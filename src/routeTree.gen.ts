@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as AppLiveCallsRouteImport } from './routes/_app.live-calls'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppContactsRouteImport } from './routes/_app.contacts'
 import { Route as AppCampaignsIndexRouteImport } from './routes/_app.campaigns.index'
@@ -45,6 +46,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
+} as any)
+const AppLiveCallsRoute = AppLiveCallsRouteImport.update({
+  id: '/live-calls',
+  path: '/live-calls',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/live-calls': typeof AppLiveCallsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/agents/$id': typeof AppAgentsIdRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/live-calls': typeof AppLiveCallsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/agents/$id': typeof AppAgentsIdRoute
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/_app/contacts': typeof AppContactsRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/live-calls': typeof AppLiveCallsRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/_app/agents/$id': typeof AppAgentsIdRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contacts'
     | '/dashboard'
+    | '/live-calls'
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/agents/$id'
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contacts'
     | '/dashboard'
+    | '/live-calls'
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/agents/$id'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_app/contacts'
     | '/_app/dashboard'
+    | '/_app/live-calls'
     | '/auth/forgot-password'
     | '/auth/reset-password'
     | '/_app/agents/$id'
@@ -208,6 +220,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_app/live-calls': {
+      id: '/_app/live-calls'
+      path: '/live-calls'
+      fullPath: '/live-calls'
+      preLoaderRoute: typeof AppLiveCallsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
       id: '/_app/dashboard'
@@ -264,6 +283,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppContactsRoute: typeof AppContactsRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppLiveCallsRoute: typeof AppLiveCallsRoute
   AppAgentsIdRoute: typeof AppAgentsIdRoute
   AppCampaignsIdRoute: typeof AppCampaignsIdRoute
   AppCampaignsNewRoute: typeof AppCampaignsNewRoute
@@ -274,6 +294,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppContactsRoute: AppContactsRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppLiveCallsRoute: AppLiveCallsRoute,
   AppAgentsIdRoute: AppAgentsIdRoute,
   AppCampaignsIdRoute: AppCampaignsIdRoute,
   AppCampaignsNewRoute: AppCampaignsNewRoute,
