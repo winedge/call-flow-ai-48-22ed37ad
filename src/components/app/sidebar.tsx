@@ -14,7 +14,13 @@ import {
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg } from "@/lib/data-store";
 
-const NAV = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  live?: boolean;
+};
+const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
   { to: "/agents", label: "AI Agents", icon: Bot },
@@ -23,7 +29,7 @@ const NAV = [
   { to: "/call-history", label: "Call History", icon: History },
   { to: "/automations", label: "Automations", icon: Workflow },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
-] as const;
+];
 
 export function Sidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
