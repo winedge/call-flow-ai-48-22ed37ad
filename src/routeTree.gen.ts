@@ -19,6 +19,7 @@ import { Route as AppCampaignsIndexRouteImport } from './routes/_app.campaigns.i
 import { Route as AppAgentsIndexRouteImport } from './routes/_app.agents.index'
 import { Route as AppCampaignsNewRouteImport } from './routes/_app.campaigns.new'
 import { Route as AppCampaignsIdRouteImport } from './routes/_app.campaigns.$id'
+import { Route as AppAgentsIdRouteImport } from './routes/_app.agents.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -69,6 +70,11 @@ const AppCampaignsIdRoute = AppCampaignsIdRouteImport.update({
   path: '/campaigns/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
+  id: '/agents/$id',
+  path: '/agents/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/agents/$id': typeof AppAgentsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/agents/': typeof AppAgentsIndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/agents/$id': typeof AppAgentsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/agents': typeof AppAgentsIndexRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/_app/agents/$id': typeof AppAgentsIdRoute
   '/_app/campaigns/$id': typeof AppCampaignsIdRoute
   '/_app/campaigns/new': typeof AppCampaignsNewRoute
   '/_app/agents/': typeof AppAgentsIndexRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/agents/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
     | '/agents/'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/agents/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
     | '/agents'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/_app/agents/$id'
     | '/_app/campaigns/$id'
     | '/_app/campaigns/new'
     | '/_app/agents/'
@@ -220,11 +232,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/agents/$id': {
+      id: '/_app/agents/$id'
+      path: '/agents/$id'
+      fullPath: '/agents/$id'
+      preLoaderRoute: typeof AppAgentsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppAgentsIdRoute: typeof AppAgentsIdRoute
   AppCampaignsIdRoute: typeof AppCampaignsIdRoute
   AppCampaignsNewRoute: typeof AppCampaignsNewRoute
   AppAgentsIndexRoute: typeof AppAgentsIndexRoute
@@ -233,6 +253,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppAgentsIdRoute: AppAgentsIdRoute,
   AppCampaignsIdRoute: AppCampaignsIdRoute,
   AppCampaignsNewRoute: AppCampaignsNewRoute,
   AppAgentsIndexRoute: AppAgentsIndexRoute,
