@@ -18,6 +18,7 @@ import { Route as AppLiveCallsRouteImport } from './routes/_app.live-calls'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppContactsRouteImport } from './routes/_app.contacts'
 import { Route as AppCallHistoryRouteImport } from './routes/_app.call-history'
+import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppCampaignsIndexRouteImport } from './routes/_app.campaigns.index'
 import { Route as AppAgentsIndexRouteImport } from './routes/_app.agents.index'
 import { Route as AppCampaignsNewRouteImport } from './routes/_app.campaigns.new'
@@ -68,6 +69,11 @@ const AppCallHistoryRoute = AppCallHistoryRouteImport.update({
   path: '/call-history',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAutomationsRoute = AppAutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCampaignsIndexRoute = AppCampaignsIndexRouteImport.update({
   id: '/campaigns/',
   path: '/campaigns/',
@@ -97,6 +103,7 @@ const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/automations': typeof AppAutomationsRoute
   '/call-history': typeof AppCallHistoryRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/automations': typeof AppAutomationsRoute
   '/call-history': typeof AppCallHistoryRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/_app/automations': typeof AppAutomationsRoute
   '/_app/call-history': typeof AppCallHistoryRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/automations'
     | '/call-history'
     | '/contacts'
     | '/dashboard'
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/automations'
     | '/call-history'
     | '/contacts'
     | '/dashboard'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/automations'
     | '/_app/call-history'
     | '/_app/contacts'
     | '/_app/dashboard'
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCallHistoryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/automations': {
+      id: '/_app/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AppAutomationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/campaigns/': {
       id: '/_app/campaigns/'
       path: '/campaigns'
@@ -300,6 +319,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppAutomationsRoute: typeof AppAutomationsRoute
   AppCallHistoryRoute: typeof AppCallHistoryRoute
   AppContactsRoute: typeof AppContactsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -312,6 +332,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAutomationsRoute: AppAutomationsRoute,
   AppCallHistoryRoute: AppCallHistoryRoute,
   AppContactsRoute: AppContactsRoute,
   AppDashboardRoute: AppDashboardRoute,
