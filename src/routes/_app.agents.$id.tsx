@@ -194,31 +194,47 @@ function AgentEditor() {
           </div>
         </Card>
 
-        <Card title="Voice & Language (ElevenLabs)">
+        <Card title="Voice & Language (Coqui XTTS v2)">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
-              <Select
-                value={form.voice_id}
-                onValueChange={(v) => {
-                  const voice = VOICES.find((x) => x.id === v)!;
-                  setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={form.voice_id}
+                  onValueChange={(v) => {
+                    const voice = VOICES.find((x) => x.id === v)!;
+                    setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
+                  }}
+                >
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={previewing}
+                  onClick={previewVoice}
+                  title="Play a preview using the greeting (or a sample line)"
+                >
+                  {previewing ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                  <span className="ml-1">Preview</span>
+                </Button>
+              </div>
             </Field>
             <Field label="Language">
               <Select value={form.language} onValueChange={(v) => patch("language", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {LANGS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                  {LANGS.map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
           </div>
+          <p className="text-[10px] text-zinc-500 font-mono pt-1">
+            Powered by Coqui XTTS v2 via Replicate — non-commercial license (dev/eval only).
+          </p>
         </Card>
 
         <Card title="Prompting (OpenAI GPT)">
