@@ -12,8 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DocsApiRouteImport } from './routes/docs.api'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
+import { Route as ApiContactsRouteImport } from './routes/api/contacts'
+import { Route as ApiCampaignsRouteImport } from './routes/api/campaigns'
+import { Route as ApiCallsRouteImport } from './routes/api/calls'
+import { Route as ApiAutomationsRouteImport } from './routes/api/automations'
+import { Route as ApiAgentsRouteImport } from './routes/api/agents'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppLiveCallsRouteImport } from './routes/_app.live-calls'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -22,9 +29,18 @@ import { Route as AppCallHistoryRouteImport } from './routes/_app.call-history'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppCampaignsIndexRouteImport } from './routes/_app.campaigns.index'
 import { Route as AppAgentsIndexRouteImport } from './routes/_app.agents.index'
+import { Route as ApiContactsIdRouteImport } from './routes/api/contacts.$id'
+import { Route as ApiCampaignsIdRouteImport } from './routes/api/campaigns.$id'
+import { Route as ApiCallsIdRouteImport } from './routes/api/calls.$id'
+import { Route as ApiAutomationsIdRouteImport } from './routes/api/automations.$id'
+import { Route as ApiAgentsIdRouteImport } from './routes/api/agents.$id'
 import { Route as AppCampaignsNewRouteImport } from './routes/_app.campaigns.new'
 import { Route as AppCampaignsIdRouteImport } from './routes/_app.campaigns.$id'
 import { Route as AppAgentsIdRouteImport } from './routes/_app.agents.$id'
+import { Route as ApiPublicWebhooksTwilioRouteImport } from './routes/api/public/webhooks.twilio'
+import { Route as ApiPublicWebhooksAutomationsRouteImport } from './routes/api/public/webhooks.automations'
+import { Route as ApiCampaignsIdStartRouteImport } from './routes/api/campaigns.$id.start'
+import { Route as ApiCampaignsIdPauseRouteImport } from './routes/api/campaigns.$id.pause'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -40,6 +56,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocsApiRoute = DocsApiRouteImport.update({
+  id: '/docs/api',
+  path: '/docs/api',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -49,6 +70,36 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
+} as any)
+const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
+  id: '/api/openapi.json',
+  path: '/api/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContactsRoute = ApiContactsRouteImport.update({
+  id: '/api/contacts',
+  path: '/api/contacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCampaignsRoute = ApiCampaignsRouteImport.update({
+  id: '/api/campaigns',
+  path: '/api/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCallsRoute = ApiCallsRouteImport.update({
+  id: '/api/calls',
+  path: '/api/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAutomationsRoute = ApiAutomationsRouteImport.update({
+  id: '/api/automations',
+  path: '/api/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentsRoute = ApiAgentsRouteImport.update({
+  id: '/api/agents',
+  path: '/api/agents',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -90,6 +141,31 @@ const AppAgentsIndexRoute = AppAgentsIndexRouteImport.update({
   path: '/agents/',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiContactsIdRoute = ApiContactsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiContactsRoute,
+} as any)
+const ApiCampaignsIdRoute = ApiCampaignsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiCampaignsRoute,
+} as any)
+const ApiCallsIdRoute = ApiCallsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiCallsRoute,
+} as any)
+const ApiAutomationsIdRoute = ApiAutomationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAutomationsRoute,
+} as any)
+const ApiAgentsIdRoute = ApiAgentsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiAgentsRoute,
+} as any)
 const AppCampaignsNewRoute = AppCampaignsNewRouteImport.update({
   id: '/campaigns/new',
   path: '/campaigns/new',
@@ -105,6 +181,27 @@ const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
   path: '/agents/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWebhooksTwilioRoute = ApiPublicWebhooksTwilioRouteImport.update({
+  id: '/api/public/webhooks/twilio',
+  path: '/api/public/webhooks/twilio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicWebhooksAutomationsRoute =
+  ApiPublicWebhooksAutomationsRouteImport.update({
+    id: '/api/public/webhooks/automations',
+    path: '/api/public/webhooks/automations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCampaignsIdStartRoute = ApiCampaignsIdStartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => ApiCampaignsIdRoute,
+} as any)
+const ApiCampaignsIdPauseRoute = ApiCampaignsIdPauseRouteImport.update({
+  id: '/pause',
+  path: '/pause',
+  getParentRoute: () => ApiCampaignsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,13 +212,29 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/live-calls': typeof AppLiveCallsRoute
   '/settings': typeof AppSettingsRoute
+  '/api/agents': typeof ApiAgentsRouteWithChildren
+  '/api/automations': typeof ApiAutomationsRouteWithChildren
+  '/api/calls': typeof ApiCallsRouteWithChildren
+  '/api/campaigns': typeof ApiCampaignsRouteWithChildren
+  '/api/contacts': typeof ApiContactsRouteWithChildren
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/docs/api': typeof DocsApiRoute
   '/agents/$id': typeof AppAgentsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
+  '/api/agents/$id': typeof ApiAgentsIdRoute
+  '/api/automations/$id': typeof ApiAutomationsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
+  '/api/contacts/$id': typeof ApiContactsIdRoute
   '/agents/': typeof AppAgentsIndexRoute
   '/campaigns/': typeof AppCampaignsIndexRoute
+  '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
+  '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
+  '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
+  '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,13 +245,29 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/live-calls': typeof AppLiveCallsRoute
   '/settings': typeof AppSettingsRoute
+  '/api/agents': typeof ApiAgentsRouteWithChildren
+  '/api/automations': typeof ApiAutomationsRouteWithChildren
+  '/api/calls': typeof ApiCallsRouteWithChildren
+  '/api/campaigns': typeof ApiCampaignsRouteWithChildren
+  '/api/contacts': typeof ApiContactsRouteWithChildren
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/docs/api': typeof DocsApiRoute
   '/agents/$id': typeof AppAgentsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
+  '/api/agents/$id': typeof ApiAgentsIdRoute
+  '/api/automations/$id': typeof ApiAutomationsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
+  '/api/contacts/$id': typeof ApiContactsIdRoute
   '/agents': typeof AppAgentsIndexRoute
   '/campaigns': typeof AppCampaignsIndexRoute
+  '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
+  '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
+  '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
+  '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,13 +280,29 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/live-calls': typeof AppLiveCallsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/agents': typeof ApiAgentsRouteWithChildren
+  '/api/automations': typeof ApiAutomationsRouteWithChildren
+  '/api/calls': typeof ApiCallsRouteWithChildren
+  '/api/campaigns': typeof ApiCampaignsRouteWithChildren
+  '/api/contacts': typeof ApiContactsRouteWithChildren
+  '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/docs/api': typeof DocsApiRoute
   '/_app/agents/$id': typeof AppAgentsIdRoute
   '/_app/campaigns/$id': typeof AppCampaignsIdRoute
   '/_app/campaigns/new': typeof AppCampaignsNewRoute
+  '/api/agents/$id': typeof ApiAgentsIdRoute
+  '/api/automations/$id': typeof ApiAutomationsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
+  '/api/contacts/$id': typeof ApiContactsIdRoute
   '/_app/agents/': typeof AppAgentsIndexRoute
   '/_app/campaigns/': typeof AppCampaignsIndexRoute
+  '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
+  '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
+  '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
+  '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,13 +315,29 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/live-calls'
     | '/settings'
+    | '/api/agents'
+    | '/api/automations'
+    | '/api/calls'
+    | '/api/campaigns'
+    | '/api/contacts'
+    | '/api/openapi.json'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/docs/api'
     | '/agents/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
+    | '/api/agents/$id'
+    | '/api/automations/$id'
+    | '/api/calls/$id'
+    | '/api/campaigns/$id'
+    | '/api/contacts/$id'
     | '/agents/'
     | '/campaigns/'
+    | '/api/campaigns/$id/pause'
+    | '/api/campaigns/$id/start'
+    | '/api/public/webhooks/automations'
+    | '/api/public/webhooks/twilio'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -187,13 +348,29 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/live-calls'
     | '/settings'
+    | '/api/agents'
+    | '/api/automations'
+    | '/api/calls'
+    | '/api/campaigns'
+    | '/api/contacts'
+    | '/api/openapi.json'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/docs/api'
     | '/agents/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
+    | '/api/agents/$id'
+    | '/api/automations/$id'
+    | '/api/calls/$id'
+    | '/api/campaigns/$id'
+    | '/api/contacts/$id'
     | '/agents'
     | '/campaigns'
+    | '/api/campaigns/$id/pause'
+    | '/api/campaigns/$id/start'
+    | '/api/public/webhooks/automations'
+    | '/api/public/webhooks/twilio'
   id:
     | '__root__'
     | '/'
@@ -205,19 +382,44 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/live-calls'
     | '/_app/settings'
+    | '/api/agents'
+    | '/api/automations'
+    | '/api/calls'
+    | '/api/campaigns'
+    | '/api/contacts'
+    | '/api/openapi.json'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/docs/api'
     | '/_app/agents/$id'
     | '/_app/campaigns/$id'
     | '/_app/campaigns/new'
+    | '/api/agents/$id'
+    | '/api/automations/$id'
+    | '/api/calls/$id'
+    | '/api/campaigns/$id'
+    | '/api/contacts/$id'
     | '/_app/agents/'
     | '/_app/campaigns/'
+    | '/api/campaigns/$id/pause'
+    | '/api/campaigns/$id/start'
+    | '/api/public/webhooks/automations'
+    | '/api/public/webhooks/twilio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  ApiAgentsRoute: typeof ApiAgentsRouteWithChildren
+  ApiAutomationsRoute: typeof ApiAutomationsRouteWithChildren
+  ApiCallsRoute: typeof ApiCallsRouteWithChildren
+  ApiCampaignsRoute: typeof ApiCampaignsRouteWithChildren
+  ApiContactsRoute: typeof ApiContactsRouteWithChildren
+  ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
+  DocsApiRoute: typeof DocsApiRoute
+  ApiPublicWebhooksAutomationsRoute: typeof ApiPublicWebhooksAutomationsRoute
+  ApiPublicWebhooksTwilioRoute: typeof ApiPublicWebhooksTwilioRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -243,6 +445,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/docs/api': {
+      id: '/docs/api'
+      path: '/docs/api'
+      fullPath: '/docs/api'
+      preLoaderRoute: typeof DocsApiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/reset-password': {
       id: '/auth/reset-password'
       path: '/reset-password'
@@ -256,6 +465,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/api/openapi.json': {
+      id: '/api/openapi.json'
+      path: '/api/openapi.json'
+      fullPath: '/api/openapi.json'
+      preLoaderRoute: typeof ApiOpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contacts': {
+      id: '/api/contacts'
+      path: '/api/contacts'
+      fullPath: '/api/contacts'
+      preLoaderRoute: typeof ApiContactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns': {
+      id: '/api/campaigns'
+      path: '/api/campaigns'
+      fullPath: '/api/campaigns'
+      preLoaderRoute: typeof ApiCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calls': {
+      id: '/api/calls'
+      path: '/api/calls'
+      fullPath: '/api/calls'
+      preLoaderRoute: typeof ApiCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/automations': {
+      id: '/api/automations'
+      path: '/api/automations'
+      fullPath: '/api/automations'
+      preLoaderRoute: typeof ApiAutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agents': {
+      id: '/api/agents'
+      path: '/api/agents'
+      fullPath: '/api/agents'
+      preLoaderRoute: typeof ApiAgentsRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -313,6 +564,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAgentsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/contacts/$id': {
+      id: '/api/contacts/$id'
+      path: '/$id'
+      fullPath: '/api/contacts/$id'
+      preLoaderRoute: typeof ApiContactsIdRouteImport
+      parentRoute: typeof ApiContactsRoute
+    }
+    '/api/campaigns/$id': {
+      id: '/api/campaigns/$id'
+      path: '/$id'
+      fullPath: '/api/campaigns/$id'
+      preLoaderRoute: typeof ApiCampaignsIdRouteImport
+      parentRoute: typeof ApiCampaignsRoute
+    }
+    '/api/calls/$id': {
+      id: '/api/calls/$id'
+      path: '/$id'
+      fullPath: '/api/calls/$id'
+      preLoaderRoute: typeof ApiCallsIdRouteImport
+      parentRoute: typeof ApiCallsRoute
+    }
+    '/api/automations/$id': {
+      id: '/api/automations/$id'
+      path: '/$id'
+      fullPath: '/api/automations/$id'
+      preLoaderRoute: typeof ApiAutomationsIdRouteImport
+      parentRoute: typeof ApiAutomationsRoute
+    }
+    '/api/agents/$id': {
+      id: '/api/agents/$id'
+      path: '/$id'
+      fullPath: '/api/agents/$id'
+      preLoaderRoute: typeof ApiAgentsIdRouteImport
+      parentRoute: typeof ApiAgentsRoute
+    }
     '/_app/campaigns/new': {
       id: '/_app/campaigns/new'
       path: '/campaigns/new'
@@ -333,6 +619,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$id'
       preLoaderRoute: typeof AppAgentsIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/webhooks/twilio': {
+      id: '/api/public/webhooks/twilio'
+      path: '/api/public/webhooks/twilio'
+      fullPath: '/api/public/webhooks/twilio'
+      preLoaderRoute: typeof ApiPublicWebhooksTwilioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/automations': {
+      id: '/api/public/webhooks/automations'
+      path: '/api/public/webhooks/automations'
+      fullPath: '/api/public/webhooks/automations'
+      preLoaderRoute: typeof ApiPublicWebhooksAutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/campaigns/$id/start': {
+      id: '/api/campaigns/$id/start'
+      path: '/start'
+      fullPath: '/api/campaigns/$id/start'
+      preLoaderRoute: typeof ApiCampaignsIdStartRouteImport
+      parentRoute: typeof ApiCampaignsIdRoute
+    }
+    '/api/campaigns/$id/pause': {
+      id: '/api/campaigns/$id/pause'
+      path: '/pause'
+      fullPath: '/api/campaigns/$id/pause'
+      preLoaderRoute: typeof ApiCampaignsIdPauseRouteImport
+      parentRoute: typeof ApiCampaignsIdRoute
     }
   }
 }
@@ -379,11 +693,104 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface ApiAgentsRouteChildren {
+  ApiAgentsIdRoute: typeof ApiAgentsIdRoute
+}
+
+const ApiAgentsRouteChildren: ApiAgentsRouteChildren = {
+  ApiAgentsIdRoute: ApiAgentsIdRoute,
+}
+
+const ApiAgentsRouteWithChildren = ApiAgentsRoute._addFileChildren(
+  ApiAgentsRouteChildren,
+)
+
+interface ApiAutomationsRouteChildren {
+  ApiAutomationsIdRoute: typeof ApiAutomationsIdRoute
+}
+
+const ApiAutomationsRouteChildren: ApiAutomationsRouteChildren = {
+  ApiAutomationsIdRoute: ApiAutomationsIdRoute,
+}
+
+const ApiAutomationsRouteWithChildren = ApiAutomationsRoute._addFileChildren(
+  ApiAutomationsRouteChildren,
+)
+
+interface ApiCallsRouteChildren {
+  ApiCallsIdRoute: typeof ApiCallsIdRoute
+}
+
+const ApiCallsRouteChildren: ApiCallsRouteChildren = {
+  ApiCallsIdRoute: ApiCallsIdRoute,
+}
+
+const ApiCallsRouteWithChildren = ApiCallsRoute._addFileChildren(
+  ApiCallsRouteChildren,
+)
+
+interface ApiCampaignsIdRouteChildren {
+  ApiCampaignsIdPauseRoute: typeof ApiCampaignsIdPauseRoute
+  ApiCampaignsIdStartRoute: typeof ApiCampaignsIdStartRoute
+}
+
+const ApiCampaignsIdRouteChildren: ApiCampaignsIdRouteChildren = {
+  ApiCampaignsIdPauseRoute: ApiCampaignsIdPauseRoute,
+  ApiCampaignsIdStartRoute: ApiCampaignsIdStartRoute,
+}
+
+const ApiCampaignsIdRouteWithChildren = ApiCampaignsIdRoute._addFileChildren(
+  ApiCampaignsIdRouteChildren,
+)
+
+interface ApiCampaignsRouteChildren {
+  ApiCampaignsIdRoute: typeof ApiCampaignsIdRouteWithChildren
+}
+
+const ApiCampaignsRouteChildren: ApiCampaignsRouteChildren = {
+  ApiCampaignsIdRoute: ApiCampaignsIdRouteWithChildren,
+}
+
+const ApiCampaignsRouteWithChildren = ApiCampaignsRoute._addFileChildren(
+  ApiCampaignsRouteChildren,
+)
+
+interface ApiContactsRouteChildren {
+  ApiContactsIdRoute: typeof ApiContactsIdRoute
+}
+
+const ApiContactsRouteChildren: ApiContactsRouteChildren = {
+  ApiContactsIdRoute: ApiContactsIdRoute,
+}
+
+const ApiContactsRouteWithChildren = ApiContactsRoute._addFileChildren(
+  ApiContactsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  ApiAgentsRoute: ApiAgentsRouteWithChildren,
+  ApiAutomationsRoute: ApiAutomationsRouteWithChildren,
+  ApiCallsRoute: ApiCallsRouteWithChildren,
+  ApiCampaignsRoute: ApiCampaignsRouteWithChildren,
+  ApiContactsRoute: ApiContactsRouteWithChildren,
+  ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
+  DocsApiRoute: DocsApiRoute,
+  ApiPublicWebhooksAutomationsRoute: ApiPublicWebhooksAutomationsRoute,
+  ApiPublicWebhooksTwilioRoute: ApiPublicWebhooksTwilioRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
