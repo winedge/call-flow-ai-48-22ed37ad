@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_app/campaigns/")({
 
 function CampaignsList() {
   const orgId = useDB((s) => s.currentOrgId);
-  const campaigns = useDB((s) => s.campaigns.filter((c) => c.org_id === orgId));
+  const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
   const calls = useDB((s) => s.calls);
   const setStatus = useDB((s) => s.setCampaignStatus);

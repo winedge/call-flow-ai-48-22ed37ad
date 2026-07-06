@@ -18,7 +18,7 @@ function CampaignDetail() {
   const agent = useDB((s) => s.agents.find((a) => a.id === campaign?.agent_id));
   const list = useDB((s) => s.lists.find((l) => l.id === campaign?.list_id));
   const phone = useDB((s) => s.phones.find((p) => p.id === campaign?.phone_number_id));
-  const calls = useDB((s) => s.calls.filter((c) => c.campaign_id === id));
+  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.campaign_id === id)));
   const setStatus = useDB((s) => s.setCampaignStatus);
   const duplicate = useDB((s) => s.duplicateCampaign);
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useShallow } from "zustand/react/shallow";
 import { useEffect, useState } from "react";
 import { PhoneOff, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -15,9 +16,8 @@ export const Route = createFileRoute("/_app/live-calls")({
 
 function LiveCalls() {
   const orgId = useDB((s) => s.currentOrgId);
-  const calls = useDB((s) =>
-    s.calls.filter((c) => c.org_id === orgId && c.status === "in_progress"),
-  );
+  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId && c.status === "in_progress"),
+  ));
   const agents = useDB((s) => s.agents);
   const [tick, setTick] = useState(0);
 

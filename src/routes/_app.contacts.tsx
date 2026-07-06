@@ -44,8 +44,8 @@ const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
 
 function ContactsPage() {
   const orgId = useDB((s) => s.currentOrgId);
-  const lists = useDB((s) => s.lists.filter((l) => l.org_id === orgId));
-  const contacts = useDB((s) => s.contacts.filter((c) => c.org_id === orgId));
+  const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
+  const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
   const addList = useDB((s) => s.addList);
   const addContact = useDB((s) => s.addContact);
   const addBulk = useDB((s) => s.addContactsBulk);

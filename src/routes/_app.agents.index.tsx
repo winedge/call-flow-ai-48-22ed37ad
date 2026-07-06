@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/agents/")({
 
 function AgentsList() {
   const orgId = useDB((s) => s.currentOrgId);
-  const agents = useDB((s) => s.agents.filter((a) => a.org_id === orgId));
+  const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
   const del = useDB((s) => s.deleteAgent);
 
   return (

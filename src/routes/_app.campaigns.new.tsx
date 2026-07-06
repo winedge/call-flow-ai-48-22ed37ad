@@ -36,9 +36,9 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 function NewCampaign() {
   const router = useRouter();
   const orgId = useDB((s) => s.currentOrgId);
-  const agents = useDB((s) => s.agents.filter((a) => a.org_id === orgId));
-  const lists = useDB((s) => s.lists.filter((l) => l.org_id === orgId));
-  const phones = useDB((s) => s.phones.filter((p) => p.org_id === orgId));
+  const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
+  const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
+  const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addCampaign = useDB((s) => s.addCampaign);
 
   const [name, setName] = useState("");
