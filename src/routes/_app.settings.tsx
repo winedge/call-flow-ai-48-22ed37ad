@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy } from "lucide-react";

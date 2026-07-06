@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, Megaphone, Play, Pause, Square, Copy } from "lucide-react";
 import { toast } from "sonner";

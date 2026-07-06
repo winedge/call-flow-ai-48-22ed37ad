@@ -1,3 +1,4 @@
+import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, Trash2, Workflow, Webhook, Mail, MessageSquare, Sheet as SheetIcon } from "lucide-react";
