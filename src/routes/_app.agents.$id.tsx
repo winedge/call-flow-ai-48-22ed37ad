@@ -1,7 +1,8 @@
 import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Save, ArrowLeft } from "lucide-react";
+import { Save, ArrowLeft, Play, Loader2 } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -17,20 +18,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDB, type AIAgent } from "@/lib/data-store";
+import {
+  XTTS_LANGUAGES,
+  XTTS_SPEAKERS,
+  synthesizeSpeech,
+} from "@/lib/tts/xtts.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
   component: AgentEditor,
 });
 
-const VOICES = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam" },
-  { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte" },
-  { id: "ThT5KcBeYPX3keUQqHPh", name: "Dorothy" },
-];
-const LANGS = ["en-US", "en-GB", "es-ES", "fr-FR", "de-DE", "ja-JP", "pt-BR"];
+// XTTS speaker presets — voice-cloned from public reference WAVs.
+const VOICES = Object.entries(XTTS_SPEAKERS).map(([id, s]) => ({
+  id,
+  name: s.label,
+}));
+
+// XTTS language codes: 2-letter (en, hi, ta, te).
+type XttsLang = keyof typeof XTTS_LANGUAGES;
+const LANGS = Object.entries(XTTS_LANGUAGES) as Array<[XttsLang, string]>;
+
+const SAMPLE_LINES: Record<XttsLang, string> = {
+  en: "Hi, this is a quick voice sample so you can hear how I sound.",
+  hi: "नमस्ते, यह आपकी आवाज़ का एक छोटा नमूना है।",
+  ta: "வணக்கம், இது ஒரு குறுகிய குரல் மாதிரி.",
+  te: "నమస్తే, ఇది ఒక చిన్న వాయిస్ నమూనా.",
+};
 
 function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
   return {
@@ -38,7 +52,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     name: "",
     voice_id: VOICES[0].id,
     voice_name: VOICES[0].name,
-    language: "en-US",
+    language: "en",
     greeting: "",
     system_prompt: "",
     prompt: "",
@@ -78,6 +92,54 @@ function AgentEditor() {
   function patch<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  // ---- Voice preview (XTTS via Replicate) ----
+  const synth = useServerFn(synthesizeSpeech);
+  const [previewing, setPreviewing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cacheRef = useRef<Map<string, string>>(new Map());
+
+  async function previewVoice() {
+    const lang = form.language as XttsLang;
+    if (!(lang in XTTS_LANGUAGES)) {
+      toast.error("Pick English, Hindi, Tamil or Telugu first.");
+      return;
+    }
+    if (!(form.voice_id in XTTS_SPEAKERS)) {
+      toast.error("Pick a voice preset first.");
+      return;
+    }
+    const text = (form.greeting.trim() || SAMPLE_LINES[lang]).slice(0, 400);
+    const cacheKey = `${form.voice_id}|${lang}|${text}`;
+    const cached = cacheRef.current.get(cacheKey);
+    audioRef.current?.pause();
+    if (cached) {
+      const a = new Audio(cached);
+      audioRef.current = a;
+      a.play().catch(() => toast.error("Browser blocked audio playback."));
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const res = await synth({
+        data: {
+          text,
+          language: lang,
+          speaker: form.voice_id as keyof typeof XTTS_SPEAKERS,
+        },
+      });
+      cacheRef.current.set(cacheKey, res.audioUrl);
+      const a = new Audio(res.audioUrl);
+      audioRef.current = a;
+      await a.play();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Voice preview failed.";
+      toast.error(msg);
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
 
   function save(e: React.FormEvent) {
     e.preventDefault();
@@ -132,31 +194,47 @@ function AgentEditor() {
           </div>
         </Card>
 
-        <Card title="Voice & Language (ElevenLabs)">
+        <Card title="Voice & Language (Coqui XTTS v2)">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
-              <Select
-                value={form.voice_id}
-                onValueChange={(v) => {
-                  const voice = VOICES.find((x) => x.id === v)!;
-                  setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={form.voice_id}
+                  onValueChange={(v) => {
+                    const voice = VOICES.find((x) => x.id === v)!;
+                    setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
+                  }}
+                >
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={previewing}
+                  onClick={previewVoice}
+                  title="Play a preview using the greeting (or a sample line)"
+                >
+                  {previewing ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
+                  <span className="ml-1">Preview</span>
+                </Button>
+              </div>
             </Field>
             <Field label="Language">
               <Select value={form.language} onValueChange={(v) => patch("language", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {LANGS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                  {LANGS.map(([code, label]) => <SelectItem key={code} value={code}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </Field>
           </div>
+          <p className="text-[10px] text-zinc-500 font-mono pt-1">
+            Powered by Coqui XTTS v2 via Replicate — non-commercial license (dev/eval only).
+          </p>
         </Card>
 
         <Card title="Prompting (OpenAI GPT)">
