@@ -26,8 +26,8 @@ export const Route = createFileRoute("/_app/dashboard")({
 
 function Dashboard() {
   const orgId = useDB((s) => s.currentOrgId);
-  const calls = useDB((s) => s.calls.filter((c) => c.org_id === orgId));
-  const campaigns = useDB((s) => s.campaigns.filter((c) => c.org_id === orgId));
+  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
+  const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
 
   const today = new Date();

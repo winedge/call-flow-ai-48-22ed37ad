@@ -29,10 +29,10 @@ function SettingsPage() {
   const settings = useDB(selectCurrentSettings);
   const saveSettings = useDB((s) => s.saveSettings);
   const orgId = useDB((s) => s.currentOrgId);
-  const phones = useDB((s) => s.phones.filter((p) => p.org_id === orgId));
+  const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addPhone = useDB((s) => s.addPhone);
   const delPhone = useDB((s) => s.deletePhone);
-  const members = useDB((s) => s.members.filter((m) => m.org_id === orgId));
+  const members = useDB(useShallow((s) => s.members.filter((m) => m.org_id === orgId)));
   const users = useDB((s) => s.users);
 
   return (
