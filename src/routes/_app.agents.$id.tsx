@@ -93,6 +93,54 @@ function AgentEditor() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  // ---- Voice preview (XTTS via Replicate) ----
+  const synth = useServerFn(synthesizeSpeech);
+  const [previewing, setPreviewing] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const cacheRef = useRef<Map<string, string>>(new Map());
+
+  async function previewVoice() {
+    const lang = form.language as XttsLang;
+    if (!(lang in XTTS_LANGUAGES)) {
+      toast.error("Pick English, Hindi, Tamil or Telugu first.");
+      return;
+    }
+    if (!(form.voice_id in XTTS_SPEAKERS)) {
+      toast.error("Pick a voice preset first.");
+      return;
+    }
+    const text = (form.greeting.trim() || SAMPLE_LINES[lang]).slice(0, 400);
+    const cacheKey = `${form.voice_id}|${lang}|${text}`;
+    const cached = cacheRef.current.get(cacheKey);
+    audioRef.current?.pause();
+    if (cached) {
+      const a = new Audio(cached);
+      audioRef.current = a;
+      a.play().catch(() => toast.error("Browser blocked audio playback."));
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const res = await synth({
+        data: {
+          text,
+          language: lang,
+          speaker: form.voice_id as keyof typeof XTTS_SPEAKERS,
+        },
+      });
+      cacheRef.current.set(cacheKey, res.audioUrl);
+      const a = new Audio(res.audioUrl);
+      audioRef.current = a;
+      await a.play();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Voice preview failed.";
+      toast.error(msg);
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
+
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) {
