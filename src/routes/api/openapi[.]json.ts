@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { buildOpenApiSpec } from "@/lib/api/openapi";
 import { CORS_HEADERS, preflight } from "@/lib/api/cors";
 
-export const Route = createFileRoute("/api/openapi[.]json")({
+export const Route = createFileRoute("/api/openapi.json")({
   server: {
     handlers: {
       OPTIONS: async () => preflight(),
