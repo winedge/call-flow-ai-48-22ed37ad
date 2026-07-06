@@ -1,7 +1,8 @@
 import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Save, ArrowLeft } from "lucide-react";
+import { Save, ArrowLeft, Play, Loader2 } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -17,20 +18,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDB, type AIAgent } from "@/lib/data-store";
+import {
+  XTTS_LANGUAGES,
+  XTTS_SPEAKERS,
+  synthesizeSpeech,
+} from "@/lib/tts/xtts.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
   component: AgentEditor,
 });
 
-const VOICES = [
-  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
-  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
-  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam" },
-  { id: "XB0fDUnXU5powFXDhCwa", name: "Charlotte" },
-  { id: "ThT5KcBeYPX3keUQqHPh", name: "Dorothy" },
-];
-const LANGS = ["en-US", "en-GB", "es-ES", "fr-FR", "de-DE", "ja-JP", "pt-BR"];
+// XTTS speaker presets — voice-cloned from public reference WAVs.
+const VOICES = Object.entries(XTTS_SPEAKERS).map(([id, s]) => ({
+  id,
+  name: s.label,
+}));
+
+// XTTS language codes: 2-letter (en, hi, ta, te).
+type XttsLang = keyof typeof XTTS_LANGUAGES;
+const LANGS = Object.entries(XTTS_LANGUAGES) as Array<[XttsLang, string]>;
+
+const SAMPLE_LINES: Record<XttsLang, string> = {
+  en: "Hi, this is a quick voice sample so you can hear how I sound.",
+  hi: "नमस्ते, यह आपकी आवाज़ का एक छोटा नमूना है।",
+  ta: "வணக்கம், இது ஒரு குறுகிய குரல் மாதிரி.",
+  te: "నమస్తే, ఇది ఒక చిన్న వాయిస్ నమూనా.",
+};
 
 function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
   return {
@@ -38,7 +52,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     name: "",
     voice_id: VOICES[0].id,
     voice_name: VOICES[0].name,
-    language: "en-US",
+    language: "en",
     greeting: "",
     system_prompt: "",
     prompt: "",
