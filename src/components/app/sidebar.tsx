@@ -9,7 +9,9 @@ import {
   Workflow,
   Settings as SettingsIcon,
   Phone,
+  Sparkles,
 } from "lucide-react";
+
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg } from "@/lib/data-store";
