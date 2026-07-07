@@ -9,7 +9,9 @@ import {
   Workflow,
   Settings as SettingsIcon,
   Phone,
+  Sparkles,
 } from "lucide-react";
+
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg } from "@/lib/data-store";
@@ -61,11 +63,21 @@ export function Sidebar() {
           </div>
         </Link>
       </div>
+      <div className="px-4 pb-3">
+        <Link
+          to={"/launch" as "/dashboard"}
+          className="group flex items-center gap-2 px-3 py-2 rounded-md bg-brand-primary/15 hover:bg-brand-primary/25 ring-1 ring-brand-primary/40 text-brand-primary transition-colors"
+        >
+          <Sparkles className="size-4" strokeWidth={2} />
+          <span className="text-sm font-medium">Launch a campaign</span>
+        </Link>
+      </div>
 
       <nav className="flex-1 px-4 space-y-0.5 overflow-y-auto">
         <p className="px-3 pb-2 pt-1 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
           Operations
         </p>
+
         {NAV.map((item) => {
           const active =
             pathname === item.to ||

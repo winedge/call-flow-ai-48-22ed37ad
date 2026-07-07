@@ -23,6 +23,7 @@ import { Route as ApiAutomationsRouteImport } from './routes/api/automations'
 import { Route as ApiAgentsRouteImport } from './routes/api/agents'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppLiveCallsRouteImport } from './routes/_app.live-calls'
+import { Route as AppLaunchRouteImport } from './routes/_app.launch'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppContactsRouteImport } from './routes/_app.contacts'
 import { Route as AppCallHistoryRouteImport } from './routes/_app.call-history'
@@ -113,6 +114,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppLiveCallsRoute = AppLiveCallsRouteImport.update({
   id: '/live-calls',
   path: '/live-calls',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLaunchRoute = AppLaunchRouteImport.update({
+  id: '/launch',
+  path: '/launch',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/call-history': typeof AppCallHistoryRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/launch': typeof AppLaunchRoute
   '/live-calls': typeof AppLiveCallsRoute
   '/settings': typeof AppSettingsRoute
   '/api/agents': typeof ApiAgentsRouteWithChildren
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/call-history': typeof AppCallHistoryRoute
   '/contacts': typeof AppContactsRoute
   '/dashboard': typeof AppDashboardRoute
+  '/launch': typeof AppLaunchRoute
   '/live-calls': typeof AppLiveCallsRoute
   '/settings': typeof AppSettingsRoute
   '/api/agents': typeof ApiAgentsRouteWithChildren
@@ -310,6 +318,7 @@ export interface FileRoutesById {
   '/_app/call-history': typeof AppCallHistoryRoute
   '/_app/contacts': typeof AppContactsRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/launch': typeof AppLaunchRoute
   '/_app/live-calls': typeof AppLiveCallsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/agents': typeof ApiAgentsRouteWithChildren
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
     | '/call-history'
     | '/contacts'
     | '/dashboard'
+    | '/launch'
     | '/live-calls'
     | '/settings'
     | '/api/agents'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/call-history'
     | '/contacts'
     | '/dashboard'
+    | '/launch'
     | '/live-calls'
     | '/settings'
     | '/api/agents'
@@ -424,6 +435,7 @@ export interface FileRouteTypes {
     | '/_app/call-history'
     | '/_app/contacts'
     | '/_app/dashboard'
+    | '/_app/launch'
     | '/_app/live-calls'
     | '/_app/settings'
     | '/api/agents'
@@ -572,6 +584,13 @@ declare module '@tanstack/react-router' {
       path: '/live-calls'
       fullPath: '/live-calls'
       preLoaderRoute: typeof AppLiveCallsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/launch': {
+      id: '/_app/launch'
+      path: '/launch'
+      fullPath: '/launch'
+      preLoaderRoute: typeof AppLaunchRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -736,6 +755,7 @@ interface AppRouteChildren {
   AppCallHistoryRoute: typeof AppCallHistoryRoute
   AppContactsRoute: typeof AppContactsRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppLaunchRoute: typeof AppLaunchRoute
   AppLiveCallsRoute: typeof AppLiveCallsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppAgentsIdRoute: typeof AppAgentsIdRoute
@@ -750,6 +770,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppCallHistoryRoute: AppCallHistoryRoute,
   AppContactsRoute: AppContactsRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppLaunchRoute: AppLaunchRoute,
   AppLiveCallsRoute: AppLiveCallsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppAgentsIdRoute: AppAgentsIdRoute,
