@@ -665,6 +665,13 @@ function LaunchWizard() {
               phone={phones.find((p) => p.id === phoneId)?.number ?? "—"}
             />
 
+            <Checklist
+              items={allChecks}
+              hasRun={checks !== null}
+              checking={checking}
+              onRun={runPreflight}
+            />
+
             <div className="flex items-center gap-2 mt-4">
               <input
                 id="start-now"
@@ -682,7 +689,18 @@ function LaunchWizard() {
               <Button variant="ghost" onClick={() => setStep(3)}>
                 <ArrowLeft className="size-4 mr-2" /> Back
               </Button>
-              <Button onClick={launch} disabled={launching} className="min-w-40">
+              <Button
+                onClick={launch}
+                disabled={launching || !canLaunch}
+                className="min-w-40"
+                title={
+                  !canLaunch
+                    ? checks === null
+                      ? "Run preflight checks first"
+                      : "Resolve failing checks before launching"
+                    : undefined
+                }
+              >
                 {launching ? (
                   <>
                     <Loader2 className="size-4 mr-2 animate-spin" /> Launching…
@@ -695,6 +713,7 @@ function LaunchWizard() {
                 )}
               </Button>
             </Actions>
+
           </StepCard>
         )}
       </div>
