@@ -912,3 +912,82 @@ function Summary({
     </div>
   );
 }
+
+function Checklist({
+  items,
+  hasRun,
+  checking,
+  onRun,
+}: {
+  items: CheckResult[];
+  hasRun: boolean;
+  checking: boolean;
+  onRun: () => void;
+}) {
+  const failing = items.filter((i) => i.status === "fail").length;
+  const warning = items.filter((i) => i.status === "warn").length;
+  return (
+    <div className="rounded-md border border-surface-border/60 bg-surface-base/60 mt-4">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border/40">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="size-4 text-brand-primary" />
+          <div>
+            <div className="text-sm font-medium text-zinc-100">
+              Launch preflight
+            </div>
+            <div className="text-xs text-zinc-500">
+              {hasRun
+                ? failing
+                  ? `${failing} issue${failing === 1 ? "" : "s"} to fix${warning ? `, ${warning} warning${warning === 1 ? "" : "s"}` : ""}`
+                  : warning
+                    ? `All clear · ${warning} warning${warning === 1 ? "" : "s"}`
+                    : "All systems go"
+                : "Verify Twilio, bridge, contacts, and credits before dialing."}
+            </div>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onRun}
+          disabled={checking}
+        >
+          {checking ? (
+            <>
+              <Loader2 className="size-3.5 mr-2 animate-spin" /> Checking…
+            </>
+          ) : hasRun ? (
+            "Re-run checks"
+          ) : (
+            "Run checks"
+          )}
+        </Button>
+      </div>
+      <ul className="divide-y divide-surface-border/40">
+        {items.map((c, i) => (
+          <li key={i} className="flex items-start gap-3 px-4 py-2.5 text-sm">
+            <StatusIcon status={c.status} />
+            <div className="min-w-0 flex-1">
+              <div className="text-zinc-200 truncate">{c.label}</div>
+              <div className="text-xs text-zinc-500">{c.detail}</div>
+            </div>
+          </li>
+        ))}
+        {!hasRun && (
+          <li className="px-4 py-2.5 text-xs text-zinc-500 italic">
+            Twilio, bridge, and AI-gateway checks run against your live secrets.
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+function StatusIcon({ status }: { status: CheckResult["status"] }) {
+  if (status === "pass")
+    return <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" />;
+  if (status === "warn")
+    return <AlertTriangle className="size-4 text-amber-400 mt-0.5 shrink-0" />;
+  return <XCircle className="size-4 text-red-400 mt-0.5 shrink-0" />;
+}
+
