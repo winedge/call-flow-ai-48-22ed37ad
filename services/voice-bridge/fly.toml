@@ -1,0 +1,26 @@
+# fly.toml — deploy target for the voice-bridge service.
+# Run: `fly launch --no-deploy` first (from services/voice-bridge/) to create
+# the app, then set secrets, then `fly deploy`.
+
+app = "your-voice-bridge"
+primary_region = "iad"     # pick something near your Twilio region
+kill_signal = "SIGINT"
+kill_timeout = 30
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false     # persistent — calls hold sockets open
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
