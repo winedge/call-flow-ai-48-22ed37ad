@@ -39,9 +39,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           });
         }
 
-        // Media Streams URL: wss with query params. Bridge validates on connect.
+        // Media Streams URL: wss with query params on the configured bridge
+        // path. Bridge validates on connect. We preserve BRIDGE_URL's path
+        // (e.g. Supabase edge function `/voice-bridge`), only appending query.
         const stream = new URL(bridge);
-        stream.pathname = "/twilio";
         stream.searchParams.set("agent_id", agentId);
         stream.searchParams.set("call_sid", callSid);
         const wsUrl = escapeXml(stream.toString());
