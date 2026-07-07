@@ -66,6 +66,8 @@ export type AIAgent = {
   id: UUID;
   org_id: UUID;
   name: string;
+  /** TTS engine key — resolved via src/lib/voice/tts/registry.ts. */
+  tts_engine: "kokoro";
   voice_id: string;
   voice_name: string;
   language: string;
@@ -253,8 +255,9 @@ function buildSeed() {
       id: seedAgentId,
       org_id: seedOrgId,
       name: "Sarah-AI",
-      voice_id: "female_warm",
-      voice_name: "Warm Female",
+      tts_engine: "kokoro",
+      voice_id: "af_bella",
+      voice_name: "Bella (American Female, warm)",
       language: "en",
       greeting: "Hi, this is Sarah with BulkCall AI. Do you have a quick moment?",
       system_prompt: "You are Sarah, a friendly outbound sales SDR. Keep replies under two sentences. Be warm and professional.",
@@ -279,8 +282,9 @@ function buildSeed() {
       id: seedAgent2Id,
       org_id: seedOrgId,
       name: "Nexus-V3",
-      voice_id: "male_deep",
-      voice_name: "Deep Male",
+      tts_engine: "kokoro",
+      voice_id: "am_michael",
+      voice_name: "Michael (American Male, deep)",
       language: "en",
       greeting: "Good day, this is Nexus calling on behalf of BulkCall AI.",
       system_prompt: "You are Nexus, a research agent collecting product feedback. Be polite and brief.",
