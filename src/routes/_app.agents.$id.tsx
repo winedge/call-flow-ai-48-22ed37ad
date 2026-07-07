@@ -2,7 +2,7 @@ import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Play, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Play, Loader2, PhoneCall } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   KOKORO_VOICES,
 } from "@/lib/voice/tts/registry";
 import { synthesizeSpeechKokoro } from "@/lib/voice/tts/kokoro.functions";
+import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
@@ -302,6 +303,10 @@ function AgentEditor() {
           </div>
         </Card>
 
+        <TestCallCard agentId={id} isNew={isNew} />
+
+
+
         <div className="flex justify-end gap-2">
           <Button type="submit" className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
             <Save className="size-3.5 mr-1" /> Save agent
@@ -311,6 +316,76 @@ function AgentEditor() {
     </>
   );
 }
+
+function TestCallCard({ agentId, isNew }: { agentId: string; isNew: boolean }) {
+  const [to, setTo] = useState("");
+  const [calling, setCalling] = useState(false);
+  const [lastSid, setLastSid] = useState<string | null>(null);
+  const dial = useServerFn(initiateCall);
+
+  async function call() {
+    if (isNew) {
+      toast.error("Save the agent first.");
+      return;
+    }
+    if (!/^\+\d{8,15}$/.test(to.trim())) {
+      toast.error("Enter a phone number in E.164 format (e.g. +14155551234).");
+      return;
+    }
+    setCalling(true);
+    try {
+      const { callSid } = await dial({ data: { to: to.trim(), agentId } });
+      setLastSid(callSid);
+      toast.success(`Call queued • ${callSid}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Call failed";
+      toast.error(msg);
+    } finally {
+      setCalling(false);
+    }
+  }
+
+  return (
+    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 space-y-4">
+      <h2 className="text-sm font-medium text-zinc-200 border-b border-surface-border/40 pb-3">
+        Test call (live)
+      </h2>
+      <p className="text-xs text-zinc-400">
+        Places a real outbound call via Twilio → voice bridge → Deepgram STT →
+        Gemini → Kokoro TTS. Requires{" "}
+        <code className="text-zinc-300">TWILIO_*</code>,{" "}
+        <code className="text-zinc-300">PUBLIC_APP_URL</code>,{" "}
+        <code className="text-zinc-300">BRIDGE_URL</code>, and{" "}
+        <code className="text-zinc-300">REPLICATE_API_KEY</code> in admin secrets.
+      </p>
+      <div className="flex gap-2">
+        <Input
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          placeholder="+14155551234"
+          className="flex-1"
+        />
+        <Button
+          type="button"
+          onClick={call}
+          disabled={calling || isNew}
+          className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110"
+        >
+          {calling ? (
+            <Loader2 className="size-3.5 animate-spin mr-1" />
+          ) : (
+            <PhoneCall className="size-3.5 mr-1" />
+          )}
+          Call now
+        </Button>
+      </div>
+      {lastSid && (
+        <p className="text-[11px] text-zinc-500 font-mono">Last CallSid: {lastSid}</p>
+      )}
+    </div>
+  );
+}
+
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
