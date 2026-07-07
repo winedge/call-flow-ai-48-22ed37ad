@@ -193,11 +193,15 @@ async function speak(session: Session, text: string) {
     const wav = new WaveFile(new Uint8Array(buf));
     wav.toBitDepth("16");
     const sampleRate = (wav.fmt as { sampleRate: number }).sampleRate;
-    const samples = wav.getSamples(false, Int16Array) as unknown as
-      | Int16Array
-      | Int16Array[];
-    const mono = Array.isArray(samples) ? samples[0] : samples;
-    const pcm8k = downsampleTo8k(mono, sampleRate);
+    // getSamples with Float64 default; if stereo it returns [L, R]. Take L, coerce to Int16.
+    const rawSamples = wav.getSamples(false) as Float64Array | Float64Array[];
+    const mono = Array.isArray(rawSamples) ? rawSamples[0] : rawSamples;
+    const pcm = new Int16Array(mono.length);
+    for (let i = 0; i < mono.length; i++) {
+      const v = mono[i];
+      pcm[i] = Math.max(-32768, Math.min(32767, Math.round(v)));
+    }
+    const pcm8k = downsampleTo8k(pcm, sampleRate);
     const mu = pcm8kToMuLaw(pcm8k);
     const frames = chunk20ms(mu);
 
