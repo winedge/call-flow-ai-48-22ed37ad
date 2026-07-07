@@ -2,7 +2,7 @@ import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Play, Loader2 } from "lucide-react";
+import { Save, ArrowLeft, Play, Loader2, PhoneCall } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   KOKORO_VOICES,
 } from "@/lib/voice/tts/registry";
 import { synthesizeSpeechKokoro } from "@/lib/voice/tts/kokoro.functions";
+import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
@@ -301,6 +302,10 @@ function AgentEditor() {
             </Field>
           </div>
         </Card>
+
+        <TestCallCard agentId={id} isNew={isNew} />
+
+
 
         <div className="flex justify-end gap-2">
           <Button type="submit" className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
