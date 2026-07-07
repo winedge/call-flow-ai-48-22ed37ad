@@ -40,6 +40,11 @@ import {
   generateAgentFromBrief,
   type GeneratedAgent,
 } from "@/lib/agents/generate.functions";
+import {
+  preflightLaunch,
+  type CheckResult,
+} from "@/lib/launch/preflight.functions";
+
 
 export const Route = createFileRoute("/_app/launch")({
   head: () => ({
