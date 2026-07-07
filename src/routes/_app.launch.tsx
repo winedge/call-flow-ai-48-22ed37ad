@@ -111,8 +111,67 @@ function LaunchWizard() {
   const [cpm, setCpm] = useState(10);
   const [launching, setLaunching] = useState(false);
 
-  async function handleGenerate() {
-    if (brief.trim().length < 8) {
+  // Preflight
+  const [checks, setChecks] = useState<CheckResult[] | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const contactCheck = useMemo<CheckResult>(() => {
+    if (!contacts.length) {
+      return {
+        id: "twilio",
+        status: "fail",
+        label: "Contacts",
+        detail: "No contacts loaded — upload a CSV or add numbers manually.",
+      } as CheckResult;
+    }
+    const seen = new Set<string>();
+    let dupes = 0;
+    let invalid = 0;
+    for (const c of contacts) {
+      if (!PHONE_RE.test(c.phone)) invalid++;
+      else if (seen.has(c.phone)) dupes++;
+      else seen.add(c.phone);
+    }
+    if (invalid) {
+      return {
+        id: "twilio",
+        status: "fail",
+        label: "Contact validity",
+        detail: `${invalid} invalid phone number${invalid === 1 ? "" : "s"} — remove or fix them.`,
+      } as CheckResult;
+    }
+    return {
+      id: "twilio",
+      status: dupes ? "warn" : "pass",
+      label: `${seen.size.toLocaleString()} valid contact${seen.size === 1 ? "" : "s"}`,
+      detail: dupes
+        ? `${dupes} duplicate number${dupes === 1 ? "" : "s"} will be skipped.`
+        : "All phone numbers are E.164-valid.",
+    } as CheckResult;
+  }, [contacts]);
+
+  async function runPreflight() {
+    const from = phones.find((p) => p.id === phoneId)?.number;
+    if (!from) {
+      toast.error("Pick a caller ID first.");
+      return;
+    }
+    setChecking(true);
+    try {
+      const results = await preflightLaunch({ data: { fromNumber: from } });
+      setChecks(results);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Preflight failed");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  const allChecks: CheckResult[] = [contactCheck, ...(checks ?? [])];
+  const hasFail = allChecks.some((c) => c.status === "fail");
+  const canLaunch =
+    checks !== null && !hasFail && contactCheck.status !== "fail";
+
       toast.error("Give me a bit more detail — 1–2 sentences is plenty.");
       return;
     }
