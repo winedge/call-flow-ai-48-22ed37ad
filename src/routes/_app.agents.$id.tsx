@@ -186,7 +186,7 @@ function AgentEditor() {
           </div>
         </Card>
 
-        <Card title="Voice & Language (Coqui XTTS v2)">
+        <Card title="Voice & Language (Kokoro-82M)">
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
               <div className="flex gap-2">
@@ -225,7 +225,7 @@ function AgentEditor() {
             </Field>
           </div>
           <p className="text-[10px] text-zinc-500 font-mono pt-1">
-            Powered by Coqui XTTS v2 via Replicate — non-commercial license (dev/eval only).
+            Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed. Tamil/Telugu coming with the next engine.
           </p>
         </Card>
 
