@@ -19,39 +19,35 @@ import {
 } from "@/components/ui/select";
 import { useDB, type AIAgent } from "@/lib/data-store";
 import {
-  XTTS_LANGUAGES,
-  XTTS_SPEAKERS,
-  synthesizeSpeech,
-} from "@/lib/tts/xtts.functions";
+  KOKORO_LANGUAGES,
+  KOKORO_VOICES,
+} from "@/lib/voice/tts/registry";
+import { synthesizeSpeechKokoro } from "@/lib/voice/tts/kokoro.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
   component: AgentEditor,
 });
 
-// XTTS speaker presets — voice-cloned from public reference WAVs.
-const VOICES = Object.entries(XTTS_SPEAKERS).map(([id, s]) => ({
-  id,
-  name: s.label,
-}));
+// Kokoro speaker presets — Apache-2.0, commercially licensed.
+const VOICES = KOKORO_VOICES.map((v) => ({ id: v.id, name: v.label, language: v.language }));
 
-// XTTS language codes: 2-letter (en, hi, ta, te).
-type XttsLang = keyof typeof XTTS_LANGUAGES;
-const LANGS = Object.entries(XTTS_LANGUAGES) as Array<[XttsLang, string]>;
+type KokoroLang = keyof typeof KOKORO_LANGUAGES;
+const LANGS = Object.entries(KOKORO_LANGUAGES) as Array<[KokoroLang, string]>;
 
-const SAMPLE_LINES: Record<XttsLang, string> = {
+const SAMPLE_LINES: Record<KokoroLang, string> = {
   en: "Hi, this is a quick voice sample so you can hear how I sound.",
   hi: "नमस्ते, यह आपकी आवाज़ का एक छोटा नमूना है।",
-  ta: "வணக்கம், இது ஒரு குறுகிய குரல் மாதிரி.",
-  te: "నమస్తే, ఇది ఒక చిన్న వాయిస్ నమూనా.",
 };
 
 function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
+  const defaultVoice = VOICES[0];
   return {
     org_id: orgId,
     name: "",
-    voice_id: VOICES[0].id,
-    voice_name: VOICES[0].name,
+    tts_engine: "kokoro",
+    voice_id: defaultVoice.id,
+    voice_name: defaultVoice.name,
     language: "en",
     greeting: "",
     system_prompt: "",
@@ -93,24 +89,24 @@ function AgentEditor() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  // ---- Voice preview (XTTS via Replicate) ----
-  const synth = useServerFn(synthesizeSpeech);
+  // ---- Voice preview (Kokoro via Replicate) ----
+  const synth = useServerFn(synthesizeSpeechKokoro);
   const [previewing, setPreviewing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cacheRef = useRef<Map<string, string>>(new Map());
 
   async function previewVoice() {
-    const lang = form.language as XttsLang;
-    if (!(lang in XTTS_LANGUAGES)) {
-      toast.error("Pick English, Hindi, Tamil or Telugu first.");
+    const lang = form.language as KokoroLang;
+    if (!(lang in KOKORO_LANGUAGES)) {
+      toast.error("Pick English or Hindi first.");
       return;
     }
-    if (!(form.voice_id in XTTS_SPEAKERS)) {
+    if (!VOICES.some((v) => v.id === form.voice_id)) {
       toast.error("Pick a voice preset first.");
       return;
     }
     const text = (form.greeting.trim() || SAMPLE_LINES[lang]).slice(0, 400);
-    const cacheKey = `${form.voice_id}|${lang}|${text}`;
+    const cacheKey = `kokoro|${form.voice_id}|${lang}|${text}`;
     const cached = cacheRef.current.get(cacheKey);
     audioRef.current?.pause();
     if (cached) {
@@ -122,11 +118,7 @@ function AgentEditor() {
     setPreviewing(true);
     try {
       const res = await synth({
-        data: {
-          text,
-          language: lang,
-          speaker: form.voice_id as keyof typeof XTTS_SPEAKERS,
-        },
+        data: { text, language: lang, voice: form.voice_id },
       });
       cacheRef.current.set(cacheKey, res.audioUrl);
       const a = new Audio(res.audioUrl);
