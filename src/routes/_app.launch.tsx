@@ -172,7 +172,10 @@ function LaunchWizard() {
   const canLaunch =
     checks !== null && !hasFail && contactCheck.status !== "fail";
 
+  async function handleGenerate() {
+    if (brief.trim().length < 8) {
       toast.error("Give me a bit more detail — 1–2 sentences is plenty.");
+
       return;
     }
     setGenerating(true);
