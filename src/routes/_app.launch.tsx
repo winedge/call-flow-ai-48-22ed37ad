@@ -14,7 +14,11 @@ import {
   Wand2,
   X,
   Plus,
+  ShieldCheck,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
