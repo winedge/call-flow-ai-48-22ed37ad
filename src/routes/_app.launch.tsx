@@ -14,7 +14,11 @@ import {
   Wand2,
   X,
   Plus,
+  ShieldCheck,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
+
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -36,6 +40,11 @@ import {
   generateAgentFromBrief,
   type GeneratedAgent,
 } from "@/lib/agents/generate.functions";
+import {
+  preflightLaunch,
+  type CheckResult,
+} from "@/lib/launch/preflight.functions";
+
 
 export const Route = createFileRoute("/_app/launch")({
   head: () => ({
@@ -102,9 +111,71 @@ function LaunchWizard() {
   const [cpm, setCpm] = useState(10);
   const [launching, setLaunching] = useState(false);
 
+  // Preflight
+  const [checks, setChecks] = useState<CheckResult[] | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  const contactCheck = useMemo<CheckResult>(() => {
+    if (!contacts.length) {
+      return {
+        id: "twilio",
+        status: "fail",
+        label: "Contacts",
+        detail: "No contacts loaded — upload a CSV or add numbers manually.",
+      } as CheckResult;
+    }
+    const seen = new Set<string>();
+    let dupes = 0;
+    let invalid = 0;
+    for (const c of contacts) {
+      if (!PHONE_RE.test(c.phone)) invalid++;
+      else if (seen.has(c.phone)) dupes++;
+      else seen.add(c.phone);
+    }
+    if (invalid) {
+      return {
+        id: "twilio",
+        status: "fail",
+        label: "Contact validity",
+        detail: `${invalid} invalid phone number${invalid === 1 ? "" : "s"} — remove or fix them.`,
+      } as CheckResult;
+    }
+    return {
+      id: "twilio",
+      status: dupes ? "warn" : "pass",
+      label: `${seen.size.toLocaleString()} valid contact${seen.size === 1 ? "" : "s"}`,
+      detail: dupes
+        ? `${dupes} duplicate number${dupes === 1 ? "" : "s"} will be skipped.`
+        : "All phone numbers are E.164-valid.",
+    } as CheckResult;
+  }, [contacts]);
+
+  async function runPreflight() {
+    const from = phones.find((p) => p.id === phoneId)?.number;
+    if (!from) {
+      toast.error("Pick a caller ID first.");
+      return;
+    }
+    setChecking(true);
+    try {
+      const results = await preflightLaunch({ data: { fromNumber: from } });
+      setChecks(results);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Preflight failed");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  const allChecks: CheckResult[] = [contactCheck, ...(checks ?? [])];
+  const hasFail = allChecks.some((c) => c.status === "fail");
+  const canLaunch =
+    checks !== null && !hasFail && contactCheck.status !== "fail";
+
   async function handleGenerate() {
     if (brief.trim().length < 8) {
       toast.error("Give me a bit more detail — 1–2 sentences is plenty.");
+
       return;
     }
     setGenerating(true);
@@ -594,6 +665,13 @@ function LaunchWizard() {
               phone={phones.find((p) => p.id === phoneId)?.number ?? "—"}
             />
 
+            <Checklist
+              items={allChecks}
+              hasRun={checks !== null}
+              checking={checking}
+              onRun={runPreflight}
+            />
+
             <div className="flex items-center gap-2 mt-4">
               <input
                 id="start-now"
@@ -611,7 +689,18 @@ function LaunchWizard() {
               <Button variant="ghost" onClick={() => setStep(3)}>
                 <ArrowLeft className="size-4 mr-2" /> Back
               </Button>
-              <Button onClick={launch} disabled={launching} className="min-w-40">
+              <Button
+                onClick={launch}
+                disabled={launching || !canLaunch}
+                className="min-w-40"
+                title={
+                  !canLaunch
+                    ? checks === null
+                      ? "Run preflight checks first"
+                      : "Resolve failing checks before launching"
+                    : undefined
+                }
+              >
                 {launching ? (
                   <>
                     <Loader2 className="size-4 mr-2 animate-spin" /> Launching…
@@ -624,6 +713,7 @@ function LaunchWizard() {
                 )}
               </Button>
             </Actions>
+
           </StepCard>
         )}
       </div>
@@ -822,3 +912,82 @@ function Summary({
     </div>
   );
 }
+
+function Checklist({
+  items,
+  hasRun,
+  checking,
+  onRun,
+}: {
+  items: CheckResult[];
+  hasRun: boolean;
+  checking: boolean;
+  onRun: () => void;
+}) {
+  const failing = items.filter((i) => i.status === "fail").length;
+  const warning = items.filter((i) => i.status === "warn").length;
+  return (
+    <div className="rounded-md border border-surface-border/60 bg-surface-base/60 mt-4">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border/40">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="size-4 text-brand-primary" />
+          <div>
+            <div className="text-sm font-medium text-zinc-100">
+              Launch preflight
+            </div>
+            <div className="text-xs text-zinc-500">
+              {hasRun
+                ? failing
+                  ? `${failing} issue${failing === 1 ? "" : "s"} to fix${warning ? `, ${warning} warning${warning === 1 ? "" : "s"}` : ""}`
+                  : warning
+                    ? `All clear · ${warning} warning${warning === 1 ? "" : "s"}`
+                    : "All systems go"
+                : "Verify Twilio, bridge, contacts, and credits before dialing."}
+            </div>
+          </div>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onRun}
+          disabled={checking}
+        >
+          {checking ? (
+            <>
+              <Loader2 className="size-3.5 mr-2 animate-spin" /> Checking…
+            </>
+          ) : hasRun ? (
+            "Re-run checks"
+          ) : (
+            "Run checks"
+          )}
+        </Button>
+      </div>
+      <ul className="divide-y divide-surface-border/40">
+        {items.map((c, i) => (
+          <li key={i} className="flex items-start gap-3 px-4 py-2.5 text-sm">
+            <StatusIcon status={c.status} />
+            <div className="min-w-0 flex-1">
+              <div className="text-zinc-200 truncate">{c.label}</div>
+              <div className="text-xs text-zinc-500">{c.detail}</div>
+            </div>
+          </li>
+        ))}
+        {!hasRun && (
+          <li className="px-4 py-2.5 text-xs text-zinc-500 italic">
+            Twilio, bridge, and AI-gateway checks run against your live secrets.
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+}
+
+function StatusIcon({ status }: { status: CheckResult["status"] }) {
+  if (status === "pass")
+    return <Check className="size-4 text-emerald-400 mt-0.5 shrink-0" />;
+  if (status === "warn")
+    return <AlertTriangle className="size-4 text-amber-400 mt-0.5 shrink-0" />;
+  return <XCircle className="size-4 text-red-400 mt-0.5 shrink-0" />;
+}
+
