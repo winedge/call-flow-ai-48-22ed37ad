@@ -21,6 +21,14 @@ const InputSchema = z.object({
   voice: z.string().min(1),
   language: z.string().default("en"),
   engine: z.string().optional(),
+  voice_settings: z
+    .object({
+      stability: z.number().min(0).max(1).optional(),
+      similarity_boost: z.number().min(0).max(1).optional(),
+      style: z.number().min(0).max(1).optional(),
+      use_speaker_boost: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 /** Wrap raw 16-bit little-endian mono PCM in a minimal WAV header. */
