@@ -372,17 +372,23 @@ async function speak(s: Session, text: string) {
     }
 
     const frames = chunk20ms(mu);
-    for (const frame of frames) {
+    // Absolute-time scheduling — setTimeout(20) drifts and causes Twilio to
+    // play frames at the wrong rate (audible as pitch/speed wobble).
+    const startAt = Date.now();
+    for (let i = 0; i < frames.length; i++) {
       if (cancelled || s.closed) break;
+      const frame = frames[i];
       let bin = "";
-      for (let i = 0; i < frame.length; i++) bin += String.fromCharCode(frame[i]);
+      for (let j = 0; j < frame.length; j++) bin += String.fromCharCode(frame[j]);
       const payload = btoa(bin);
       s.twilio.send(JSON.stringify({
         event: "media",
         streamSid: s.streamSid,
         media: { payload },
       }));
-      await new Promise((r) => setTimeout(r, 20));
+      const targetAt = startAt + (i + 1) * 20;
+      const delay = targetAt - Date.now();
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
     }
     if (!cancelled && !s.closed) {
       s.twilio.send(JSON.stringify({
