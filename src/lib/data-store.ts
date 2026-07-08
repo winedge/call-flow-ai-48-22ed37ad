@@ -1,13 +1,22 @@
 /**
- * In-memory data layer for BulkCall AI.
+ * Client-side data cache backed by Supabase.
  *
- * NOTE: Lovable Cloud (Supabase) couldn't be provisioned (workspace credits).
- * This module is intentionally shaped like a typed Supabase client so swapping
- * it for createServerFn + Supabase later is mechanical — same entity names,
- * same shapes, same "org_id" multi-tenancy.
+ * The store hydrates from Supabase on auth (see src/lib/sync.ts) and every
+ * mutation below fires a write-through to the corresponding table. The
+ * zustand persist middleware keeps a per-browser cache for instant paints.
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { supabase } from "@/integrations/supabase/client";
+
+// Fire-and-forget DB write. Errors log to console — UI stays responsive.
+function dbWrite(p: Promise<unknown>) {
+  void p.then((r) => {
+    const err = (r as { error?: { message?: string } })?.error;
+    if (err) console.error("[data-store] write failed:", err);
+  });
+}
+
 
 export type UUID = string;
 export const uid = () =>
