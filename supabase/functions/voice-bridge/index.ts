@@ -162,6 +162,7 @@ type AgentConfig = {
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
   tts_engine?: string;
+  speak_first?: boolean;
   voice_settings?: {
     stability?: number;
     similarity_boost?: number;
@@ -622,7 +623,9 @@ Deno.serve((req) => {
         },
         onError: (e) => console.error("deepgram", e),
       });
-      void speak(session, session.agent.greeting || "Hello, this is your AI assistant.");
+      if (session.agent.speak_first !== false) {
+        void speak(session, session.agent.greeting || "Hello, this is your AI assistant.");
+      }
     } else if (msg.event === "media" && session.dg && msg.media) {
       // base64 μ-law → bytes → forward to Deepgram
       const bin = atob(msg.media.payload);
