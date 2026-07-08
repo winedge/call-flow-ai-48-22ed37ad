@@ -128,7 +128,7 @@ type DataFieldSpec = {
 };
 
 async function extractCallData(
-  admin: Awaited<ReturnType<typeof import("@/integrations/supabase/client.server").then>>["supabaseAdmin"],
+  admin: { from: (table: string) => { select: (cols: string) => { eq: (col: string, val: string) => { maybeSingle: () => Promise<{ data: unknown; error: unknown }> } } } },
   agentId: string,
   transcript: { role: "user" | "assistant"; content: string }[],
 ): Promise<Record<string, string | number | boolean | null> | null> {
