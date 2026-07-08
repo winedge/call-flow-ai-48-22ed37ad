@@ -79,6 +79,14 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         if (existing.status === "in_progress" || existing.status === "ringing") {
           patch.status = "completed";
         }
+        if (Array.isArray(body.transcript) && body.transcript.length > 0) {
+          patch.transcript = body.transcript.filter(
+            (t) =>
+              t &&
+              (t.role === "user" || t.role === "assistant") &&
+              typeof t.content === "string",
+          );
+        }
 
         const { error: updErr } = await supabaseAdmin
           .from("calls")
