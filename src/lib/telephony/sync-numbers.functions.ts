@@ -79,7 +79,7 @@ export const syncTwilioNumbers = createServerFn({ method: "POST" })
 
       const { error } = await supabase
         .from("phone_numbers")
-        .upsert(row, { onConflict: "twilio_sid" });
+        .upsert(row, { onConflict: "user_id,twilio_sid" });
       if (error) {
         return { ok: false, reason: "unknown", message: error.message };
       }
