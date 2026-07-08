@@ -20,6 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDB, selectCurrentSettings, type PhoneNumber, type UUID } from "@/lib/data-store";
 import { persistSettings } from "@/lib/sync";
 import { syncTwilioNumbers } from "@/lib/telephony/sync-numbers.functions";
+import { testElevenLabs } from "@/lib/integrations/elevenlabs-test.functions";
+import { Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/_app/settings")({
