@@ -65,6 +65,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     end_call_conditions: [],
     max_retries: 3,
     retry_delay_minutes: 60,
+    data_fields: [],
   };
 }
 
