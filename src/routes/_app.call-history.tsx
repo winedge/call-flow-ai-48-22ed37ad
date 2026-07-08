@@ -50,6 +50,7 @@ function CallHistory() {
     const toMs = dateTo ? new Date(dateTo).getTime() + 86_400_000 : Infinity;
     return calls
       .filter((c) => statusFilter === "all" || c.status === statusFilter)
+      .filter((c) => endReasonFilter === "all" || (c.end_reason ?? "") === endReasonFilter)
       .filter((c) => campaignFilter === "all" || c.campaign_id === campaignFilter)
       .filter((c) => agentFilter === "all" || c.agent_id === agentFilter)
       .filter((c) => sentimentFilter === "all" || c.sentiment === sentimentFilter)
