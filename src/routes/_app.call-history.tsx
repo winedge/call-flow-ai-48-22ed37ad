@@ -247,6 +247,11 @@ function CallHistory() {
                           c.status === "in_progress" ? "text-brand-primary" : "text-zinc-500"
                         }`}>{c.status}</span>
                       </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[10px] uppercase tracking-wider font-mono ${TONE_CLASS[endReasonTone(c.end_reason)]}`}>
+                          {endReasonLabel(c.end_reason)}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{c.sentiment ?? "—"}</td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-300">{leadScore(c)}</td>
