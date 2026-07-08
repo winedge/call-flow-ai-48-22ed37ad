@@ -1,7 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User as UserIcon } from "lucide-react";
+import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User as UserIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useDB, selectCurrentSettings, type PhoneNumber } from "@/lib/data-store";
+import { useDB, selectCurrentSettings, type PhoneNumber, type UUID } from "@/lib/data-store";
 import { persistSettings } from "@/lib/sync";
+import { syncTwilioNumbers } from "@/lib/telephony/sync-numbers.functions";
+
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — BulkCall AI" }] }),
