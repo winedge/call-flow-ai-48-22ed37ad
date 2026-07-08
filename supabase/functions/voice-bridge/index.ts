@@ -212,12 +212,17 @@ async function requestTransfer(callSid: string, to: string): Promise<void> {
  * Fire-and-forget: tell the app why this call ended so the UI can show it.
  * Never throws — we're mid-cleanup and can't afford to interrupt.
  */
-async function reportCallEvent(callSid: string, endReason: string): Promise<void> {
+async function reportCallEvent(
+  callSid: string,
+  endReason: string,
+  transcript?: { role: "user" | "assistant"; content: string }[],
+): Promise<void> {
   try {
     const body = JSON.stringify({
       call_sid: callSid,
       end_reason: endReason,
       ended_at: new Date().toISOString(),
+      transcript,
     });
     const { ts, sig } = await sign(body);
     await fetch(`${APP_URL}/api/public/bridge/call-event`, {
