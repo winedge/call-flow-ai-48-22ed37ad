@@ -277,6 +277,51 @@ function SettingsPage() {
   );
 }
 
+function SyncTwilioButton({ orgId }: { orgId: UUID }) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const res = await syncTwilioNumbers();
+      if (!res.ok) {
+        toast.error(`Sync failed: ${res.message}`);
+        return;
+      }
+      // Reload phones for the current user from DB into the store
+      const { data } = await supabase
+        .from("phone_numbers")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const rows = (data ?? []).map((r): PhoneNumber => ({
+        id: r.id as UUID,
+        org_id: r.user_id as UUID,
+        number: r.number,
+        twilio_sid: r.twilio_sid,
+        type: (r.type as PhoneNumber["type"]) ?? "local",
+        capabilities: Array.isArray(r.capabilities) ? (r.capabilities as string[]) : ["voice"],
+        inbound_agent_id: (r.inbound_agent_id as UUID | null) ?? null,
+        created_at: r.created_at,
+      }));
+      useDB.setState({ phones: rows });
+      const msg = res.total === 0
+        ? "No numbers found on your Twilio account."
+        : `${res.added} added · ${res.updated} updated · ${res.total} total`;
+      toast.success(msg);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={onClick} disabled={busy}>
+      <RefreshCw className={`size-3.5 mr-1 ${busy ? "animate-spin" : ""}`} />
+      {busy ? "Syncing…" : "Sync from Twilio"}
+    </Button>
+  );
+}
+void orgId; // reserved for future org scoping
+
 function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
   const color = method === "GET" ? "text-emerald-400" : "text-blue-400";
   return (
