@@ -72,6 +72,15 @@ export type Contact = {
   created_at: string;
 };
 
+export type DataFieldType = "text" | "email" | "phone" | "number" | "date" | "boolean";
+
+export type DataField = {
+  key: string;
+  label: string;
+  type: DataFieldType;
+  required: boolean;
+};
+
 export type AIAgent = {
   id: UUID;
   org_id: UUID;
@@ -95,6 +104,7 @@ export type AIAgent = {
   end_call_conditions: string[];
   max_retries: number;
   retry_delay_minutes: number;
+  data_fields: DataField[];
   created_at: string;
 };
 
@@ -166,6 +176,7 @@ export type Call = {
   ai_minutes: number;
   appointment_booked: boolean;
   end_reason: string | null;
+  extracted_data: Record<string, string | number | boolean | null>;
 };
 
 export type Appointment = {
@@ -322,7 +333,8 @@ export const useDB = create<DBState>()(
             end_call_conditions: agent.end_call_conditions,
             max_retries: agent.max_retries,
             retry_delay_minutes: agent.retry_delay_minutes,
-          }),
+            data_fields: agent.data_fields,
+          } as never),
         );
         return agent;
       },

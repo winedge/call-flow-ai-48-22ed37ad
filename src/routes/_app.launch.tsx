@@ -426,6 +426,7 @@ function LaunchWizard() {
         end_call_conditions: gen.end_call_conditions,
         max_retries: 3,
         retry_delay_minutes: 60,
+        data_fields: [],
       });
       const list = addList(listName || `${campaignName} — Contacts`, `Auto-created for ${campaignName}`);
       const rows = contacts.map((c) => ({ ...c, list_id: list.id }));

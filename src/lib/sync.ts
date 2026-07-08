@@ -50,6 +50,7 @@ function toAgent(r: Row): AIAgent {
     end_call_conditions: (r.end_call_conditions as string[]) ?? [],
     max_retries: Number(r.max_retries ?? 3),
     retry_delay_minutes: Number(r.retry_delay_minutes ?? 60),
+    data_fields: Array.isArray(r.data_fields) ? (r.data_fields as AIAgent["data_fields"]) : [],
     created_at: (r.created_at as string) ?? new Date().toISOString(),
   };
 }
@@ -161,6 +162,10 @@ function toCall(r: Row): Call {
     ai_minutes: Number(r.ai_minutes ?? 0),
     appointment_booked: Boolean(r.appointment_booked),
     end_reason: (r.end_reason as string | null) ?? null,
+    extracted_data:
+      r.extracted_data && typeof r.extracted_data === "object" && !Array.isArray(r.extracted_data)
+        ? (r.extracted_data as Call["extracted_data"])
+        : {},
   };
 }
 

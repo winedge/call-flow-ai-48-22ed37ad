@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDB, type AIAgent } from "@/lib/data-store";
+import { useDB, type AIAgent, type DataField, type DataFieldType } from "@/lib/data-store";
 import {
   KOKORO_LANGUAGES,
   KOKORO_VOICES,
@@ -65,6 +65,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     end_call_conditions: [],
     max_retries: 3,
     retry_delay_minutes: 60,
+    data_fields: [],
   };
 }
 
@@ -414,7 +415,16 @@ function AgentEditor() {
           </div>
         </Card>
 
+        <Card title="Data collection">
+          <p className="text-[11px] text-zinc-500 mb-3">
+            Define the fields this agent should collect from callers. After each call ends, the transcript is
+            scanned for these fields and the values are saved on the call record.
+          </p>
+          <DataFieldsEditor value={form.data_fields} onChange={(v) => patch("data_fields", v)} />
+        </Card>
+
         <TestCallCard agentId={id} isNew={isNew} />
+
 
 
 
@@ -511,6 +521,105 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-2">
       <Label className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+const FIELD_TYPES: { value: DataFieldType; label: string }[] = [
+  { value: "text", label: "Text" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "number", label: "Number" },
+  { value: "date", label: "Date" },
+  { value: "boolean", label: "Yes / No" },
+];
+
+function slugKey(label: string) {
+  return label
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || `field_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function DataFieldsEditor({
+  value,
+  onChange,
+}: {
+  value: DataField[];
+  onChange: (v: DataField[]) => void;
+}) {
+  function update(i: number, patch: Partial<DataField>) {
+    onChange(value.map((f, idx) => (idx === i ? { ...f, ...patch } : f)));
+  }
+  function remove(i: number) {
+    onChange(value.filter((_, idx) => idx !== i));
+  }
+  function add() {
+    onChange([
+      ...value,
+      { key: slugKey(`field_${value.length + 1}`), label: "", type: "text", required: false },
+    ]);
+  }
+
+  return (
+    <div className="space-y-3">
+      {value.length === 0 && (
+        <p className="text-[11px] text-zinc-500 italic">
+          No fields yet. Add one — e.g. "Full name", "Email", "Preferred callback time".
+        </p>
+      )}
+      {value.map((f, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-1 sm:grid-cols-[1fr_140px_110px_auto] gap-2 items-center bg-zinc-950/40 ring-1 ring-white/5 rounded-lg p-2"
+        >
+          <Input
+            value={f.label}
+            placeholder="Field label (e.g. Full name)"
+            onChange={(e) => {
+              const label = e.target.value;
+              update(i, { label, key: f.key ? f.key : slugKey(label) });
+            }}
+            onBlur={(e) => {
+              if (!f.key || f.key.startsWith("field_")) {
+                update(i, { key: slugKey(e.target.value) });
+              }
+            }}
+            className="h-8 text-xs"
+          />
+          <Select value={f.type} onValueChange={(v) => update(i, { type: v as DataFieldType })}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {FIELD_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <label className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
+            <input
+              type="checkbox"
+              checked={f.required}
+              onChange={(e) => update(i, { required: e.target.checked })}
+              className="accent-brand-primary"
+            />
+            Required
+          </label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => remove(i)}
+            className="text-red-400 hover:text-red-300"
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={add}>
+        + Add field
+      </Button>
     </div>
   );
 }
