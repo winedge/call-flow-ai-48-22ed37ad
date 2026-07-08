@@ -25,6 +25,7 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
+import logoAsset from "@/assets/logo.png.asset.json";
 import {
   Sheet,
   SheetContent,
