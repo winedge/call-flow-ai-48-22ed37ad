@@ -12,6 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
 import { computeCampaignMetrics, formatEta, formatDuration, callsToCsv, downloadFile, leadScore } from "@/lib/reporting";
+import { endReasonLabel, END_REASON_ORDER, END_REASON_TONE } from "@/lib/voice/call-end-reasons";
+
+const END_REASON_FILL: Record<string, string> = {
+  green: "#22c55e",
+  amber: "#f59e0b",
+  blue: "#38bdf8",
+  red: "#ef4444",
+  gray: "#64748b",
+};
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign — BulkCall AI" }] }),
@@ -62,6 +71,21 @@ function CampaignDetail() {
     { name: "Failed", value: metrics.failed, fill: "#ef4444" },
   ].filter((d) => d.value > 0);
 
+  const endReasonData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of calls) {
+      if (!c.end_reason) continue;
+      map.set(c.end_reason, (map.get(c.end_reason) ?? 0) + 1);
+    }
+    return END_REASON_ORDER
+      .filter((r) => map.has(r))
+      .map((r) => ({
+        name: endReasonLabel(r),
+        value: map.get(r)!,
+        fill: END_REASON_FILL[END_REASON_TONE[r]],
+      }));
+  }, [calls]);
+
   const hourlyData = useMemo(() => {
     const bins: Record<string, { hour: string; calls: number; answered: number }> = {};
     for (const c of calls) {
@@ -81,6 +105,7 @@ function CampaignDetail() {
       started_at: c.started_at,
       phone: c.phone_to,
       status: c.status,
+      end_reason: c.end_reason ?? "",
       outcome: c.outcome,
       duration_sec: c.duration_sec,
       ai_minutes: c.ai_minutes,
@@ -324,6 +349,28 @@ function CampaignDetail() {
               )}
             </div>
 
+            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
+              <h3 className="text-sm font-medium text-zinc-200 mb-4">Why calls ended</h3>
+              {endReasonData.length === 0 ? (
+                <div className="h-56 grid place-items-center text-xs text-zinc-500">
+                  No end reasons recorded yet — they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={endReasonData}>
+                    <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
+                    <XAxis dataKey="name" stroke="#71717a" fontSize={11} interval={0} angle={-15} textAnchor="end" height={60} />
+                    <YAxis stroke="#71717a" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 6, fontSize: 12 }} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {endReasonData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+
             {hourlyData.length > 1 && (
               <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
                 <h3 className="text-sm font-medium text-zinc-200 mb-4">Call volume over time</h3>
@@ -358,6 +405,7 @@ function CampaignDetail() {
                     <th className="px-4 py-3 text-left font-medium">When</th>
                     <th className="px-4 py-3 text-left font-medium">Number</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
+                    <th className="px-4 py-3 text-left font-medium">End reason</th>
                     <th className="px-4 py-3 text-left font-medium">Outcome</th>
                     <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                     <th className="px-4 py-3 text-right font-medium">Duration</th>
@@ -366,7 +414,7 @@ function CampaignDetail() {
                 </thead>
                 <tbody>
                   {calls.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-zinc-500">No calls yet</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-zinc-500">No calls yet</td></tr>
                   ) : (
                     calls.slice(0, 200).map((c) => (
                       <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
@@ -377,6 +425,7 @@ function CampaignDetail() {
                           <Link to="/calls/$id" params={{ id: c.id }} className="hover:text-brand-primary">{c.phone_to}</Link>
                         </td>
                         <td className="px-4 py-3 text-zinc-400">{c.status}</td>
+                        <td className="px-4 py-3 text-zinc-400 text-xs">{endReasonLabel(c.end_reason)}</td>
                         <td className="px-4 py-3 text-zinc-400">{c.outcome || "—"}</td>
                         <td className="px-4 py-3 text-zinc-400">{c.sentiment ?? "—"}</td>
                         <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>

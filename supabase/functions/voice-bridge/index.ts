@@ -207,6 +207,48 @@ async function requestTransfer(callSid: string, to: string): Promise<void> {
   if (!res.ok) throw new Error(`transfer ${res.status}: ${await res.text()}`);
 }
 
+/**
+ * Fire-and-forget: tell the app why this call ended so the UI can show it.
+ * Never throws — we're mid-cleanup and can't afford to interrupt.
+ */
+async function reportCallEvent(callSid: string, endReason: string): Promise<void> {
+  try {
+    const body = JSON.stringify({
+      call_sid: callSid,
+      end_reason: endReason,
+      ended_at: new Date().toISOString(),
+    });
+    const { ts, sig } = await sign(body);
+    await fetch(`${APP_URL}/api/public/bridge/call-event`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Bridge-Timestamp": ts,
+        "X-Bridge-Signature": sig,
+      },
+      body,
+    });
+  } catch (e) {
+    console.error("call-event report failed", e);
+  }
+}
+
+/**
+ * Map internal cleanup reasons to the canonical end_reason vocabulary
+ * used by the UI (see src/lib/voice/call-end-reasons.ts).
+ */
+function classifyEndReason(raw: string): string {
+  const r = raw.toLowerCase();
+  if (r.startsWith("agent ended")) return "agent_ended";
+  if (r.startsWith("transfer")) return "transfer";
+  if (r.startsWith("max duration")) return "max_duration";
+  if (r.startsWith("silence")) return "silence_timeout";
+  if (r === "twilio stop" || r.startsWith("socket closed")) return "caller_hangup";
+  if (r.startsWith("agent config") || r.startsWith("agent not loaded")) return "agent_config_error";
+  if (r.startsWith("socket error")) return "bridge_error";
+  return "other";
+}
+
 async function synthTts(
   text: string,
   voice: string,
@@ -358,8 +400,12 @@ async function handleUserTurn(s: Session, text: string) {
         await new Promise((r) => setTimeout(r, 300));
         try {
           await requestTransfer(s.callSid, to);
-          // Twilio will drop the <Stream> once it fetches new TwiML;
-          // socket.onclose will run cleanup.
+          // Report the transfer up front — Twilio will drop the <Stream>
+          // as soon as it fetches new TwiML, and socket.onclose fires
+          // cleanup with "socket closed" which would otherwise be
+          // (mis)classified as caller_hangup.
+          void reportCallEvent(s.callSid, "transfer");
+          s.callSid = null; // suppress duplicate report from cleanup
         } catch (e) {
           console.error("transfer failed", e);
           await speak(s, "I couldn't complete the transfer. Let me take a message instead.");
@@ -389,6 +435,9 @@ function cleanup(s: Session, reason: string) {
   s.dg?.close();
   for (const t of s.timers) clearTimeout(t);
   s.timers = [];
+  if (s.callSid) {
+    void reportCallEvent(s.callSid, classifyEndReason(reason));
+  }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
 

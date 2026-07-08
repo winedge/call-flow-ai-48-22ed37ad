@@ -12,6 +12,15 @@ import {
 } from "@/components/ui/select";
 import { useDB } from "@/lib/data-store";
 import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
+import { endReasonLabel, endReasonTone, END_REASON_ORDER } from "@/lib/voice/call-end-reasons";
+
+const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = {
+  green: "text-emerald-400",
+  amber: "text-amber-400",
+  blue: "text-sky-400",
+  red: "text-red-400",
+  gray: "text-zinc-500",
+};
 
 export const Route = createFileRoute("/_app/call-history")({
   head: () => ({ meta: [{ title: "Call history — BulkCall AI" }] }),
@@ -26,6 +35,7 @@ function CallHistory() {
   const contacts = useDB((s) => s.contacts);
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [endReasonFilter, setEndReasonFilter] = useState("all");
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
   const [sentimentFilter, setSentimentFilter] = useState("all");
@@ -40,6 +50,7 @@ function CallHistory() {
     const toMs = dateTo ? new Date(dateTo).getTime() + 86_400_000 : Infinity;
     return calls
       .filter((c) => statusFilter === "all" || c.status === statusFilter)
+      .filter((c) => endReasonFilter === "all" || (c.end_reason ?? "") === endReasonFilter)
       .filter((c) => campaignFilter === "all" || c.campaign_id === campaignFilter)
       .filter((c) => agentFilter === "all" || c.agent_id === agentFilter)
       .filter((c) => sentimentFilter === "all" || c.sentiment === sentimentFilter)
@@ -65,7 +76,7 @@ function CallHistory() {
         );
       })
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
-  }, [calls, statusFilter, campaignFilter, agentFilter, sentimentFilter, leadFilter, dateFrom, dateTo, search, contacts]);
+  }, [calls, statusFilter, endReasonFilter, campaignFilter, agentFilter, sentimentFilter, leadFilter, dateFrom, dateTo, search, contacts]);
 
   const orgCampaigns = campaigns.filter((c) => c.org_id === orgId);
   const orgAgents = agents.filter((a) => a.org_id === orgId);
@@ -83,6 +94,7 @@ function CallHistory() {
         campaign: camp?.name ?? "",
         agent: agent?.name ?? "",
         status: c.status,
+        end_reason: c.end_reason ?? "",
         outcome: c.outcome,
         sentiment: c.sentiment ?? "",
         duration_sec: c.duration_sec,
@@ -98,6 +110,7 @@ function CallHistory() {
 
   function resetFilters() {
     setStatusFilter("all");
+    setEndReasonFilter("all");
     setCampaignFilter("all");
     setAgentFilter("all");
     setSentimentFilter("all");
@@ -120,7 +133,7 @@ function CallHistory() {
       />
 
       <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-4 mb-4 space-y-3">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
@@ -131,6 +144,15 @@ function CallHistory() {
               <SelectItem value="busy">Busy</SelectItem>
               <SelectItem value="voicemail">Voicemail</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={endReasonFilter} onValueChange={setEndReasonFilter}>
+            <SelectTrigger><SelectValue placeholder="End reason" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All end reasons</SelectItem>
+              {END_REASON_ORDER.map((r) => (
+                <SelectItem key={r} value={r}>{endReasonLabel(r)}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={campaignFilter} onValueChange={setCampaignFilter}>
@@ -188,6 +210,7 @@ function CallHistory() {
                 <th className="px-4 py-3 text-left font-medium">Campaign</th>
                 <th className="px-4 py-3 text-left font-medium">Agent</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">End reason</th>
                 <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                 <th className="px-4 py-3 text-right font-medium">Duration</th>
                 <th className="px-4 py-3 text-right font-medium">Score</th>
@@ -196,7 +219,7 @@ function CallHistory() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
               ) : (
                 filtered.slice(0, 200).map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
@@ -223,6 +246,11 @@ function CallHistory() {
                           c.status === "voicemail" ? "text-amber-400" :
                           c.status === "in_progress" ? "text-brand-primary" : "text-zinc-500"
                         }`}>{c.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[10px] uppercase tracking-wider font-mono ${TONE_CLASS[endReasonTone(c.end_reason)]}`}>
+                          {endReasonLabel(c.end_reason)}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{c.sentiment ?? "—"}</td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>

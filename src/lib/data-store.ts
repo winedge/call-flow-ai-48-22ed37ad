@@ -163,6 +163,7 @@ export type Call = {
   cost_cents: number;
   ai_minutes: number;
   appointment_booked: boolean;
+  end_reason: string | null;
 };
 
 export type Appointment = {

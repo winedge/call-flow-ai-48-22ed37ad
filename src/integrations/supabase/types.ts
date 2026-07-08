@@ -185,6 +185,7 @@ export type Database = {
           cost_cents: number
           created_at: string
           duration_sec: number
+          end_reason: string | null
           ended_at: string | null
           id: string
           outcome: string
@@ -209,6 +210,7 @@ export type Database = {
           cost_cents?: number
           created_at?: string
           duration_sec?: number
+          end_reason?: string | null
           ended_at?: string | null
           id?: string
           outcome?: string
@@ -233,6 +235,7 @@ export type Database = {
           cost_cents?: number
           created_at?: string
           duration_sec?: number
+          end_reason?: string | null
           ended_at?: string | null
           id?: string
           outcome?: string

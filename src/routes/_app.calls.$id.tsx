@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useDB } from "@/lib/data-store";
 import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
+import { endReasonLabel } from "@/lib/voice/call-end-reasons";
 
 export const Route = createFileRoute("/_app/calls/$id")({
   head: () => ({ meta: [{ title: "Call — BulkCall AI" }] }),
@@ -115,8 +116,9 @@ function CallDetail() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         <StatTile label="Status" value={call.status} />
+        <StatTile label="End reason" value={endReasonLabel(call.end_reason)} />
         <StatTile label="Duration" value={formatDuration(call.duration_sec)} />
         <StatTile label="Sentiment" value={call.sentiment ?? "—"} />
         <StatTile label="Lead score" value={score} accent={score >= 70} />
