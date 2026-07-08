@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useDB } from "@/lib/data-store";
 import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
+import { endReasonLabel } from "@/lib/voice/call-end-reasons";
 
 export const Route = createFileRoute("/_app/calls/$id")({
   head: () => ({ meta: [{ title: "Call — BulkCall AI" }] }),
