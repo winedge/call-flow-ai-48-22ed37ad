@@ -161,6 +161,7 @@ type AgentConfig = {
   voicemail_message?: string;
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
+  tts_engine?: string;
 };
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
