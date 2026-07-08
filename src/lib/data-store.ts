@@ -530,7 +530,7 @@ export const useDB = create<DBState>()(
         delete dbPatch.has_openai;
         if (uid_) {
           dbWrite(
-            supabase.from("org_settings").upsert({ user_id: uid_, ...dbPatch }),
+            supabase.from("org_settings").upsert({ user_id: uid_, ...dbPatch } as never),
           );
         }
       },
