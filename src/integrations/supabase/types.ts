@@ -469,6 +469,7 @@ export type Database = {
           capabilities: Json
           created_at: string
           id: string
+          inbound_agent_id: string | null
           number: string
           twilio_sid: string
           type: string
@@ -479,6 +480,7 @@ export type Database = {
           capabilities?: Json
           created_at?: string
           id?: string
+          inbound_agent_id?: string | null
           number: string
           twilio_sid?: string
           type?: string
@@ -489,13 +491,22 @@ export type Database = {
           capabilities?: Json
           created_at?: string
           id?: string
+          inbound_agent_id?: string | null
           number?: string
           twilio_sid?: string
           type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "phone_numbers_inbound_agent_id_fkey"
+            columns: ["inbound_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

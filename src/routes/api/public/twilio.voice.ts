@@ -2,9 +2,15 @@
  * Twilio Voice URL — returns TwiML that hands the call's audio to the
  * voice-bridge service via <Connect><Stream>.
  *
- * Twilio POSTs `application/x-www-form-urlencoded` with CallSid, From, To.
- * We pass the agent_id + call SID to the bridge as query params so it can
- * fetch the agent config and open a Deepgram stream tagged by call.
+ * Handles BOTH:
+ *   • Outbound calls we originated — Twilio invokes this URL with
+ *     `?agent_id=…` (we pass it in initiateCall). The calls row already
+ *     exists.
+ *   • Inbound calls to your Twilio number — Twilio invokes this URL with
+ *     no query params. We look up the phone_numbers row for the `To`
+ *     number and use its `inbound_agent_id` (falling back to the user's
+ *     first agent). A calls row is created on the fly so the same
+ *     status/end-reason webhooks persist end-to-end.
  */
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -18,25 +24,81 @@ function escapeXml(s: string): string {
   }[c]!));
 }
 
+function sayAndHangup(msg: string): Response {
+  const twiml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<Response><Say voice="alice">${escapeXml(msg)}</Say><Hangup/></Response>`;
+  return new Response(twiml, {
+    status: 200,
+    headers: { "Content-Type": "text/xml" },
+  });
+}
+
 export const Route = createFileRoute("/api/public/twilio/voice")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const url = new URL(request.url);
-        const agentId = url.searchParams.get("agent_id") ?? "";
+        let agentId = url.searchParams.get("agent_id") ?? "";
         const raw = await request.text().catch(() => "");
         const form = new URLSearchParams(raw);
         const callSid = form.get("CallSid") ?? "";
+        const fromNumber = form.get("From") ?? "";
+        const toNumber = form.get("To") ?? "";
+        const direction = form.get("Direction") ?? "";
+        const isInbound =
+          !agentId && (direction === "inbound" || direction === "");
 
         const bridge = process.env.BRIDGE_URL;
         if (!bridge) {
-          const twiml =
-            `<?xml version="1.0" encoding="UTF-8"?>` +
-            `<Response><Say voice="alice">The voice bridge is not configured. Goodbye.</Say><Hangup/></Response>`;
-          return new Response(twiml, {
-            status: 200,
-            headers: { "Content-Type": "text/xml" },
-          });
+          return sayAndHangup("The voice bridge is not configured. Goodbye.");
+        }
+
+        // Inbound routing: look up phone_numbers by "To" number to find the
+        // owner + configured inbound agent, then insert a persisted call
+        // row so status webhooks + end-reason updates land on it.
+        if (isInbound) {
+          if (!toNumber) return sayAndHangup("Missing destination number.");
+          const { supabaseAdmin } = await import(
+            "@/integrations/supabase/client.server"
+          );
+          const { data: phone } = await supabaseAdmin
+            .from("phone_numbers")
+            .select("user_id, inbound_agent_id")
+            .eq("number", toNumber)
+            .maybeSingle<{ user_id: string; inbound_agent_id: string | null }>();
+          if (!phone) {
+            return sayAndHangup(
+              "This number is not configured. Goodbye.",
+            );
+          }
+          agentId = phone.inbound_agent_id ?? "";
+          if (!agentId) {
+            // Fallback: first agent owned by this user
+            const { data: fallback } = await supabaseAdmin
+              .from("agents")
+              .select("id")
+              .eq("user_id", phone.user_id)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle<{ id: string }>();
+            agentId = fallback?.id ?? "";
+          }
+          if (!agentId) {
+            return sayAndHangup(
+              "No AI agent is assigned to this number. Goodbye.",
+            );
+          }
+          // Persist a call row so twilio status callbacks + bridge events
+          // can update it by twilio_call_sid.
+          await supabaseAdmin.from("calls").insert({
+            user_id: phone.user_id,
+            agent_id: agentId,
+            phone_from: fromNumber,
+            phone_to: toNumber,
+            twilio_call_sid: callSid,
+            status: "in_progress",
+          } as never);
         }
 
         // Media Streams URL: wss with query params on the configured bridge
