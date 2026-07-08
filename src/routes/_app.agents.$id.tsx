@@ -23,6 +23,7 @@ import {
   KOKORO_VOICES,
 } from "@/lib/voice/tts/registry";
 import { synthesizeSpeechKokoro } from "@/lib/voice/tts/kokoro.functions";
+import { listElevenLabsVoices, previewElevenLabsVoice, type ElevenLabsVoice } from "@/lib/voice/tts/elevenlabs.functions";
 import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
@@ -90,13 +91,68 @@ function AgentEditor() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  // ---- Voice preview (Kokoro via Replicate) ----
-  const synth = useServerFn(synthesizeSpeechKokoro);
+  // ---- Voice preview ----
+  const synthKokoro = useServerFn(synthesizeSpeechKokoro);
+  const loadVoices = useServerFn(listElevenLabsVoices);
+  const previewEleven = useServerFn(previewElevenLabsVoice);
   const [previewing, setPreviewing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cacheRef = useRef<Map<string, string>>(new Map());
 
+  const [elVoices, setElVoices] = useState<ElevenLabsVoice[] | null>(null);
+  const [elLoading, setElLoading] = useState(false);
+  const [elError, setElError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (form.tts_engine !== "elevenlabs" || elVoices !== null || elLoading) return;
+    setElLoading(true);
+    setElError(null);
+    loadVoices()
+      .then((res) => {
+        if (res.ok) setElVoices(res.voices);
+        else setElError(res.message);
+      })
+      .catch((e) => setElError(e instanceof Error ? e.message : "Failed to load voices"))
+      .finally(() => setElLoading(false));
+  }, [form.tts_engine, elVoices, elLoading, loadVoices]);
+
   async function previewVoice() {
+    if (form.tts_engine === "elevenlabs") {
+      if (!form.voice_id) {
+        toast.error("Pick a voice first.");
+        return;
+      }
+      const text = (form.greeting.trim() || "Hi, this is a quick voice sample so you can hear how I sound.").slice(0, 400);
+      const cacheKey = `el|${form.voice_id}|${text}`;
+      const cached = cacheRef.current.get(cacheKey);
+      audioRef.current?.pause();
+      if (cached) {
+        const a = new Audio(cached);
+        audioRef.current = a;
+        a.play().catch(() => toast.error("Browser blocked audio playback."));
+        return;
+      }
+      setPreviewing(true);
+      try {
+        const res = await previewEleven({ data: { voiceId: form.voice_id, text } });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        const url = `data:${res.mimeType};base64,${res.audioBase64}`;
+        cacheRef.current.set(cacheKey, url);
+        const a = new Audio(url);
+        audioRef.current = a;
+        await a.play();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Voice preview failed.");
+      } finally {
+        setPreviewing(false);
+      }
+      return;
+    }
+
+    // Kokoro path
     const lang = form.language as KokoroLang;
     if (!(lang in KOKORO_LANGUAGES)) {
       toast.error("Pick English or Hindi first.");
@@ -118,7 +174,7 @@ function AgentEditor() {
     }
     setPreviewing(true);
     try {
-      const res = await synth({
+      const res = await synthKokoro({
         data: { text, language: lang, voice: form.voice_id },
       });
       cacheRef.current.set(cacheKey, res.audioUrl);
@@ -187,27 +243,73 @@ function AgentEditor() {
           </div>
         </Card>
 
-        <Card title="Voice & Language (Kokoro-82M)">
+        <Card title="Voice & Language">
+          <Field label="TTS engine">
+            <Select
+              value={form.tts_engine}
+              onValueChange={(v) => {
+                const engine = v as AIAgent["tts_engine"];
+                if (engine === "kokoro") {
+                  const dv = VOICES[0];
+                  setForm((f) => ({ ...f, tts_engine: engine, voice_id: dv.id, voice_name: dv.name }));
+                } else {
+                  setForm((f) => ({ ...f, tts_engine: engine, voice_id: "", voice_name: "" }));
+                }
+              }}
+            >
+              <SelectTrigger className="sm:w-64"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="kokoro">Kokoro-82M (Replicate)</SelectItem>
+                <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
               <div className="flex gap-2">
-                <Select
-                  value={form.voice_id}
-                  onValueChange={(v) => {
-                    const voice = VOICES.find((x) => x.id === v)!;
-                    setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
-                  }}
-                >
-                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {form.tts_engine === "elevenlabs" ? (
+                  <Select
+                    value={form.voice_id}
+                    onValueChange={(v) => {
+                      const voice = elVoices?.find((x) => x.voice_id === v);
+                      if (!voice) return;
+                      setForm((f) => ({ ...f, voice_id: voice.voice_id, voice_name: voice.name }));
+                    }}
+                    disabled={elLoading || !!elError}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={elLoading ? "Loading voices…" : elError ? "Error loading voices" : "Select a voice"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(elVoices ?? []).map((v) => (
+                        <SelectItem key={v.voice_id} value={v.voice_id}>
+                          {v.name}
+                          {v.labels?.accent ? ` · ${v.labels.accent}` : ""}
+                          {v.category ? ` · ${v.category}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select
+                    value={form.voice_id}
+                    onValueChange={(v) => {
+                      const voice = VOICES.find((x) => x.id === v)!;
+                      setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
+                    }}
+                  >
+                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={previewing}
+                  disabled={previewing || !form.voice_id}
                   onClick={previewVoice}
                   title="Play a preview using the greeting (or a sample line)"
                 >
@@ -225,10 +327,19 @@ function AgentEditor() {
               </Select>
             </Field>
           </div>
-          <p className="text-[10px] text-zinc-500 font-mono pt-1">
-            Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed. Tamil/Telugu coming with the next engine.
-          </p>
+          {form.tts_engine === "elevenlabs" ? (
+            <p className="text-[10px] text-zinc-500 font-mono pt-1">
+              {elError
+                ? `ElevenLabs: ${elError}`
+                : `ElevenLabs · ${elVoices?.length ?? 0} voices loaded from your account. Uses eleven_multilingual_v2.`}
+            </p>
+          ) : (
+            <p className="text-[10px] text-zinc-500 font-mono pt-1">
+              Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed.
+            </p>
+          )}
         </Card>
+
 
         <Card title="Prompting (OpenAI GPT)">
           <Field label="Greeting (spoken first)">

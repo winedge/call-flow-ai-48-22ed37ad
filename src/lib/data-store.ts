@@ -77,7 +77,7 @@ export type AIAgent = {
   org_id: UUID;
   name: string;
   /** TTS engine key — resolved via src/lib/voice/tts/registry.ts. */
-  tts_engine: "kokoro";
+  tts_engine: "kokoro" | "elevenlabs";
   voice_id: string;
   voice_name: string;
   language: string;
@@ -304,6 +304,7 @@ export const useDB = create<DBState>()(
             id: agent.id,
             user_id: agent.org_id,
             name: agent.name,
+            tts_engine: agent.tts_engine,
             voice_id: agent.voice_id,
             voice_name: agent.voice_name,
             language: agent.language,
@@ -333,7 +334,6 @@ export const useDB = create<DBState>()(
         delete dbPatch.id;
         delete dbPatch.org_id;
         delete dbPatch.created_at;
-        delete dbPatch.tts_engine;
         dbWrite(supabase.from("agents").update(dbPatch as never).eq("id", id));
       },
       deleteAgent: (id) => {
