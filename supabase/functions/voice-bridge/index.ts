@@ -567,6 +567,17 @@ Deno.serve((req) => {
         ttsEngine: a.tts_engine,
         voiceId: a.voice_id,
       });
+      // Prefetch the greeting audio in parallel with the Twilio start
+      // handshake — by the time speak() runs, TTS is already done.
+      if (a.speak_first !== false) {
+        const greeting = a.greeting || "Hello, this is your AI assistant.";
+        session.greetingAudio = synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
+          .catch((e) => {
+            console.error("greeting prefetch failed", e);
+            session.greetingAudio = null;
+            throw e;
+          });
+      }
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
       session.timers.push(
