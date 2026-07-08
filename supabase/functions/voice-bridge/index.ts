@@ -290,7 +290,9 @@ type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
 
 function openDeepgram(cb: {
   onInterim: (t: string) => void;
-  onFinal: (t: string) => void;
+  onFinal: (t: string, speechFinal: boolean) => void;
+  onUtteranceEnd: () => void;
+  onSpeechStart: () => void;
   onError: (e: unknown) => void;
 }): DgHandle {
   const url = new URL("wss://api.deepgram.com/v1/listen");
@@ -300,7 +302,14 @@ function openDeepgram(cb: {
   url.searchParams.set("model", "nova-2-phonecall");
   url.searchParams.set("smart_format", "true");
   url.searchParams.set("interim_results", "true");
-  url.searchParams.set("endpointing", "100");
+  // Endpointing: silence (ms) before Deepgram commits a `speech_final`.
+  // 300ms is tight but reliable on phone audio; the utterance_end_ms
+  // watchdog below covers cases where the model never marks speech_final.
+  url.searchParams.set("endpointing", "300");
+  // VAD events give us a hard UtteranceEnd signal — used to flush any
+  // buffered finals when Deepgram doesn't emit speech_final in time.
+  url.searchParams.set("vad_events", "true");
+  url.searchParams.set("utterance_end_ms", "1000");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
@@ -311,8 +320,12 @@ function openDeepgram(cb: {
       if (msg.type === "Results") {
         const t = msg.channel?.alternatives?.[0]?.transcript ?? "";
         if (!t) return;
-        if (msg.is_final || msg.speech_final) cb.onFinal(t);
+        if (msg.is_final || msg.speech_final) cb.onFinal(t, !!msg.speech_final);
         else cb.onInterim(t);
+      } else if (msg.type === "UtteranceEnd") {
+        cb.onUtteranceEnd();
+      } else if (msg.type === "SpeechStarted") {
+        cb.onSpeechStart();
       }
     } catch (e) {
       cb.onError(e);
@@ -661,13 +674,34 @@ Deno.serve((req) => {
       }
       const startListening = () => {
         if (session.dg || session.closed) return;
+        // Aggregate final fragments across an utterance so we call the LLM
+        // once per turn (Deepgram can emit several is_final chunks before
+        // the caller actually stops). Commit on speech_final OR a
+        // UtteranceEnd VAD event — whichever fires first.
+        let pending = "";
+        const commit = () => {
+          const text = pending.trim();
+          pending = "";
+          if (text) void handleUserTurn(session, text);
+        };
         session.dg = openDeepgram({
+          onSpeechStart: () => {
+            // Hard barge-in: caller began speaking. Kill any in-flight
+            // playback immediately so the agent yields the floor.
+            if (session.speaking) session.cancelSpeech();
+          },
           onInterim: (t) => {
+            // Soft barge-in guard: only cancel once we've heard real words,
+            // not a stray cough / crosstalk detected by the VAD.
             if (session.speaking && t.trim().length > 2) session.cancelSpeech();
           },
-          onFinal: (t) => {
-            const text = t.trim();
-            if (text) void handleUserTurn(session, text);
+          onFinal: (t, speechFinal) => {
+            pending = (pending ? pending + " " : "") + t.trim();
+            if (speechFinal) commit();
+          },
+          onUtteranceEnd: () => {
+            // Deepgram's silence watchdog fired — flush anything buffered.
+            if (pending) commit();
           },
           onError: (e) => console.error("deepgram", e),
         });
