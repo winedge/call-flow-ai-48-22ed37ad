@@ -15,6 +15,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg } from "@/lib/data-store";
+import logoAsset from "@/assets/logo.png.asset.json";
 
 type NavItem = {
   to: string;
