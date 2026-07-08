@@ -333,7 +333,8 @@ export const useDB = create<DBState>()(
             end_call_conditions: agent.end_call_conditions,
             max_retries: agent.max_retries,
             retry_delay_minutes: agent.retry_delay_minutes,
-          }),
+            data_fields: agent.data_fields,
+          } as never),
         );
         return agent;
       },
