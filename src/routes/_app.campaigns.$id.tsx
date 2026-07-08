@@ -404,6 +404,7 @@ function CampaignDetail() {
                     <th className="px-4 py-3 text-left font-medium">When</th>
                     <th className="px-4 py-3 text-left font-medium">Number</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
+                    <th className="px-4 py-3 text-left font-medium">End reason</th>
                     <th className="px-4 py-3 text-left font-medium">Outcome</th>
                     <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                     <th className="px-4 py-3 text-right font-medium">Duration</th>
@@ -412,7 +413,7 @@ function CampaignDetail() {
                 </thead>
                 <tbody>
                   {calls.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-xs text-zinc-500">No calls yet</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-zinc-500">No calls yet</td></tr>
                   ) : (
                     calls.slice(0, 200).map((c) => (
                       <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
@@ -423,6 +424,7 @@ function CampaignDetail() {
                           <Link to="/calls/$id" params={{ id: c.id }} className="hover:text-brand-primary">{c.phone_to}</Link>
                         </td>
                         <td className="px-4 py-3 text-zinc-400">{c.status}</td>
+                        <td className="px-4 py-3 text-zinc-400 text-xs">{endReasonLabel(c.end_reason)}</td>
                         <td className="px-4 py-3 text-zinc-400">{c.outcome || "—"}</td>
                         <td className="px-4 py-3 text-zinc-400">{c.sentiment ?? "—"}</td>
                         <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
