@@ -645,7 +645,9 @@ Deno.serve((req) => {
         });
       };
       if (session.agent.speak_first !== false) {
-        void speak(session, session.agent.greeting || "Hello, this is your AI assistant.").finally(startListening);
+        const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
+        session.history.push({ role: "assistant", content: greeting });
+        void speak(session, greeting).finally(startListening);
       } else {
         startListening();
       }
