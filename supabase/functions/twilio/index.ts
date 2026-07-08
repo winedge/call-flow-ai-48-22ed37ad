@@ -300,7 +300,7 @@ function openDeepgram(cb: {
   url.searchParams.set("model", "nova-2-phonecall");
   url.searchParams.set("smart_format", "true");
   url.searchParams.set("interim_results", "true");
-  url.searchParams.set("endpointing", "150");
+  url.searchParams.set("endpointing", "100");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
@@ -352,12 +352,28 @@ type Session = {
   closed: boolean;
   lastUserAudioAt: number;
   timers: ReturnType<typeof setTimeout>[];
+  playbackMark: string | null;
+  finishPlayback: () => void;
 };
 
 async function speak(s: Session, text: string) {
   if (!s.agent || !s.streamSid || s.closed) return;
   let cancelled = false;
-  s.cancelSpeech = () => (cancelled = true);
+  const markName = `utterance-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let finishPlayback = () => {};
+  const playbackDone = new Promise<void>((resolve) => {
+    finishPlayback = resolve;
+  });
+  s.playbackMark = markName;
+  s.finishPlayback = finishPlayback;
+  s.cancelSpeech = () => {
+    if (cancelled) return;
+    cancelled = true;
+    try {
+      s.twilio.send(JSON.stringify({ event: "clear", streamSid: s.streamSid }));
+    } catch { /* ignore */ }
+    finishPlayback();
+  };
   s.speaking = true;
   try {
     const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
@@ -380,9 +396,6 @@ async function speak(s: Session, text: string) {
     }
 
     const frames = chunk20ms(mu);
-    // Absolute-time scheduling — setTimeout(20) drifts and causes Twilio to
-    // play frames at the wrong rate (audible as pitch/speed wobble).
-    const startAt = Date.now();
     for (let i = 0; i < frames.length; i++) {
       if (cancelled || s.closed) break;
       const frame = frames[i];
@@ -394,20 +407,24 @@ async function speak(s: Session, text: string) {
         streamSid: s.streamSid,
         media: { payload },
       }));
-      const targetAt = startAt + (i + 1) * 20;
-      const delay = targetAt - Date.now();
-      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      if (i % 50 === 49) await Promise.resolve();
     }
     if (!cancelled && !s.closed) {
       s.twilio.send(JSON.stringify({
         event: "mark",
         streamSid: s.streamSid,
-        mark: { name: "utterance-end" },
+        mark: { name: markName },
       }));
+      const fallback = setTimeout(finishPlayback, Math.max(500, frames.length * 20 + 750));
+      await playbackDone.finally(() => clearTimeout(fallback));
     }
   } catch (e) {
     console.error("tts failed", e);
   } finally {
+    if (s.playbackMark === markName) {
+      s.playbackMark = null;
+      s.finishPlayback = () => {};
+    }
     s.speaking = false;
     s.cancelSpeech = () => {};
   }
@@ -532,6 +549,8 @@ Deno.serve((req) => {
     closed: false,
     lastUserAudioAt: Date.now(),
     timers: [],
+    playbackMark: null,
+    finishPlayback: () => {},
   };
 
   const loadAgent = (agentId: string) => fetchAgent(agentId)
@@ -613,18 +632,23 @@ Deno.serve((req) => {
         cleanup(session, "agent not loaded");
         return;
       }
-      session.dg = openDeepgram({
-        onInterim: (t) => {
-          if (session.speaking && t.trim().length > 2) session.cancelSpeech();
-        },
-        onFinal: (t) => {
-          const text = t.trim();
-          if (text) void handleUserTurn(session, text);
-        },
-        onError: (e) => console.error("deepgram", e),
-      });
+      const startListening = () => {
+        if (session.dg || session.closed) return;
+        session.dg = openDeepgram({
+          onInterim: (t) => {
+            if (session.speaking && t.trim().length > 2) session.cancelSpeech();
+          },
+          onFinal: (t) => {
+            const text = t.trim();
+            if (text) void handleUserTurn(session, text);
+          },
+          onError: (e) => console.error("deepgram", e),
+        });
+      };
       if (session.agent.speak_first !== false) {
-        void speak(session, session.agent.greeting || "Hello, this is your AI assistant.");
+        void speak(session, session.agent.greeting || "Hello, this is your AI assistant.").finally(startListening);
+      } else {
+        startListening();
       }
     } else if (msg.event === "media" && session.dg && msg.media) {
       // base64 μ-law → bytes → forward to Deepgram
@@ -633,6 +657,9 @@ Deno.serve((req) => {
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       session.dg.send(bytes);
       session.lastUserAudioAt = Date.now();
+    } else if (msg.event === "mark") {
+      const name = (msg as { mark?: { name?: string } }).mark?.name;
+      if (name && name === session.playbackMark) session.finishPlayback();
     } else if (msg.event === "stop") {
       console.log("bridge twilio stop", { callSid: session.callSid, streamSid: session.streamSid });
       cleanup(session, "twilio stop");
