@@ -400,8 +400,12 @@ async function handleUserTurn(s: Session, text: string) {
         await new Promise((r) => setTimeout(r, 300));
         try {
           await requestTransfer(s.callSid, to);
-          // Twilio will drop the <Stream> once it fetches new TwiML;
-          // socket.onclose will run cleanup.
+          // Report the transfer up front — Twilio will drop the <Stream>
+          // as soon as it fetches new TwiML, and socket.onclose fires
+          // cleanup with "socket closed" which would otherwise be
+          // (mis)classified as caller_hangup.
+          void reportCallEvent(s.callSid, "transfer");
+          s.callSid = null; // suppress duplicate report from cleanup
         } catch (e) {
           console.error("transfer failed", e);
           await speak(s, "I couldn't complete the transfer. Let me take a message instead.");
@@ -431,6 +435,9 @@ function cleanup(s: Session, reason: string) {
   s.dg?.close();
   for (const t of s.timers) clearTimeout(t);
   s.timers = [];
+  if (s.callSid) {
+    void reportCallEvent(s.callSid, classifyEndReason(reason));
+  }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
 
