@@ -72,6 +72,18 @@ function triggerForStatus(status: string): string | null {
   return null;
 }
 
+// Map Twilio's terminal CallStatus / internal status to a canonical end_reason.
+// See src/lib/voice/call-end-reasons.ts for the full set.
+function twilioEndReason(rawStatus: string | undefined, mapped: string): string | null {
+  if (rawStatus === "canceled") return "canceled";
+  if (mapped === "no_answer") return "no_answer";
+  if (mapped === "busy") return "busy";
+  if (mapped === "failed") return "carrier_failed";
+  if (mapped === "completed") return "caller_hangup"; // fallback if bridge never wrote one
+  return null;
+}
+
+
 export const Route = createFileRoute("/api/public/webhooks/twilio")({
   server: {
     handlers: {
