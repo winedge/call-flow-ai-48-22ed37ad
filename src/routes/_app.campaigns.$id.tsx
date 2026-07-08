@@ -105,6 +105,7 @@ function CampaignDetail() {
       started_at: c.started_at,
       phone: c.phone_to,
       status: c.status,
+      end_reason: c.end_reason ?? "",
       outcome: c.outcome,
       duration_sec: c.duration_sec,
       ai_minutes: c.ai_minutes,
