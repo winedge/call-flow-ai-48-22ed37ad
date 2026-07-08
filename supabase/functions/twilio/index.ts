@@ -354,15 +354,26 @@ async function speak(s: Session, text: string) {
   try {
     const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine);
     if (cancelled || s.closed) return;
-    const buf = await (await fetch(audio_url)).arrayBuffer();
-    if (cancelled || s.closed) return;
-    const { sampleRate, samples } = parseWav(buf);
-    const pcm8k = downsampleTo8k(samples, sampleRate);
-    const mu = pcm8kToMuLaw(pcm8k);
+
+    // Fast path: ElevenLabs returns raw μ-law 8kHz as data URI —
+    // no fetch, no WAV parse, no downsample, no encode. Twilio's wire format.
+    let mu: Uint8Array;
+    if (audio_url.startsWith("data:audio/mulaw;base64,")) {
+      const b64 = audio_url.slice("data:audio/mulaw;base64,".length);
+      const bin = atob(b64);
+      mu = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) mu[i] = bin.charCodeAt(i);
+    } else {
+      const buf = await (await fetch(audio_url)).arrayBuffer();
+      if (cancelled || s.closed) return;
+      const { sampleRate, samples } = parseWav(buf);
+      const pcm8k = downsampleTo8k(samples, sampleRate);
+      mu = pcm8kToMuLaw(pcm8k);
+    }
+
     const frames = chunk20ms(mu);
     for (const frame of frames) {
       if (cancelled || s.closed) break;
-      // base64 encode without spreading huge arrays
       let bin = "";
       for (let i = 0; i < frame.length; i++) bin += String.fromCharCode(frame[i]);
       const payload = btoa(bin);
@@ -387,6 +398,7 @@ async function speak(s: Session, text: string) {
     s.cancelSpeech = () => {};
   }
 }
+
 
 async function handleUserTurn(s: Session, text: string) {
   if (!s.agent || s.turnLock) {
