@@ -210,6 +210,7 @@ function CallHistory() {
                 <th className="px-4 py-3 text-left font-medium">Campaign</th>
                 <th className="px-4 py-3 text-left font-medium">Agent</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">End reason</th>
                 <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                 <th className="px-4 py-3 text-right font-medium">Duration</th>
                 <th className="px-4 py-3 text-right font-medium">Score</th>
@@ -218,7 +219,7 @@ function CallHistory() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
               ) : (
                 filtered.slice(0, 200).map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
