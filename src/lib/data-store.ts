@@ -339,6 +339,10 @@ export const useDB = create<DBState>()(
             max_retries: agent.max_retries,
             retry_delay_minutes: agent.retry_delay_minutes,
             data_fields: agent.data_fields,
+            voice_stability: agent.voice_stability ?? null,
+            voice_similarity_boost: agent.voice_similarity_boost ?? null,
+            voice_style: agent.voice_style ?? null,
+            voice_speaker_boost: agent.voice_speaker_boost ?? null,
           } as never),
         );
         return agent;
