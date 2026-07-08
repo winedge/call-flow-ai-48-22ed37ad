@@ -155,6 +155,12 @@ type AgentConfig = {
   greeting: string;
   system_prompt: string;
   temperature: number;
+  transfer_number?: string;
+  end_call_conditions?: string[];
+  voicemail_handling?: string;
+  voicemail_message?: string;
+  max_call_seconds?: number;
+  silence_timeout_seconds?: number;
 };
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
@@ -170,7 +176,7 @@ async function fetchAgent(id: string): Promise<AgentConfig> {
 async function runTurn(
   agent: AgentConfig,
   history: { role: "user" | "assistant"; content: string }[],
-): Promise<{ reply: string; end_call: boolean }> {
+): Promise<{ reply: string; end_call: boolean; transfer: boolean }> {
   const body = JSON.stringify({ agent, history });
   const { ts, sig } = await sign(body);
   const res = await fetch(`${APP_URL}/api/public/bridge/turn`, {
@@ -184,6 +190,21 @@ async function runTurn(
   });
   if (!res.ok) throw new Error(`turn ${res.status}: ${await res.text()}`);
   return await res.json();
+}
+
+async function requestTransfer(callSid: string, to: string): Promise<void> {
+  const body = JSON.stringify({ call_sid: callSid, transfer_number: to });
+  const { ts, sig } = await sign(body);
+  const res = await fetch(`${APP_URL}/api/public/bridge/transfer`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Bridge-Timestamp": ts,
+      "X-Bridge-Signature": sig,
+    },
+    body,
+  });
+  if (!res.ok) throw new Error(`transfer ${res.status}: ${await res.text()}`);
 }
 
 async function synthTts(
@@ -263,6 +284,7 @@ function openDeepgram(cb: {
 type Session = {
   twilio: WebSocket;
   streamSid: string | null;
+  callSid: string | null;
   agent: AgentConfig | null;
   dg: DgHandle | null;
   history: { role: "user" | "assistant"; content: string }[];
@@ -270,6 +292,8 @@ type Session = {
   turnLock: boolean;
   cancelSpeech: () => void;
   closed: boolean;
+  lastUserAudioAt: number;
+  timers: ReturnType<typeof setTimeout>[];
 };
 
 async function speak(s: Session, text: string) {
@@ -322,10 +346,29 @@ async function handleUserTurn(s: Session, text: string) {
   s.turnLock = true;
   s.history.push({ role: "user", content: text });
   try {
-    const { reply, end_call } = await runTurn(s.agent, s.history);
-    if (!reply) return;
-    s.history.push({ role: "assistant", content: reply });
-    await speak(s, reply);
+    const { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    if (!reply && !end_call && !transfer) return;
+    if (reply) {
+      s.history.push({ role: "assistant", content: reply });
+      await speak(s, reply);
+    }
+    if (transfer) {
+      const to = s.agent.transfer_number?.trim();
+      if (to && s.callSid) {
+        await new Promise((r) => setTimeout(r, 300));
+        try {
+          await requestTransfer(s.callSid, to);
+          // Twilio will drop the <Stream> once it fetches new TwiML;
+          // socket.onclose will run cleanup.
+        } catch (e) {
+          console.error("transfer failed", e);
+          await speak(s, "I couldn't complete the transfer. Let me take a message instead.");
+        }
+      } else {
+        console.warn("transfer requested but no target or call_sid");
+      }
+      return;
+    }
     if (end_call) {
       await new Promise((r) => setTimeout(r, 400));
       cleanup(s, "agent ended call");
@@ -344,6 +387,8 @@ function cleanup(s: Session, reason: string) {
   s.speaking = false;
   s.cancelSpeech();
   s.dg?.close();
+  for (const t of s.timers) clearTimeout(t);
+  s.timers = [];
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
 
