@@ -43,8 +43,13 @@ function ForgotPasswordPage() {
             </p>
           ) : (
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
+                const email = (e.currentTarget.elements.namedItem("em") as HTMLInputElement).value;
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/auth/reset-password`,
+                });
+                if (error) return toast.error(error.message);
                 setSent(true);
               }}
               className="space-y-4"
