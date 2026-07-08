@@ -241,9 +241,10 @@ export const Route = createFileRoute("/api/public/bridge/tts")({
           return errorJson(400, e instanceof Error ? e.message : "bad input");
         }
 
+        const origin = new URL(request.url).origin;
         const result =
           input.engine === "elevenlabs"
-            ? await synthesizeElevenLabs(input.text, input.voice, input.voice_settings)
+            ? await synthesizeElevenLabs(input.text, input.voice, origin, input.voice_settings)
             : await synthesizeKokoro(input.text, input.voice);
 
         if ("error" in result) return errorJson(result.status, result.error);
