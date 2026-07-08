@@ -1,7 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User as UserIcon } from "lucide-react";
+import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User as UserIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -17,8 +17,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { useDB, selectCurrentSettings, type PhoneNumber } from "@/lib/data-store";
+import { useDB, selectCurrentSettings, type PhoneNumber, type UUID } from "@/lib/data-store";
 import { persistSettings } from "@/lib/sync";
+import { syncTwilioNumbers } from "@/lib/telephony/sync-numbers.functions";
+
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — BulkCall AI" }] }),
@@ -127,9 +129,12 @@ function SettingsPage() {
 
         <TabsContent value="telephony" className="space-y-6">
           <Card title="Phone numbers">
-            <p className="text-xs text-zinc-500 mb-4">
-              Numbers provisioned via Twilio for outbound caller ID and inbound webhooks.
-            </p>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <p className="text-xs text-zinc-500">
+                Numbers provisioned via Twilio for outbound caller ID and inbound webhooks.
+              </p>
+              <SyncTwilioButton orgId={orgId} />
+            </div>
             <div className="space-y-2 mb-4">
               {phones.map((p) => (
                 <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
@@ -163,13 +168,14 @@ function SettingsPage() {
                 </div>
               ))}
               {phones.length === 0 && (
-                <p className="text-xs text-zinc-500 italic">No numbers provisioned.</p>
+                <p className="text-xs text-zinc-500 italic">No numbers provisioned. Click “Sync from Twilio” to import numbers from your Twilio account.</p>
               )}
 
             </div>
             <AddPhone onAdd={(n, t) => { addPhone(n, t); toast.success("Number added"); }} />
           </Card>
         </TabsContent>
+
 
         <TabsContent value="webhooks" className="space-y-6">
           <Card title="Workspace defaults">
@@ -270,6 +276,51 @@ function SettingsPage() {
     </>
   );
 }
+
+function SyncTwilioButton({ orgId }: { orgId: UUID }) {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const res = await syncTwilioNumbers();
+      if (!res.ok) {
+        toast.error(`Sync failed: ${res.message}`);
+        return;
+      }
+      // Reload phones for the current user from DB into the store
+      const { data } = await supabase
+        .from("phone_numbers")
+        .select("*")
+        .order("created_at", { ascending: false });
+      const rows = (data ?? []).map((r): PhoneNumber => ({
+        id: r.id as UUID,
+        org_id: r.user_id as UUID,
+        number: r.number,
+        twilio_sid: r.twilio_sid,
+        type: (r.type as PhoneNumber["type"]) ?? "local",
+        capabilities: (Array.isArray(r.capabilities) ? (r.capabilities as string[]) : ["voice"]).filter((c): c is "voice" | "sms" => c === "voice" || c === "sms"),
+        inbound_agent_id: (r.inbound_agent_id as UUID | null) ?? null,
+        created_at: r.created_at,
+      }));
+      useDB.setState({ phones: rows });
+      const msg = res.total === 0
+        ? "No numbers found on your Twilio account."
+        : `${res.added} added · ${res.updated} updated · ${res.total} total`;
+      toast.success(msg);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={onClick} disabled={busy}>
+      <RefreshCw className={`size-3.5 mr-1 ${busy ? "animate-spin" : ""}`} />
+      {busy ? "Syncing…" : "Sync from Twilio"}
+    </Button>
+  );
+}
+
 
 function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
   const color = method === "GET" ? "text-emerald-400" : "text-blue-400";
