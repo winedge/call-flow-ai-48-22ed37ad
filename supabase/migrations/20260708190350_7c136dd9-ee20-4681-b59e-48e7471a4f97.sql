@@ -1,0 +1,1 @@
+ALTER TABLE public.agents ADD COLUMN IF NOT EXISTS speak_first BOOLEAN NOT NULL DEFAULT true;
