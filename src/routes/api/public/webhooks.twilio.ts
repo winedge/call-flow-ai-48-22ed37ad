@@ -1,9 +1,26 @@
+/**
+ * Twilio Status Callback — persists call state to public.calls.
+ *
+ * Twilio POSTs here at each lifecycle transition (initiated → ringing →
+ * answered → completed / no-answer / busy / failed). We match the row by
+ * twilio_call_sid (set at initiateCall) and update status, duration,
+ * recording_url, ended_at. If no row exists (e.g. an inbound call not
+ * originated by our app) we skip — user_id is required and we can't
+ * safely attribute it.
+ *
+ * After a terminal transition we also fire enabled automations belonging
+ * to the call's owner (fetched from public.automations, RLS-bypassed via
+ * the admin client because the request is from Twilio, not a user).
+ *
+ * Signature verification: HMAC-SHA1 X-Twilio-Signature when
+ * TWILIO_AUTH_TOKEN is set (skipped in dev/preview when the secret is
+ * missing).
+ */
 import { createFileRoute } from "@tanstack/react-router";
-import { db, newId, nowIso, type Call } from "@/lib/api/store.server";
 import { errorJson, json, preflight } from "@/lib/api/cors";
 
 // Twilio -> internal status map
-const STATUS: Record<string, Call["status"]> = {
+const STATUS: Record<string, string> = {
   queued: "queued",
   ringing: "ringing",
   "in-progress": "in_progress",
@@ -14,20 +31,19 @@ const STATUS: Record<string, Call["status"]> = {
   canceled: "failed",
 };
 
-async function readBody(request: Request): Promise<Record<string, string>> {
-  const ct = request.headers.get("content-type") ?? "";
-  if (ct.includes("application/json")) {
-    return (await request.json()) as Record<string, string>;
+const TERMINAL = new Set(["completed", "failed", "no_answer", "busy"]);
+
+async function readBody(raw: string, contentType: string): Promise<Record<string, string>> {
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(raw) as Record<string, string>;
+    } catch {
+      return {};
+    }
   }
-  const text = await request.text();
-  const params = new URLSearchParams(text);
-  return Object.fromEntries(params.entries());
+  return Object.fromEntries(new URLSearchParams(raw).entries());
 }
 
-/**
- * Verifies Twilio's HMAC-SHA1 X-Twilio-Signature.
- * Skipped when TWILIO_AUTH_TOKEN is not set (preview/dev).
- */
 async function verifyTwilio(request: Request, raw: string): Promise<boolean> {
   const token = process.env.TWILIO_AUTH_TOKEN;
   if (!token) return true;
@@ -49,74 +65,86 @@ async function verifyTwilio(request: Request, raw: string): Promise<boolean> {
   return expected === signature;
 }
 
+function triggerForStatus(status: string): string | null {
+  if (status === "completed") return "call_completed";
+  if (status === "no_answer") return "call_no_answer";
+  if (status === "failed" || status === "busy") return "call_failed";
+  return null;
+}
+
 export const Route = createFileRoute("/api/public/webhooks/twilio")({
   server: {
     handlers: {
       OPTIONS: async () => preflight(),
       POST: async ({ request }) => {
-        const raw = await request.clone().text();
+        const raw = await request.text();
         if (!(await verifyTwilio(request, raw))) {
           return errorJson(401, "Invalid Twilio signature");
         }
-        const body = await readBody(new Request(request.url, {
-          method: "POST",
-          headers: request.headers,
-          body: raw,
-        }));
+        const body = await readBody(raw, request.headers.get("content-type") ?? "");
 
-        const sid = body.CallSid;
-        if (!sid) return errorJson(400, "CallSid required");
+        const callSid = body.CallSid;
+        if (!callSid) return errorJson(400, "CallSid required");
 
         const status = STATUS[body.CallStatus] ?? "in_progress";
-        const store = db();
-        let call = store.calls.find((c) => c.provider_call_sid === sid);
-        if (!call) {
-          call = {
-            id: newId(),
-            campaign_id: null,
-            contact_id: null,
-            agent_id: null,
-            from_number: body.From ?? "",
-            to_number: body.To ?? "",
-            status,
-            outcome: null,
-            duration_seconds: Number(body.CallDuration ?? 0),
-            recording_url: body.RecordingUrl ?? null,
-            transcript: [],
-            provider_call_sid: sid,
-            started_at: nowIso(),
-            ended_at: null,
-          };
-          store.calls.push(call);
-        } else {
-          call.status = status;
-          if (body.CallDuration) call.duration_seconds = Number(body.CallDuration);
-          if (body.RecordingUrl) call.recording_url = body.RecordingUrl;
+        const nowIso = new Date().toISOString();
+
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        const { data: existing, error: readErr } = await supabaseAdmin
+          .from("calls")
+          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to")
+          .eq("twilio_call_sid", callSid)
+          .maybeSingle();
+        if (readErr) return errorJson(500, `db read: ${readErr.message}`);
+
+        if (!existing) {
+          // Inbound or foreign call — nothing to persist without a user_id.
+          return json({ ok: true, matched: false });
         }
-        if (["completed", "failed", "no_answer", "busy"].includes(status)) {
-          call.ended_at = nowIso();
-          // Fire matching automations
-          const trig =
-            status === "completed"
-              ? "call.completed"
-              : status === "no_answer"
-                ? "call.no_answer"
-                : "call.failed";
-          for (const a of store.automations.filter(
-            (x) => x.enabled && x.trigger === trig,
-          )) {
-            // Fire-and-forget outbound webhook actions
-            const url = (a.config as { url?: string })?.url;
-            if (a.action === "webhook" && url) {
-              fetch(url, {
+
+        const patch: Record<string, unknown> = {
+          status,
+          updated_at: nowIso,
+        };
+        if (body.CallDuration) patch.duration_sec = Number(body.CallDuration);
+        if (body.RecordingUrl) patch.recording_url = body.RecordingUrl;
+        if (TERMINAL.has(status) && !("ended_at" in patch)) {
+          patch.ended_at = nowIso;
+        }
+
+        const { error: updErr } = await supabaseAdmin
+          .from("calls")
+          .update(patch as never)
+          .eq("id", existing.id);
+        if (updErr) return errorJson(500, `db update: ${updErr.message}`);
+
+        // Fire automations on terminal transitions.
+        const trig = TERMINAL.has(status) ? triggerForStatus(status) : null;
+        if (trig) {
+          const { data: automations } = await supabaseAdmin
+            .from("automations")
+            .select("id, action, config")
+            .eq("user_id", existing.user_id)
+            .eq("enabled", true)
+            .eq("trigger", trig);
+          for (const a of automations ?? []) {
+            const cfg = (a.config ?? {}) as { url?: string };
+            if (a.action === "webhook" && cfg.url) {
+              fetch(cfg.url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ event: trig, call, automation: a.id }),
+                body: JSON.stringify({
+                  event: trig,
+                  call: { ...existing, ...patch, id: existing.id, twilio_call_sid: callSid },
+                  automation: a.id,
+                }),
               }).catch(() => {});
             }
           }
         }
-        return json({ ok: true, call_id: call.id });
+
+        return json({ ok: true, call_id: existing.id });
       },
     },
   },
