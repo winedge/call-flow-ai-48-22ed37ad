@@ -85,22 +85,37 @@ export const Route = createFileRoute("/api/public/twilio/amd")({
         const agent = await loadAgentVoicemail(agentId);
         const handling = agent?.handling ?? "hangup";
         const message = agent?.message?.trim() ?? "";
+        const willLeave = handling === "leave_message" && !!message;
 
-        let twiml: string;
-        if (handling === "leave_message" && message) {
-          twiml =
-            `<?xml version="1.0" encoding="UTF-8"?>` +
+        const twiml = willLeave
+          ? `<?xml version="1.0" encoding="UTF-8"?>` +
             `<Response>` +
             `<Pause length="2"/>` +
             `<Say voice="alice">${escapeXml(message)}</Say>` +
             `<Hangup/>` +
-            `</Response>`;
-        } else {
-          twiml =
-            `<?xml version="1.0" encoding="UTF-8"?>` +
+            `</Response>`
+          : `<?xml version="1.0" encoding="UTF-8"?>` +
             `<Response><Hangup/></Response>`;
-        }
+
         await modifyCall(callSid, twiml);
+
+        // Record the outcome on the call row (best-effort).
+        try {
+          const { supabaseAdmin } = await import(
+            "@/integrations/supabase/client.server"
+          );
+          await supabaseAdmin
+            .from("calls")
+            .update({
+              end_reason: willLeave ? "voicemail_left" : "voicemail_hangup",
+              ended_at: new Date().toISOString(),
+              status: "completed",
+            } as never)
+            .eq("twilio_call_sid", callSid);
+        } catch (e) {
+          console.error("amd end_reason write failed", e);
+        }
+
         return new Response("", { status: 204 });
       },
     },
