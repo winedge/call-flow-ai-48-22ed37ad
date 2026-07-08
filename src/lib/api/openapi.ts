@@ -160,7 +160,7 @@ export function buildOpenApiSpec(origin: string) {
         name: { type: "string" },
         trigger: {
           type: "string",
-          enum: ["call.completed", "call.failed", "call.no_answer", "webhook"],
+          enum: ["call_completed", "call_failed", "call_no_answer", "appointment_booked", "webhook"],
         },
         action: {
           type: "string",
@@ -178,7 +178,7 @@ export function buildOpenApiSpec(origin: string) {
         name: { type: "string" },
         trigger: {
           type: "string",
-          enum: ["call.completed", "call.failed", "call.no_answer", "webhook"],
+          enum: ["call_completed", "call_failed", "call_no_answer", "appointment_booked", "webhook"],
         },
         action: {
           type: "string",
@@ -186,6 +186,119 @@ export function buildOpenApiSpec(origin: string) {
         },
         config: { type: "object", additionalProperties: true },
         enabled: { type: "boolean" },
+      },
+    },
+    TranscriptTurn: {
+      type: "object",
+      properties: {
+        role: { type: "string", enum: ["user", "assistant"] },
+        content: { type: "string" },
+      },
+    },
+    CallPayload: {
+      type: "object",
+      description:
+        "Full call record delivered to automation webhooks on post-call events.",
+      properties: {
+        id: { type: "string", format: "uuid" },
+        twilio_call_sid: { type: "string" },
+        user_id: { type: "string", format: "uuid" },
+        agent_id: { type: "string", format: "uuid", nullable: true },
+        campaign_id: { type: "string", format: "uuid", nullable: true },
+        contact_id: { type: "string", format: "uuid", nullable: true },
+        direction: { type: "string", enum: ["inbound", "outbound"], nullable: true },
+        phone_to: { type: "string", example: "+15551234567" },
+        phone_from: { type: "string", nullable: true, example: "+15559876543" },
+        status: {
+          type: "string",
+          enum: [
+            "queued",
+            "ringing",
+            "in_progress",
+            "completed",
+            "failed",
+            "no_answer",
+            "busy",
+          ],
+        },
+        started_at: { type: "string", format: "date-time", nullable: true },
+        ended_at: { type: "string", format: "date-time", nullable: true },
+        duration_sec: { type: "integer", nullable: true },
+        recording_url: { type: "string", nullable: true },
+        end_reason: {
+          type: "string",
+          nullable: true,
+          description:
+            "Canonical short code (agent_ended, transfer, caller_hangup, no_answer, busy, carrier_failed, voicemail_left, voicemail_hangup, silence_timeout, max_duration, bridge_error, agent_config_error, canceled, other).",
+        },
+        transcript: {
+          type: "array",
+          nullable: true,
+          items: { $ref: "#/components/schemas/TranscriptTurn" },
+        },
+        extracted_data: {
+          type: "object",
+          additionalProperties: true,
+          description:
+            "Structured fields extracted from the transcript, keyed by the agent's configured data_fields. Absent keys mean the value was not stated.",
+        },
+      },
+    },
+    PostCallWebhookPayload: {
+      type: "object",
+      description:
+        "Payload delivered to automation webhooks after a call ends. Emitted by both the bridge (call_completed) and the Twilio status callback (call_completed / call_failed / call_no_answer).",
+      required: ["event", "call", "data", "automation"],
+      properties: {
+        event: {
+          type: "string",
+          enum: ["call_completed", "call_failed", "call_no_answer"],
+        },
+        call: { $ref: "#/components/schemas/CallPayload" },
+        data: {
+          type: "object",
+          additionalProperties: true,
+          description:
+            "Only the agent-defined extracted fields for this call. Same object as call.extracted_data.",
+        },
+        automation: { type: "string", format: "uuid" },
+      },
+      example: {
+        event: "call_completed",
+        automation: "0f6b4b98-3c5d-4a2c-9d3f-2a1e1d3e9c11",
+        call: {
+          id: "1b2f8e34-4c9a-4a52-a7b6-df6b0c2f4a01",
+          twilio_call_sid: "CA1234567890abcdef1234567890abcdef",
+          user_id: "0d7d6d6a-1f8e-4a51-8ae5-6f0f4b2d3a10",
+          agent_id: "8a5f0b31-2c9d-4b7e-9c88-1a2b3c4d5e6f",
+          campaign_id: null,
+          contact_id: "2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+          direction: "outbound",
+          phone_to: "+15551234567",
+          phone_from: "+15559876543",
+          status: "completed",
+          started_at: "2026-07-08T15:04:03.000Z",
+          ended_at: "2026-07-08T15:06:41.000Z",
+          duration_sec: 158,
+          recording_url: "https://api.twilio.com/2010-04-01/Accounts/AC.../Recordings/RE...",
+          end_reason: "caller_hangup",
+          transcript: [
+            { role: "assistant", content: "Hi, this is Ava calling from Acme. Do you have a moment?" },
+            { role: "user", content: "Sure, go ahead." },
+            { role: "assistant", content: "Great — can I grab your email to send the follow-up?" },
+            { role: "user", content: "It's jane@example.com." },
+          ],
+          extracted_data: {
+            full_name: "Jane Doe",
+            email: "jane@example.com",
+            interested: true,
+          },
+        },
+        data: {
+          full_name: "Jane Doe",
+          email: "jane@example.com",
+          interested: true,
+        },
       },
     },
     TwilioCallEvent: {
@@ -213,6 +326,7 @@ export function buildOpenApiSpec(origin: string) {
         RecordingUrl: { type: "string" },
       },
     },
+
   } as const;
 
   const listResp = (ref: string) => ({
@@ -383,7 +497,7 @@ export function buildOpenApiSpec(origin: string) {
           tags: ["webhooks"],
           summary: "Twilio status callback receiver",
           description:
-            "Configure this URL as your Twilio statusCallback. Accepts application/json or application/x-www-form-urlencoded. Verifies X-Twilio-Signature when TWILIO_AUTH_TOKEN is configured.",
+            "Configure this URL as your Twilio statusCallback. Accepts application/json or application/x-www-form-urlencoded. Verifies X-Twilio-Signature when TWILIO_AUTH_TOKEN is configured.\n\nOn terminal transitions (completed / failed / no_answer / busy) this endpoint fans out to every enabled automation whose `trigger` matches the call outcome (`call_completed`, `call_failed`, `call_no_answer`). Each webhook automation receives a `PostCallWebhookPayload` — see the schema for the exact shape.",
           security: [],
           requestBody: {
             required: true,
@@ -431,6 +545,27 @@ export function buildOpenApiSpec(origin: string) {
           },
         },
       },
+      "x-post-call-webhook": {
+        post: {
+          tags: ["webhooks"],
+          summary: "Outbound post-call webhook (delivered to your URL)",
+          description:
+            "This is NOT an endpoint on BulkCall AI — it documents the payload BulkCall AI POSTs to the `url` configured on any `webhook`-action automation whose trigger fires after a call ends.\n\nEmitted from two places with the same shape:\n- The voice bridge, when it reports the final transcript (fires `call_completed`).\n- The Twilio status callback, on terminal transitions (fires `call_completed`, `call_failed`, or `call_no_answer`).\n\nContent-Type is `application/json`. There is no signature header on outbound deliveries yet — validate by IP allow-list or a shared secret in the URL until HMAC signing ships.",
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/PostCallWebhookPayload" },
+              },
+            },
+          },
+          responses: {
+            "2XX": { description: "Any 2xx is treated as delivered; non-2xx responses are not retried." },
+          },
+        },
+      },
     },
   };
 }
+
