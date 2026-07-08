@@ -162,6 +162,12 @@ type AgentConfig = {
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
   tts_engine?: string;
+  voice_settings?: {
+    stability?: number;
+    similarity_boost?: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+  };
 };
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
