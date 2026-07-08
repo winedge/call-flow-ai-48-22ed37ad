@@ -674,13 +674,34 @@ Deno.serve((req) => {
       }
       const startListening = () => {
         if (session.dg || session.closed) return;
+        // Aggregate final fragments across an utterance so we call the LLM
+        // once per turn (Deepgram can emit several is_final chunks before
+        // the caller actually stops). Commit on speech_final OR a
+        // UtteranceEnd VAD event — whichever fires first.
+        let pending = "";
+        const commit = () => {
+          const text = pending.trim();
+          pending = "";
+          if (text) void handleUserTurn(session, text);
+        };
         session.dg = openDeepgram({
+          onSpeechStart: () => {
+            // Hard barge-in: caller began speaking. Kill any in-flight
+            // playback immediately so the agent yields the floor.
+            if (session.speaking) session.cancelSpeech();
+          },
           onInterim: (t) => {
+            // Soft barge-in guard: only cancel once we've heard real words,
+            // not a stray cough / crosstalk detected by the VAD.
             if (session.speaking && t.trim().length > 2) session.cancelSpeech();
           },
-          onFinal: (t) => {
-            const text = t.trim();
-            if (text) void handleUserTurn(session, text);
+          onFinal: (t, speechFinal) => {
+            pending = (pending ? pending + " " : "") + t.trim();
+            if (speechFinal) commit();
+          },
+          onUtteranceEnd: () => {
+            // Deepgram's silence watchdog fired — flush anything buffered.
+            if (pending) commit();
           },
           onError: (e) => console.error("deepgram", e),
         });
