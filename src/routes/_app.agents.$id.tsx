@@ -398,6 +398,19 @@ function AgentEditor() {
 
 
         <Card title="Prompting (OpenAI GPT)">
+          <Field label="Speak first">
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={form.speak_first ?? true}
+                onCheckedChange={(v) => patch("speak_first", v)}
+              />
+              <span className="text-xs text-zinc-500">
+                {form.speak_first ?? true
+                  ? "Agent greets the caller as soon as the call connects."
+                  : "Agent waits silently until the caller speaks first."}
+              </span>
+            </div>
+          </Field>
           <Field label="Greeting (spoken first)">
             <Textarea rows={2} value={form.greeting} onChange={(e) => patch("greeting", e.target.value)} />
           </Field>
