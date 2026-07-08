@@ -6,6 +6,10 @@
  *   POST {PUBLIC_APP_URL}/api/public/twilio/voice?agent_id=...
  * which returns `<Connect><Stream url="wss://{BRIDGE_URL}/twilio?..." />`.
  *
+ * Persists a row in public.calls (as the signed-in user) BEFORE returning,
+ * so every Twilio status callback and bridge event can update the row by
+ * twilio_call_sid.
+ *
  * Also enables Answering Machine Detection so voicemail systems get either
  * a hangup or the agent's voicemail script (handled by
  * /api/public/twilio/amd).
@@ -20,15 +24,19 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const InputSchema = z.object({
   to: z.string().regex(/^\+\d{8,15}$/, "E.164 phone number required"),
   agentId: z.string().min(1),
+  campaignId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
 });
 
 export const initiateCall = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => InputSchema.parse(data))
-  .handler(async ({ data }): Promise<{ callSid: string }> => {
+  .handler(async ({ data, context }): Promise<{ callSid: string; callId: string }> => {
     const sid = process.env.TWILIO_ACCOUNT_SID;
     const token = process.env.TWILIO_AUTH_TOKEN;
     const from = process.env.TWILIO_FROM_NUMBER;
@@ -89,6 +97,29 @@ export const initiateCall = createServerFn({ method: "POST" })
       const txt = await res.text().catch(() => "");
       throw new Error(`Twilio ${res.status}: ${txt.slice(0, 300)}`);
     }
-    const json = (await res.json()) as { sid: string };
-    return { callSid: json.sid };
+    const twilioJson = (await res.json()) as { sid: string };
+    const callSid = twilioJson.sid;
+
+    // Persist the call row so status callbacks + bridge events can update it.
+    const { data: inserted, error: insErr } = await context.supabase
+      .from("calls")
+      .insert({
+        user_id: context.userId,
+        agent_id: data.agentId,
+        campaign_id: data.campaignId ?? null,
+        contact_id: data.contactId ?? null,
+        phone_from: from!,
+        phone_to: data.to,
+        twilio_call_sid: callSid,
+        status: "queued",
+      })
+      .select("id")
+      .single();
+    if (insErr) {
+      // Don't fail the call — the Twilio dial already succeeded. Log and
+      // continue; the row can still be reconciled later via the SID.
+      console.error("[initiateCall] calls insert failed:", insErr.message);
+      return { callSid, callId: "" };
+    }
+    return { callSid, callId: inserted.id };
   });
