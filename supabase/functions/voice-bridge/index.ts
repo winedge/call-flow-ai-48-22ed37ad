@@ -34,6 +34,30 @@ function linearToMuLaw(sample: number): number {
   return (~(sign | (exponent << 4) | mantissa)) & MU;
 }
 
+function muLawToLinear(u: number): number {
+  u = ~u & 0xff;
+  const sign = u & 0x80;
+  const exponent = (u >> 4) & 0x07;
+  const mantissa = u & 0x0f;
+  let sample = ((mantissa << 3) + 0x84) << exponent;
+  sample -= 0x84;
+  return sign ? -sample : sample;
+}
+
+function rmsMuLaw(mu: Uint8Array): number {
+  if (!mu.length) return 0;
+  let sum = 0;
+  for (let i = 0; i < mu.length; i++) {
+    const s = muLawToLinear(mu[i]);
+    sum += s * s;
+  }
+  return Math.sqrt(sum / mu.length);
+}
+
+function silenceFrame(size = 160): Uint8Array {
+  return new Uint8Array(size).fill(0xff);
+}
+
 function downsampleTo8k(pcm: Int16Array, srcRate: number): Int16Array {
   if (srcRate === 8000) return pcm;
   const ratio = srcRate / 8000;
@@ -303,13 +327,14 @@ function openDeepgram(cb: {
   url.searchParams.set("smart_format", "true");
   url.searchParams.set("interim_results", "true");
   // Endpointing: silence (ms) before Deepgram commits a `speech_final`.
-  // 300ms is tight but reliable on phone audio; the utterance_end_ms
+  // Keep this tight; our local noise gate prevents background office noise
+  // from becoming speech while still letting real callers finish naturally.
   // watchdog below covers cases where the model never marks speech_final.
-  url.searchParams.set("endpointing", "300");
+  url.searchParams.set("endpointing", "180");
   // VAD events give us a hard UtteranceEnd signal — used to flush any
   // buffered finals when Deepgram doesn't emit speech_final in time.
   url.searchParams.set("vad_events", "true");
-  url.searchParams.set("utterance_end_ms", "1000");
+  url.searchParams.set("utterance_end_ms", "700");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
@@ -367,8 +392,87 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
-  greetingAudio: Promise<{ audio_url: string }> | null;
+  greetingAudio: { text: string; promise: Promise<{ audio_url: string }> } | null;
+  queuedUserText: string;
+  activeTurnInterrupted: boolean;
+  noiseGate: {
+    noiseFloor: number;
+    speechFrames: number;
+    silenceFrames: number;
+    inSpeech: boolean;
+    preRoll: Uint8Array[];
+    voiceMsSinceCommit: number;
+    lastVoiceAt: number;
+  };
 };
+
+function gateInboundAudio(s: Session, bytes: Uint8Array): Uint8Array[] {
+  const g = s.noiseGate;
+  const rms = rmsMuLaw(bytes);
+  const openThreshold = Math.max(650, g.noiseFloor * 3.1);
+  const keepOpenThreshold = Math.max(420, g.noiseFloor * 1.75);
+  const loud = g.inSpeech ? rms > keepOpenThreshold : rms > openThreshold;
+
+  if (!g.inSpeech) {
+    g.preRoll.push(bytes);
+    while (g.preRoll.length > 5) g.preRoll.shift();
+
+    if (!loud) {
+      g.speechFrames = 0;
+      g.noiseFloor = g.noiseFloor * 0.95 + rms * 0.05;
+      return [silenceFrame(bytes.length)];
+    }
+
+    g.speechFrames++;
+    // Require either two consecutive loud frames or one very clear speech
+    // frame. This rejects keyboard/room spikes without clipping real speech.
+    if (g.speechFrames < 2 && rms < openThreshold * 1.55) {
+      return [silenceFrame(bytes.length)];
+    }
+
+    g.inSpeech = true;
+    g.silenceFrames = 0;
+    g.lastVoiceAt = Date.now();
+    g.voiceMsSinceCommit += g.speechFrames * 20;
+    const out = g.preRoll;
+    g.preRoll = [];
+    return out;
+  }
+
+  if (loud) {
+    g.silenceFrames = 0;
+    g.lastVoiceAt = Date.now();
+    g.voiceMsSinceCommit += 20;
+    return [bytes];
+  }
+
+  g.silenceFrames++;
+  if (g.silenceFrames >= 12) {
+    g.inSpeech = false;
+    g.speechFrames = 0;
+    g.preRoll = [];
+    g.noiseFloor = g.noiseFloor * 0.98 + rms * 0.02;
+  }
+  return [silenceFrame(bytes.length)];
+}
+
+function looksLikeSpeech(text: string, voiceMs: number): boolean {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.length < 2 || voiceMs < 160) return false;
+  if (/^(uh+|um+|hm+|hmm+|ah+|er+|mm+|noise|background|music|cough|laugh)$/.test(normalized)) return false;
+
+  const words = normalized.split(" ").filter(Boolean);
+  if (words.length >= 2) return true;
+
+  const shortAnswers = new Set([
+    "yes", "yeah", "yep", "no", "nope", "okay", "ok", "sure", "hello", "hi", "thanks", "bye", "correct", "right",
+  ]);
+  return normalized.length >= 4 || shortAnswers.has(normalized);
+}
 
 async function speak(s: Session, text: string) {
   if (!s.agent || !s.streamSid || s.closed) return;
@@ -393,8 +497,8 @@ async function speak(s: Session, text: string) {
     // Reuse a preloaded audio promise (used for the greeting) when it
     // matches the text we're about to speak — cuts first-speak latency.
     // If prefetch failed, fall back to a fresh synth so the call isn't silent.
-    const preload = s.greetingAudio;
-    s.greetingAudio = null;
+    const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
+    if (preload) s.greetingAudio = null;
     let audio_url: string;
     try {
       audio_url = (await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings))).audio_url;
@@ -460,18 +564,26 @@ async function speak(s: Session, text: string) {
 }
 
 async function handleUserTurn(s: Session, text: string) {
+  const cleanText = text.replace(/\s+/g, " ").trim();
+  if (!cleanText) return;
   if (!s.agent || s.turnLock) {
-    if (s.agent) s.history.push({ role: "user", content: text });
+    if (s.agent) {
+      s.queuedUserText = s.queuedUserText ? `${s.queuedUserText} ${cleanText}` : cleanText;
+      s.activeTurnInterrupted = true;
+    }
     return;
   }
   s.turnLock = true;
-  s.history.push({ role: "user", content: text });
+  s.activeTurnInterrupted = false;
+  s.history.push({ role: "user", content: cleanText });
   try {
     const { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    if (s.activeTurnInterrupted || s.queuedUserText) return;
     if (!reply && !end_call && !transfer) return;
     if (reply) {
       s.history.push({ role: "assistant", content: reply });
       await speak(s, reply);
+      if (s.activeTurnInterrupted || s.queuedUserText) return;
     }
     if (transfer) {
       const to = s.agent.transfer_number?.trim();
@@ -500,9 +612,15 @@ async function handleUserTurn(s: Session, text: string) {
     }
   } catch (e) {
     console.error("turn failed", e);
-    await speak(s, "Sorry, I had a technical issue. Could you say that again?");
+    if (!s.activeTurnInterrupted && !s.queuedUserText) {
+      await speak(s, "Sorry, I had a technical issue. Could you say that again?");
+    }
   } finally {
     s.turnLock = false;
+    const queued = s.queuedUserText.trim();
+    s.queuedUserText = "";
+    s.activeTurnInterrupted = false;
+    if (queued && !s.closed) void handleUserTurn(s, queued);
   }
 }
 
@@ -580,6 +698,17 @@ Deno.serve((req) => {
     playbackMark: null,
     finishPlayback: () => {},
     greetingAudio: null,
+    queuedUserText: "",
+    activeTurnInterrupted: false,
+    noiseGate: {
+      noiseFloor: 180,
+      speechFrames: 0,
+      silenceFrames: 0,
+      inSpeech: false,
+      preRoll: [],
+      voiceMsSinceCommit: 0,
+      lastVoiceAt: 0,
+    },
   };
 
   const loadAgent = (agentId: string) => fetchAgent(agentId)
@@ -595,12 +724,15 @@ Deno.serve((req) => {
       // handshake — by the time speak() runs, TTS is already done.
       if (a.speak_first !== false) {
         const greeting = a.greeting || "Hello, this is your AI assistant.";
-        session.greetingAudio = synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
+        session.greetingAudio = {
+          text: greeting,
+          promise: synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
           .catch((e) => {
             console.error("greeting prefetch failed", e);
             session.greetingAudio = null;
             throw e;
-          });
+          }),
+        };
       }
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
@@ -679,47 +811,78 @@ Deno.serve((req) => {
         // the caller actually stops). Commit on speech_final OR a
         // UtteranceEnd VAD event — whichever fires first.
         let pending = "";
-        const commit = () => {
-          const text = pending.trim();
+        let latestInterim = "";
+        let commitTimer: ReturnType<typeof setTimeout> | null = null;
+        let lastCommitAt = 0;
+        const clearCommitTimer = () => {
+          if (commitTimer) clearTimeout(commitTimer);
+          commitTimer = null;
+        };
+        const commit = (allowInterim = false) => {
+          clearCommitTimer();
+          const text = (pending.trim() || (allowInterim ? latestInterim.trim() : ""));
+          const voiceMs = session.noiseGate.voiceMsSinceCommit;
+          session.noiseGate.voiceMsSinceCommit = 0;
           pending = "";
-          if (text) void handleUserTurn(session, text);
+          latestInterim = "";
+          if (!text || Date.now() - lastCommitAt < 250) return;
+          if (!looksLikeSpeech(text, voiceMs)) {
+            console.log("bridge ignored non-speech transcript", { text, voiceMs });
+            return;
+          }
+          lastCommitAt = Date.now();
+          void handleUserTurn(session, text);
+        };
+        const scheduleCommit = (ms: number, allowInterim = false) => {
+          clearCommitTimer();
+          commitTimer = setTimeout(() => commit(allowInterim), ms);
         };
         session.dg = openDeepgram({
           onSpeechStart: () => {
-            // Hard barge-in: caller began speaking. Kill any in-flight
-            // playback immediately so the agent yields the floor.
-            if (session.speaking) session.cancelSpeech();
+            // Barge-in only when our local audio gate recently saw real
+            // caller voice; this prevents room noise from cutting off TTS.
+            if (session.speaking && Date.now() - session.noiseGate.lastVoiceAt < 350) session.cancelSpeech();
           },
           onInterim: (t) => {
-            // Soft barge-in guard: only cancel once we've heard real words,
-            // not a stray cough / crosstalk detected by the VAD.
-            if (session.speaking && t.trim().length > 2) session.cancelSpeech();
+            latestInterim = t.trim();
+            const voiceMs = session.noiseGate.voiceMsSinceCommit;
+            // Soft barge-in guard: only cancel once we've heard meaningful
+            // words backed by gated caller audio, not stray background noise.
+            if (session.speaking && looksLikeSpeech(latestInterim, voiceMs)) session.cancelSpeech();
+            scheduleCommit(850, true);
           },
           onFinal: (t, speechFinal) => {
             pending = (pending ? pending + " " : "") + t.trim();
+            latestInterim = "";
             if (speechFinal) commit();
+            else scheduleCommit(420);
           },
           onUtteranceEnd: () => {
             // Deepgram's silence watchdog fired — flush anything buffered.
             if (pending) commit();
+            else if (latestInterim) commit(true);
           },
           onError: (e) => console.error("deepgram", e),
         });
       };
+      startListening();
       if (session.agent.speak_first !== false) {
         const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
         session.history.push({ role: "assistant", content: greeting });
-        void speak(session, greeting).finally(startListening);
+        void speak(session, greeting);
       } else {
-        startListening();
+        // Listening already started above.
       }
     } else if (msg.event === "media" && session.dg && msg.media) {
       // base64 μ-law → bytes → forward to Deepgram
       const bin = atob(msg.media.payload);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      session.dg.send(bytes);
-      session.lastUserAudioAt = Date.now();
+      const gatedFrames = gateInboundAudio(session, bytes);
+      for (const frame of gatedFrames) session.dg.send(frame);
+      if (Date.now() - session.noiseGate.lastVoiceAt < 80) {
+        session.lastUserAudioAt = session.noiseGate.lastVoiceAt;
+      }
     } else if (msg.event === "mark") {
       const name = (msg as { mark?: { name?: string } }).mark?.name;
       if (name && name === session.playbackMark) session.finishPlayback();
