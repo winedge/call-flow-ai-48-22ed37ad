@@ -105,6 +105,11 @@ export type AIAgent = {
   max_retries: number;
   retry_delay_minutes: number;
   data_fields: DataField[];
+  /** ElevenLabs voice tuning — falls back to sensible defaults when null. */
+  voice_stability?: number | null;
+  voice_similarity_boost?: number | null;
+  voice_style?: number | null;
+  voice_speaker_boost?: boolean | null;
   created_at: string;
 };
 
