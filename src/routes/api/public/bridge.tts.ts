@@ -1,11 +1,10 @@
 /**
- * Bridge → Lovable: synthesize one utterance via Kokoro.
+ * Bridge → Lovable: synthesize one utterance.
  *
- * Body: { text, voice, language }
- * Returns: { audio_url } — Replicate WAV URL, valid for ~1h.
- *
- * The bridge fetches the URL, decodes the WAV, resamples 24k→8k, μ-law
- * encodes it, and streams 20ms frames back to Twilio.
+ * Body: { text, voice, language, engine? }
+ * Returns: { audio_url } — either a Replicate HTTP URL (Kokoro) or a
+ * `data:audio/wav;base64,...` URL (ElevenLabs). Bridge handles both via
+ * fetch(audio_url).arrayBuffer(), then parses WAV.
  *
  * Auth: HMAC via BRIDGE_SHARED_SECRET.
  */
@@ -21,7 +20,125 @@ const InputSchema = z.object({
   text: z.string().min(1).max(2000),
   voice: z.string().min(1),
   language: z.string().default("en"),
+  engine: z.string().optional(),
 });
+
+/** Wrap raw 16-bit little-endian mono PCM in a minimal WAV header. */
+function pcmToWav(pcm: Uint8Array, sampleRate: number): Uint8Array {
+  const dataSize = pcm.length;
+  const buf = new ArrayBuffer(44 + dataSize);
+  const v = new DataView(buf);
+  const writeStr = (o: number, s: string) => {
+    for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i));
+  };
+  writeStr(0, "RIFF");
+  v.setUint32(4, 36 + dataSize, true);
+  writeStr(8, "WAVE");
+  writeStr(12, "fmt ");
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); // PCM
+  v.setUint16(22, 1, true); // mono
+  v.setUint32(24, sampleRate, true);
+  v.setUint32(28, sampleRate * 2, true); // byte rate
+  v.setUint16(32, 2, true); // block align
+  v.setUint16(34, 16, true); // bits/sample
+  writeStr(36, "data");
+  v.setUint32(40, dataSize, true);
+  new Uint8Array(buf, 44).set(pcm);
+  return new Uint8Array(buf);
+}
+
+function toBase64(bytes: Uint8Array): string {
+  // Buffer is available in the Worker/Node runtime; avoids stack overflow.
+  return Buffer.from(bytes).toString("base64");
+}
+
+async function synthesizeElevenLabs(
+  text: string,
+  voiceId: string,
+): Promise<{ audio_url: string } | { error: string; status: number }> {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) return { error: "ElevenLabs not configured", status: 500 };
+
+  const sampleRate = 16000;
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_${sampleRate}`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        Accept: "audio/pcm",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          use_speaker_boost: true,
+        },
+      }),
+    },
+  );
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    return { error: `ElevenLabs ${res.status}: ${t.slice(0, 200)}`, status: 502 };
+  }
+  const pcm = new Uint8Array(await res.arrayBuffer());
+  const wav = pcmToWav(pcm, sampleRate);
+  return { audio_url: `data:audio/wav;base64,${toBase64(wav)}` };
+}
+
+async function synthesizeKokoro(
+  text: string,
+  voice: string,
+): Promise<{ audio_url: string } | { error: string; status: number }> {
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const replicateKey = process.env.REPLICATE_API_KEY;
+  if (!lovableKey || !replicateKey) {
+    return { error: "Replicate connector not linked", status: 500 };
+  }
+  const headers = {
+    Authorization: `Bearer ${lovableKey}`,
+    "X-Connection-Api-Key": replicateKey,
+    "Content-Type": "application/json",
+  };
+  const createRes = await fetch(`${GATEWAY}/models/${MODEL}/predictions`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      input: { text, voice, speed: 1.0 },
+    }),
+  });
+  if (!createRes.ok) {
+    const t = await createRes.text().catch(() => "");
+    return { error: `Replicate ${createRes.status}: ${t.slice(0, 200)}`, status: createRes.status };
+  }
+  const { id } = (await createRes.json()) as { id: string };
+  const start = Date.now();
+  let delay = 800;
+  while (Date.now() - start < 45_000) {
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay + 300, 2500);
+    const poll = await fetch(`${GATEWAY}/predictions/${id}`, { headers });
+    if (!poll.ok) return { error: `Replicate poll ${poll.status}`, status: poll.status };
+    const s = (await poll.json()) as {
+      status: string;
+      output?: string | string[];
+      error?: string;
+    };
+    if (s.status === "succeeded") {
+      const out = Array.isArray(s.output) ? s.output[0] : s.output;
+      if (!out) return { error: "Kokoro returned no output", status: 502 };
+      return { audio_url: out };
+    }
+    if (s.status === "failed" || s.status === "canceled") {
+      return { error: s.error ?? `Kokoro ${s.status}`, status: 502 };
+    }
+  }
+  return { error: "Kokoro timed out after 45s", status: 504 };
+}
 
 export const Route = createFileRoute("/api/public/bridge/tts")({
   server: {
@@ -39,52 +156,13 @@ export const Route = createFileRoute("/api/public/bridge/tts")({
           return errorJson(400, e instanceof Error ? e.message : "bad input");
         }
 
-        const lovableKey = process.env.LOVABLE_API_KEY;
-        const replicateKey = process.env.REPLICATE_API_KEY;
-        if (!lovableKey || !replicateKey) {
-          return errorJson(500, "Replicate connector not linked");
-        }
-        const headers = {
-          Authorization: `Bearer ${lovableKey}`,
-          "X-Connection-Api-Key": replicateKey,
-          "Content-Type": "application/json",
-        };
+        const result =
+          input.engine === "elevenlabs"
+            ? await synthesizeElevenLabs(input.text, input.voice)
+            : await synthesizeKokoro(input.text, input.voice);
 
-        const createRes = await fetch(`${GATEWAY}/models/${MODEL}/predictions`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            input: { text: input.text, voice: input.voice, speed: 1.0 },
-          }),
-        });
-        if (!createRes.ok) {
-          const t = await createRes.text().catch(() => "");
-          return errorJson(createRes.status, `Replicate ${createRes.status}: ${t.slice(0, 200)}`);
-        }
-        const { id } = (await createRes.json()) as { id: string };
-
-        const start = Date.now();
-        let delay = 800;
-        while (Date.now() - start < 45_000) {
-          await new Promise((r) => setTimeout(r, delay));
-          delay = Math.min(delay + 300, 2500);
-          const poll = await fetch(`${GATEWAY}/predictions/${id}`, { headers });
-          if (!poll.ok) return errorJson(poll.status, `Replicate poll ${poll.status}`);
-          const s = (await poll.json()) as {
-            status: string;
-            output?: string | string[];
-            error?: string;
-          };
-          if (s.status === "succeeded") {
-            const out = Array.isArray(s.output) ? s.output[0] : s.output;
-            if (!out) return errorJson(502, "Kokoro returned no output");
-            return json({ audio_url: out });
-          }
-          if (s.status === "failed" || s.status === "canceled") {
-            return errorJson(502, s.error ?? `Kokoro ${s.status}`);
-          }
-        }
-        return errorJson(504, "Kokoro timed out after 45s");
+        if ("error" in result) return errorJson(result.status, result.error);
+        return json({ audio_url: result.audio_url });
       },
     },
   },
