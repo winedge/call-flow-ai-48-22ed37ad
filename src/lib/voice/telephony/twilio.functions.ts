@@ -6,6 +6,10 @@
  *   POST {PUBLIC_APP_URL}/api/public/twilio/voice?agent_id=...
  * which returns `<Connect><Stream url="wss://{BRIDGE_URL}/twilio?..." />`.
  *
+ * Also enables Answering Machine Detection so voicemail systems get either
+ * a hangup or the agent's voicemail script (handled by
+ * /api/public/twilio/amd).
+ *
  * Required env (set in Lovable admin secrets):
  *   TWILIO_ACCOUNT_SID     – ACxxxxxxxx
  *   TWILIO_AUTH_TOKEN      – 32-char token
@@ -49,6 +53,8 @@ export const initiateCall = createServerFn({ method: "POST" })
     voiceUrl.searchParams.set("agent_id", data.agentId);
 
     const statusUrl = `${publicUrl}/api/public/webhooks/twilio`;
+    const amdUrl = new URL(`${publicUrl}/api/public/twilio/amd`);
+    amdUrl.searchParams.set("agent_id", data.agentId);
 
     const body = new URLSearchParams({
       To: data.to,
@@ -57,8 +63,14 @@ export const initiateCall = createServerFn({ method: "POST" })
       Method: "POST",
       StatusCallback: statusUrl,
       StatusCallbackMethod: "POST",
-      // Twilio sends up to five status events; comma-list keeps it in one field
-      "StatusCallbackEvent": "initiated ringing answered completed",
+      StatusCallbackEvent: "initiated ringing answered completed",
+      // Answering Machine Detection — Twilio waits until the greeting ends
+      // so we can leave a full voicemail if the agent has one.
+      MachineDetection: "DetectMessageEnd",
+      AsyncAmd: "true",
+      AsyncAmdStatusCallback: amdUrl.toString(),
+      AsyncAmdStatusCallbackMethod: "POST",
+      MachineDetectionTimeout: "30",
     });
 
     const basic = btoa(`${sid}:${token}`);
