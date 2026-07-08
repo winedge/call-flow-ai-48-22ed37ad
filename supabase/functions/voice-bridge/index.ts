@@ -379,9 +379,20 @@ async function speak(s: Session, text: string) {
   try {
     // Reuse a preloaded audio promise (used for the greeting) when it
     // matches the text we're about to speak — cuts first-speak latency.
+    // If prefetch failed, fall back to a fresh synth so the call isn't silent.
     const preload = s.greetingAudio;
     s.greetingAudio = null;
-    const { audio_url } = await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings));
+    let audio_url: string;
+    try {
+      audio_url = (await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings))).audio_url;
+    } catch (e) {
+      if (preload) {
+        console.warn("greeting prefetch rejected, falling back to fresh synth");
+        audio_url = (await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings)).audio_url;
+      } else {
+        throw e;
+      }
+    }
     if (cancelled || s.closed) return;
 
     // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —
