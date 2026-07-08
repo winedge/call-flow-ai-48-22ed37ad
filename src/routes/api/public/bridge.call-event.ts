@@ -35,7 +35,12 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         if (!(await verifyBridge(request, raw))) {
           return errorJson(401, "Invalid bridge signature");
         }
-        let body: { call_sid?: string; end_reason?: string; ended_at?: string };
+        let body: {
+          call_sid?: string;
+          end_reason?: string;
+          ended_at?: string;
+          transcript?: { role: "user" | "assistant"; content: string }[];
+        };
         try {
           body = JSON.parse(raw);
         } catch {
