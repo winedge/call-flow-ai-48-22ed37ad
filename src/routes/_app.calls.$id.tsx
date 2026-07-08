@@ -245,10 +245,13 @@ function CallDetail() {
               <Star className="size-3.5 text-amber-400" /> Extracted information
             </h2>
             <dl className="space-y-2 text-xs">
-              {Object.entries(extracted).map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-3">
-                  <dt className="text-zinc-500 uppercase tracking-wider text-[10px] font-mono">{k}</dt>
-                  <dd className="text-zinc-200 text-right break-words min-w-0">{v}</dd>
+              {extractedByLabel.length === 0 && (
+                <p className="text-[11px] text-zinc-500 italic">No fields captured.</p>
+              )}
+              {extractedByLabel.map(({ label, value }) => (
+                <div key={label} className="flex justify-between gap-3">
+                  <dt className="text-zinc-500 uppercase tracking-wider text-[10px] font-mono">{label}</dt>
+                  <dd className="text-zinc-200 text-right break-words min-w-0">{value}</dd>
                 </div>
               ))}
               {call.outcome && (
