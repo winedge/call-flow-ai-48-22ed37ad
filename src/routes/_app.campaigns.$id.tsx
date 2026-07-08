@@ -12,6 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
 import { computeCampaignMetrics, formatEta, formatDuration, callsToCsv, downloadFile, leadScore } from "@/lib/reporting";
+import { endReasonLabel, END_REASON_ORDER, END_REASON_TONE } from "@/lib/voice/call-end-reasons";
+
+const END_REASON_FILL: Record<string, string> = {
+  green: "#22c55e",
+  amber: "#f59e0b",
+  blue: "#38bdf8",
+  red: "#ef4444",
+  gray: "#64748b",
+};
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign — BulkCall AI" }] }),
