@@ -14,7 +14,513 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          business_knowledge: string
+          created_at: string
+          end_call_conditions: Json
+          greeting: string
+          id: string
+          language: string
+          max_retries: number
+          name: string
+          objective: string
+          personality: string
+          prompt: string
+          qualification_questions: Json
+          retry_delay_minutes: number
+          system_prompt: string
+          temperature: number
+          transfer_number: string
+          tts_engine: string
+          updated_at: string
+          user_id: string
+          voice_id: string
+          voice_name: string
+          voicemail_handling: string
+          voicemail_message: string
+        }
+        Insert: {
+          business_knowledge?: string
+          created_at?: string
+          end_call_conditions?: Json
+          greeting?: string
+          id?: string
+          language?: string
+          max_retries?: number
+          name: string
+          objective?: string
+          personality?: string
+          prompt?: string
+          qualification_questions?: Json
+          retry_delay_minutes?: number
+          system_prompt?: string
+          temperature?: number
+          transfer_number?: string
+          tts_engine?: string
+          updated_at?: string
+          user_id: string
+          voice_id?: string
+          voice_name?: string
+          voicemail_handling?: string
+          voicemail_message?: string
+        }
+        Update: {
+          business_knowledge?: string
+          created_at?: string
+          end_call_conditions?: Json
+          greeting?: string
+          id?: string
+          language?: string
+          max_retries?: number
+          name?: string
+          objective?: string
+          personality?: string
+          prompt?: string
+          qualification_questions?: Json
+          retry_delay_minutes?: number
+          system_prompt?: string
+          temperature?: number
+          transfer_number?: string
+          tts_engine?: string
+          updated_at?: string
+          user_id?: string
+          voice_id?: string
+          voice_name?: string
+          voicemail_handling?: string
+          voicemail_message?: string
+        }
+        Relationships: []
+      }
+      appointments: {
+        Row: {
+          call_id: string | null
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          notes: string
+          scheduled_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_id?: string | null
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_id?: string | null
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          action: string
+          config: Json
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          trigger: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action?: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          trigger?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          config?: Json
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          trigger?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      calls: {
+        Row: {
+          agent_id: string | null
+          ai_minutes: number
+          appointment_booked: boolean
+          campaign_id: string | null
+          contact_id: string | null
+          cost_cents: number
+          created_at: string
+          duration_sec: number
+          ended_at: string | null
+          id: string
+          outcome: string
+          phone_from: string
+          phone_to: string
+          recording_url: string | null
+          sentiment: string | null
+          started_at: string
+          status: string
+          summary: string
+          transcript: Json
+          twilio_call_sid: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          ai_minutes?: number
+          appointment_booked?: boolean
+          campaign_id?: string | null
+          contact_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          duration_sec?: number
+          ended_at?: string | null
+          id?: string
+          outcome?: string
+          phone_from?: string
+          phone_to?: string
+          recording_url?: string | null
+          sentiment?: string | null
+          started_at?: string
+          status?: string
+          summary?: string
+          transcript?: Json
+          twilio_call_sid?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          ai_minutes?: number
+          appointment_booked?: boolean
+          campaign_id?: string | null
+          contact_id?: string | null
+          cost_cents?: number
+          created_at?: string
+          duration_sec?: number
+          ended_at?: string | null
+          id?: string
+          outcome?: string
+          phone_from?: string
+          phone_to?: string
+          recording_url?: string | null
+          sentiment?: string | null
+          started_at?: string
+          status?: string
+          summary?: string
+          transcript?: Json
+          twilio_call_sid?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          agent_id: string | null
+          calling_hours: Json
+          calls_per_minute: number
+          created_at: string
+          id: string
+          list_id: string | null
+          name: string
+          phone_number_id: string | null
+          retry_rules: Json
+          status: string
+          timezone: string
+          updated_at: string
+          user_id: string
+          voicemail_rules: Json
+        }
+        Insert: {
+          agent_id?: string | null
+          calling_hours?: Json
+          calls_per_minute?: number
+          created_at?: string
+          id?: string
+          list_id?: string | null
+          name: string
+          phone_number_id?: string | null
+          retry_rules?: Json
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+          voicemail_rules?: Json
+        }
+        Update: {
+          agent_id?: string | null
+          calling_hours?: Json
+          calls_per_minute?: number
+          created_at?: string
+          id?: string
+          list_id?: string | null
+          name?: string
+          phone_number_id?: string | null
+          retry_rules?: Json
+          status?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+          voicemail_rules?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_phone_number_id_fkey"
+            columns: ["phone_number_id"]
+            isOneToOne: false
+            referencedRelation: "phone_numbers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_lists: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          company: string
+          created_at: string
+          custom_vars: Json
+          email: string
+          id: string
+          list_id: string | null
+          name: string
+          notes: string
+          phone: string
+          status: string
+          tags: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string
+          created_at?: string
+          custom_vars?: Json
+          email?: string
+          id?: string
+          list_id?: string | null
+          name?: string
+          notes?: string
+          phone: string
+          status?: string
+          tags?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string
+          created_at?: string
+          custom_vars?: Json
+          email?: string
+          id?: string
+          list_id?: string | null
+          name?: string
+          notes?: string
+          phone?: string
+          status?: string
+          tags?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_settings: {
+        Row: {
+          created_at: string
+          smtp_host: string
+          smtp_port: number
+          smtp_user: string
+          time_zone: string
+          updated_at: string
+          user_id: string
+          webhook_url: string
+        }
+        Insert: {
+          created_at?: string
+          smtp_host?: string
+          smtp_port?: number
+          smtp_user?: string
+          time_zone?: string
+          updated_at?: string
+          user_id: string
+          webhook_url?: string
+        }
+        Update: {
+          created_at?: string
+          smtp_host?: string
+          smtp_port?: number
+          smtp_user?: string
+          time_zone?: string
+          updated_at?: string
+          user_id?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
+      phone_numbers: {
+        Row: {
+          capabilities: Json
+          created_at: string
+          id: string
+          number: string
+          twilio_sid: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          capabilities?: Json
+          created_at?: string
+          id?: string
+          number: string
+          twilio_sid?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          capabilities?: Json
+          created_at?: string
+          id?: string
+          number?: string
+          twilio_sid?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
