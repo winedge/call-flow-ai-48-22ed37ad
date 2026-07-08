@@ -177,7 +177,7 @@ export const Route = createFileRoute("/api/public/bridge/tts")({
 
         const result =
           input.engine === "elevenlabs"
-            ? await synthesizeElevenLabs(input.text, input.voice)
+            ? await synthesizeElevenLabs(input.text, input.voice, input.voice_settings)
             : await synthesizeKokoro(input.text, input.voice);
 
         if ("error" in result) return errorJson(result.status, result.error);
