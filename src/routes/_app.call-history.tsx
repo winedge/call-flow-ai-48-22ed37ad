@@ -110,6 +110,7 @@ function CallHistory() {
 
   function resetFilters() {
     setStatusFilter("all");
+    setEndReasonFilter("all");
     setCampaignFilter("all");
     setAgentFilter("all");
     setSentimentFilter("all");
