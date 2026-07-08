@@ -10,12 +10,13 @@ import { persist } from "zustand/middleware";
 import { supabase } from "@/integrations/supabase/client";
 
 // Fire-and-forget DB write. Errors log to console — UI stays responsive.
-function dbWrite(p: Promise<unknown>) {
-  void p.then((r) => {
+function dbWrite(p: PromiseLike<unknown>) {
+  Promise.resolve(p).then((r) => {
     const err = (r as { error?: { message?: string } })?.error;
     if (err) console.error("[data-store] write failed:", err);
   });
 }
+
 
 
 export type UUID = string;
