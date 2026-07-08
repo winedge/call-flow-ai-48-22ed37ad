@@ -359,7 +359,7 @@ async function speak(s: Session, text: string) {
   s.cancelSpeech = () => (cancelled = true);
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine);
+    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
     if (cancelled || s.closed) return;
 
     // Fast path: ElevenLabs returns raw μ-law 8kHz as data URI —
