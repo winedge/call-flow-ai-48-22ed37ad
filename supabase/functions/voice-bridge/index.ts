@@ -346,7 +346,7 @@ async function speak(s: Session, text: string) {
   s.cancelSpeech = () => (cancelled = true);
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language);
+    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine);
     if (cancelled || s.closed) return;
     const buf = await (await fetch(audio_url)).arrayBuffer();
     if (cancelled || s.closed) return;
