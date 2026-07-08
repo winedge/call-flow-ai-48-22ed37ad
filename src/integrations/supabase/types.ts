@@ -434,6 +434,9 @@ export type Database = {
       org_settings: {
         Row: {
           created_at: string
+          has_elevenlabs: boolean
+          has_openai: boolean
+          has_twilio: boolean
           smtp_host: string
           smtp_port: number
           smtp_user: string
@@ -444,6 +447,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          has_elevenlabs?: boolean
+          has_openai?: boolean
+          has_twilio?: boolean
           smtp_host?: string
           smtp_port?: number
           smtp_user?: string
@@ -454,6 +460,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          has_elevenlabs?: boolean
+          has_openai?: boolean
+          has_twilio?: boolean
           smtp_host?: string
           smtp_port?: number
           smtp_user?: string
