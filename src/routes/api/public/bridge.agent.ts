@@ -31,6 +31,7 @@ type BridgeAgent = {
   voicemail_message?: string;
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
+  tts_engine?: string;
 };
 
 function toStringArray(v: unknown): string[] {
