@@ -60,14 +60,30 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: existing, error: readErr } = await supabaseAdmin
           .from("calls")
-          .select("id, status, agent_id")
+          .select(
+            "id, user_id, status, agent_id, campaign_id, contact_id, direction, phone_to, phone_from, started_at, ended_at, duration_sec, recording_url, transcript, end_reason, extracted_data",
+          )
           .eq("twilio_call_sid", callSid)
-          .maybeSingle();
+          .maybeSingle<{
+            id: string;
+            user_id: string;
+            status: string;
+            agent_id: string | null;
+            campaign_id: string | null;
+            contact_id: string | null;
+            direction: string | null;
+            phone_to: string;
+            phone_from: string | null;
+            started_at: string | null;
+            ended_at: string | null;
+            duration_sec: number | null;
+            recording_url: string | null;
+            transcript: unknown;
+            end_reason: string | null;
+            extracted_data: Record<string, unknown> | null;
+          }>();
         if (readErr) return errorJson(500, `db read: ${readErr.message}`);
         if (!existing) {
-          // Nothing to update — happens if the call row hasn't been persisted
-          // yet (e.g. purely inbound testing). Return 200 so the bridge
-          // doesn't retry.
           return json({ ok: true, updated: false });
         }
 
@@ -94,22 +110,80 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
 
         // Run structured field extraction if the agent has data_fields defined
         // and we have a transcript to work from.
+        let extractedData: Record<string, unknown> | null = null;
         if (cleanTranscript && cleanTranscript.length > 0 && existing.agent_id) {
           const extracted = await extractCallData(
             existing.agent_id as string,
             cleanTranscript,
           );
-          if (extracted) patch.extracted_data = extracted;
+          if (extracted) {
+            patch.extracted_data = extracted;
+            extractedData = extracted;
+          }
         }
 
 
         const { error: updErr } = await supabaseAdmin
           .from("calls")
-          // end_reason / extracted_data columns were added after types.ts was
-          // generated; cast until the regeneration lands.
           .update(patch as never)
           .eq("id", existing.id);
         if (updErr) return errorJson(500, `db update: ${updErr.message}`);
+
+        // Fire "call_completed" automations with the full call payload,
+        // matching the shape emitted by webhooks.twilio.ts so subscribers
+        // receive one consistent schema across both post-call paths.
+        const nowStatus = (patch.status as string | undefined) ?? existing.status;
+        if (nowStatus === "completed") {
+          const extracted =
+            extractedData ??
+            (existing.extracted_data as Record<string, unknown> | null) ??
+            {};
+          const transcript =
+            (patch.transcript as unknown) ?? existing.transcript ?? null;
+          const callPayload = {
+            id: existing.id,
+            twilio_call_sid: callSid,
+            user_id: existing.user_id,
+            agent_id: existing.agent_id,
+            campaign_id: existing.campaign_id,
+            contact_id: existing.contact_id,
+            direction: existing.direction,
+            phone_to: existing.phone_to,
+            phone_from: existing.phone_from,
+            status: nowStatus,
+            started_at: existing.started_at,
+            ended_at: (patch.ended_at as string | undefined) ?? existing.ended_at,
+            duration_sec: existing.duration_sec,
+            recording_url: existing.recording_url,
+            end_reason:
+              (patch.end_reason as string | undefined) ?? existing.end_reason,
+            transcript,
+            extracted_data: extracted,
+          };
+
+          const { data: automations } = await supabaseAdmin
+            .from("automations")
+            .select("id, action, config")
+            .eq("user_id", existing.user_id)
+            .eq("enabled", true)
+            .eq("trigger", "call_completed");
+          for (const a of automations ?? []) {
+            const cfg = (a.config ?? {}) as { url?: string };
+            if (a.action === "webhook" && cfg.url) {
+              fetch(cfg.url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  event: "call_completed",
+                  call: callPayload,
+                  data: extracted,
+                  automation: a.id,
+                }),
+              }).catch(() => {});
+            }
+          }
+        }
+
         return json({ ok: true, updated: true });
       },
     },
