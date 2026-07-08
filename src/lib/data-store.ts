@@ -110,6 +110,8 @@ export type AIAgent = {
   voice_similarity_boost?: number | null;
   voice_style?: number | null;
   voice_speaker_boost?: boolean | null;
+  /** If false, the agent waits for the caller to speak first instead of greeting. */
+  speak_first?: boolean;
   created_at: string;
 };
 
@@ -343,6 +345,7 @@ export const useDB = create<DBState>()(
             voice_similarity_boost: agent.voice_similarity_boost ?? null,
             voice_style: agent.voice_style ?? null,
             voice_speaker_boost: agent.voice_speaker_boost ?? null,
+            speak_first: agent.speak_first ?? true,
           } as never),
         );
         return agent;

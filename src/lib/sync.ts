@@ -51,6 +51,7 @@ function toAgent(r: Row): AIAgent {
     max_retries: Number(r.max_retries ?? 3),
     retry_delay_minutes: Number(r.retry_delay_minutes ?? 60),
     data_fields: Array.isArray(r.data_fields) ? (r.data_fields as AIAgent["data_fields"]) : [],
+    speak_first: (r as { speak_first?: boolean }).speak_first ?? true,
     created_at: (r.created_at as string) ?? new Date().toISOString(),
   };
 }

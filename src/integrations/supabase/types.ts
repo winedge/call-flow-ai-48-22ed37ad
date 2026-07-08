@@ -30,6 +30,7 @@ export type Database = {
           prompt: string
           qualification_questions: Json
           retry_delay_minutes: number
+          speak_first: boolean
           system_prompt: string
           temperature: number
           transfer_number: string
@@ -60,6 +61,7 @@ export type Database = {
           prompt?: string
           qualification_questions?: Json
           retry_delay_minutes?: number
+          speak_first?: boolean
           system_prompt?: string
           temperature?: number
           transfer_number?: string
@@ -90,6 +92,7 @@ export type Database = {
           prompt?: string
           qualification_questions?: Json
           retry_delay_minutes?: number
+          speak_first?: boolean
           system_prompt?: string
           temperature?: number
           transfer_number?: string
