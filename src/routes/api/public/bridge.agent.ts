@@ -35,6 +35,12 @@ type BridgeAgent = {
   silence_timeout_seconds?: number;
   tts_engine?: string;
   data_fields?: DataField[];
+  voice_settings?: {
+    stability?: number;
+    similarity_boost?: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+  };
 };
 
 function toStringArray(v: unknown): string[] {
