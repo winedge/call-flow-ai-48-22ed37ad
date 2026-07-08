@@ -92,6 +92,20 @@ async function fetchFromSupabase(id: string): Promise<BridgeAgent | null> {
       silence_timeout_seconds: 30,
       tts_engine: (data as { tts_engine?: string }).tts_engine || "kokoro",
       data_fields: toDataFields((data as { data_fields?: unknown }).data_fields),
+      voice_settings: (() => {
+        const d = data as {
+          voice_stability?: number | null;
+          voice_similarity_boost?: number | null;
+          voice_style?: number | null;
+          voice_speaker_boost?: boolean | null;
+        };
+        const vs: NonNullable<BridgeAgent["voice_settings"]> = {};
+        if (typeof d.voice_stability === "number") vs.stability = d.voice_stability;
+        if (typeof d.voice_similarity_boost === "number") vs.similarity_boost = d.voice_similarity_boost;
+        if (typeof d.voice_style === "number") vs.style = d.voice_style;
+        if (typeof d.voice_speaker_boost === "boolean") vs.use_speaker_boost = d.voice_speaker_boost;
+        return Object.keys(vs).length ? vs : undefined;
+      })(),
     };
   } catch {
     return null;
