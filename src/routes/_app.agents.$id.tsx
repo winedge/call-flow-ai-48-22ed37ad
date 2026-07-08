@@ -66,6 +66,10 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     max_retries: 3,
     retry_delay_minutes: 60,
     data_fields: [],
+    voice_stability: 0.35,
+    voice_similarity_boost: 0.8,
+    voice_style: 0.45,
+    voice_speaker_boost: true,
   };
 }
 
