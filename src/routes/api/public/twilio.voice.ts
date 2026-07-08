@@ -34,6 +34,26 @@ function sayAndHangup(msg: string): Response {
   });
 }
 
+function bridgeStreamUrl(rawBridgeUrl: string): URL {
+  const stream = new URL(rawBridgeUrl);
+  stream.protocol = "wss:";
+
+  // Older bridge configs used the base project host plus `/twilio`. Lovable
+  // Cloud edge functions are served from the functions host at `/voice-bridge`.
+  // If that stale shape is still saved, Twilio connects to a non-function URL
+  // and hangs up before the bridge can log the call.
+  if (
+    stream.hostname.endsWith(".supabase.co") &&
+    !stream.hostname.endsWith(".functions.supabase.co")
+  ) {
+    const projectRef = stream.hostname.split(".")[0];
+    stream.hostname = `${projectRef}.functions.supabase.co`;
+    stream.pathname = "/voice-bridge";
+  }
+
+  return stream;
+}
+
 export const Route = createFileRoute("/api/public/twilio/voice")({
   server: {
     handlers: {
@@ -104,7 +124,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         // Media Streams URL: wss with query params on the configured bridge
         // path. Bridge validates on connect. We preserve BRIDGE_URL's path
         // (e.g. Supabase edge function `/voice-bridge`), only appending query.
-        const stream = new URL(bridge);
+        const stream = bridgeStreamUrl(bridge);
         stream.searchParams.set("agent_id", agentId);
         stream.searchParams.set("call_sid", callSid);
         const wsUrl = escapeXml(stream.toString());
