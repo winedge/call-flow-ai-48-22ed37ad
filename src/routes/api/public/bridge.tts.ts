@@ -170,8 +170,9 @@ async function synthesizeElevenLabs(
     const t = await res.text().catch(() => "");
     return { error: `ElevenLabs ${res.status}: ${t.slice(0, 200)}`, status: 502 };
   }
-  const mulaw = new Uint8Array(await res.arrayBuffer());
-  return { audio_url: `data:audio/mulaw;base64,${toBase64(mulaw)}` };
+  const rawMulaw = new Uint8Array(await res.arrayBuffer());
+  const mixed = await mixOfficeAmbience(rawMulaw, originHint);
+  return { audio_url: `data:audio/mulaw;base64,${toBase64(mixed)}` };
 }
 
 async function synthesizeKokoro(
