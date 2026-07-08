@@ -425,6 +425,7 @@ Deno.serve((req) => {
   const session: Session = {
     twilio: socket,
     streamSid: null,
+    callSid: url.searchParams.get("call_sid"),
     agent: null,
     dg: null,
     history: [],
@@ -432,11 +433,33 @@ Deno.serve((req) => {
     turnLock: false,
     cancelSpeech: () => {},
     closed: false,
+    lastUserAudioAt: Date.now(),
+    timers: [],
   };
 
   // Kick off agent fetch immediately.
   fetchAgent(agentId)
-    .then((a) => (session.agent = a))
+    .then((a) => {
+      session.agent = a;
+      // Hard call-duration cap. Default 15min if agent doesn't specify.
+      const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
+      session.timers.push(
+        setTimeout(() => cleanup(session, `max duration ${maxSec}s`), maxSec * 1000),
+      );
+      // Silence watchdog: if no user audio for N seconds and we aren't
+      // mid-utterance, hang up. Default 30s.
+      const silenceMs = Math.max(5000, (a.silence_timeout_seconds ?? 30) * 1000);
+      const tick = () => {
+        if (session.closed) return;
+        const idle = Date.now() - session.lastUserAudioAt;
+        if (idle > silenceMs && !session.speaking && !session.turnLock) {
+          cleanup(session, `silence ${Math.round(idle / 1000)}s`);
+          return;
+        }
+        session.timers.push(setTimeout(tick, 5000));
+      };
+      session.timers.push(setTimeout(tick, 5000));
+    })
     .catch((e) => {
       console.error("agent fetch failed", e);
       cleanup(session, "agent config unavailable");
@@ -458,6 +481,9 @@ Deno.serve((req) => {
 
     if (msg.event === "start") {
       session.streamSid = msg.start!.streamSid;
+      // Prefer the authoritative call_sid from Twilio's start frame.
+      if (msg.start?.callSid) session.callSid = msg.start.callSid;
+      session.lastUserAudioAt = Date.now();
       for (let i = 0; i < 50 && !session.agent; i++) {
         await new Promise((r) => setTimeout(r, 40));
       }
@@ -482,6 +508,7 @@ Deno.serve((req) => {
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       session.dg.send(bytes);
+      session.lastUserAudioAt = Date.now();
     } else if (msg.event === "stop") {
       cleanup(session, "twilio stop");
     }
