@@ -86,14 +86,35 @@ Any host that runs a Docker container and keeps the process alive works.
 `auto_stop_machines = false` matters — you don't want the runtime shutting
 down mid-call. Provision at least one always-on instance.
 
-## Scaling & cost
+## Scaling, capacity & observability
 
-- One machine handles ~50 concurrent calls at 512 MB. Scale horizontally
-  behind Fly's built-in load balancing (each ws session is stateless
-  outside the machine that owns it).
-- Bridge itself is free of per-call cost. Per-minute cost sits with
-  Twilio ($0.014), Deepgram ($0.0043), Lovable AI (~$0.001), Kokoro
-  (~$0.001–0.002).
+- **Concurrency cap.** `MAX_SESSIONS` (env, default `100`) caps in-flight
+  WebSocket sessions per machine. Over the cap, `/twilio` upgrades are
+  rejected with `503` so Fly's load balancer picks another machine.
+- **Sizing.** One `shared-cpu-2x / 1 GB` machine comfortably holds 100
+  concurrent calls (audio is μ-law 8 kHz, ~8 kB/s each way; the hot loop
+  is downsample + μ-law encode of Kokoro WAVs). Scale horizontally —
+  every session is fully owned by the machine that accepted its upgrade,
+  so there's no cross-machine state to share.
+- **Health & metrics.**
+  - `GET /healthz` → `200 ok` (used by Fly's TCP/HTTP checks).
+  - `GET /metrics` → JSON `{ active, max_sessions, opened, closed,
+    uptime_s, memory: { rss_mb, heap_mb } }`. Scrape from Grafana Agent,
+    Fly Metrics, or a plain cron.
+- **Structured logs.** Every log line is JSON with `connection_id`,
+  `call_sid`, `agent_id` — grep one call end-to-end with
+  `fly logs | grep <call_sid>`.
+- **Reconnect.** Deepgram STT auto-reconnects with exponential backoff
+  (up to 3 attempts) if the upstream socket drops. LLM turn and TTS
+  are short HTTPS calls; failures surface a spoken error and the caller
+  can retry the utterance.
+- **Twilio disconnects.** `stop` frames, socket close, and hangups all
+  funnel through a single `cleanup()` path, so the Deepgram socket is
+  closed and the session is removed from the registry immediately.
+- **Cost.** Bridge itself is free of per-call cost. Per-minute cost sits
+  with Twilio ($0.014), Deepgram ($0.0043), Lovable AI (~$0.001),
+  Kokoro (~$0.001–0.002).
+
 
 ## Security
 
