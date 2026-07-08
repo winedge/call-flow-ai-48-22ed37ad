@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Phone, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/forgot-password")({
   head: () => ({
@@ -41,15 +43,20 @@ function ForgotPasswordPage() {
             </p>
           ) : (
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
+                const email = (e.currentTarget.elements.namedItem("em") as HTMLInputElement).value;
+                const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/auth/reset-password`,
+                });
+                if (error) return toast.error(error.message);
                 setSent(true);
               }}
               className="space-y-4"
             >
               <div className="space-y-2">
                 <Label htmlFor="em">Email</Label>
-                <Input id="em" type="email" required />
+                <Input id="em" name="em" type="email" required />
               </div>
               <Button type="submit" className="w-full bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
                 Send reset link
