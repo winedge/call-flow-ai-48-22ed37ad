@@ -34,9 +34,12 @@ function SettingsPage() {
   const saveSettings = useDB((s) => s.saveSettings);
   const orgId = useDB((s) => s.currentOrgId);
   const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
+  const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
   const addPhone = useDB((s) => s.addPhone);
   const delPhone = useDB((s) => s.deletePhone);
+  const setPhoneInboundAgent = useDB((s) => s.setPhoneInboundAgent);
   const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
+
 
   const [me, setMe] = useState<Me | null>(null);
   useEffect(() => {
@@ -129,19 +132,40 @@ function SettingsPage() {
             </p>
             <div className="space-y-2 mb-4">
               {phones.map((p) => (
-                <div key={p.id} className="flex items-center justify-between bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
-                  <div>
+                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
+                  <div className="min-w-0">
                     <p className="font-mono text-zinc-200">{p.number}</p>
                     <p className="text-[11px] text-zinc-500">{p.type} · {p.capabilities.join(", ")}</p>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={() => { delPhone(p.id); toast.success("Number released"); }}>
-                    <Trash2 className="size-3.5 text-red-400" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <Label className="text-[10px] text-zinc-500 mb-1">Inbound agent</Label>
+                      <Select
+                        value={p.inbound_agent_id ?? "none"}
+                        onValueChange={(v) => {
+                          setPhoneInboundAgent(p.id, v === "none" ? null : v);
+                          toast.success(v === "none" ? "Inbound routing cleared" : "Inbound agent assigned");
+                        }}
+                      >
+                        <SelectTrigger className="w-56"><SelectValue placeholder="Not routed" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— None —</SelectItem>
+                          {agents.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => { delPhone(p.id); toast.success("Number released"); }}>
+                      <Trash2 className="size-3.5 text-red-400" />
+                    </Button>
+                  </div>
                 </div>
               ))}
               {phones.length === 0 && (
                 <p className="text-xs text-zinc-500 italic">No numbers provisioned.</p>
               )}
+
             </div>
             <AddPhone onAdd={(n, t) => { addPhone(n, t); toast.success("Number added"); }} />
           </Card>
