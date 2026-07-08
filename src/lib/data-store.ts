@@ -176,6 +176,7 @@ export type Call = {
   ai_minutes: number;
   appointment_booked: boolean;
   end_reason: string | null;
+  extracted_data: Record<string, string | number | boolean | null>;
 };
 
 export type Appointment = {
