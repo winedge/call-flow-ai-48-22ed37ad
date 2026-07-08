@@ -35,6 +35,7 @@ function CallHistory() {
   const contacts = useDB((s) => s.contacts);
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [endReasonFilter, setEndReasonFilter] = useState("all");
   const [campaignFilter, setCampaignFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
   const [sentimentFilter, setSentimentFilter] = useState("all");
