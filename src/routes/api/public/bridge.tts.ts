@@ -64,13 +64,25 @@ function toBase64(bytes: Uint8Array): string {
 async function synthesizeElevenLabs(
   text: string,
   voiceId: string,
+  overrides?: {
+    stability?: number;
+    similarity_boost?: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+  },
 ): Promise<{ audio_url: string } | { error: string; status: number }> {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { error: "ElevenLabs not configured", status: 500 };
 
+  const voice_settings = {
+    stability: overrides?.stability ?? 0.35,
+    similarity_boost: overrides?.similarity_boost ?? 0.8,
+    style: overrides?.style ?? 0.45,
+    use_speaker_boost: overrides?.use_speaker_boost ?? true,
+  };
+
   // Request μ-law 8kHz directly — matches Twilio's wire format so the bridge
-  // forwards bytes with zero resample/encode work. Biggest latency win and
-  // eliminates the pitch drift that comes from off-rate playback.
+  // forwards bytes with zero resample/encode work.
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=ulaw_8000`,
     {
@@ -83,14 +95,9 @@ async function synthesizeElevenLabs(
       body: JSON.stringify({
         text,
         // turbo_v2_5 has noticeably more natural prosody than flash while
-        // still keeping TTFB low. Flash sounds robotic on numbers/read-backs.
+        // still keeping TTFB low.
         model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          stability: 0.35,
-          similarity_boost: 0.8,
-          style: 0.45,
-          use_speaker_boost: true,
-        },
+        voice_settings,
       }),
     },
   );
@@ -99,7 +106,6 @@ async function synthesizeElevenLabs(
     return { error: `ElevenLabs ${res.status}: ${t.slice(0, 200)}`, status: 502 };
   }
   const mulaw = new Uint8Array(await res.arrayBuffer());
-  // Custom media type — the bridge detects this and skips WAV parsing.
   return { audio_url: `data:audio/mulaw;base64,${toBase64(mulaw)}` };
 }
 
