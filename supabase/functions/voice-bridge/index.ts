@@ -290,7 +290,9 @@ type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
 
 function openDeepgram(cb: {
   onInterim: (t: string) => void;
-  onFinal: (t: string) => void;
+  onFinal: (t: string, speechFinal: boolean) => void;
+  onUtteranceEnd: () => void;
+  onSpeechStart: () => void;
   onError: (e: unknown) => void;
 }): DgHandle {
   const url = new URL("wss://api.deepgram.com/v1/listen");
@@ -300,7 +302,14 @@ function openDeepgram(cb: {
   url.searchParams.set("model", "nova-2-phonecall");
   url.searchParams.set("smart_format", "true");
   url.searchParams.set("interim_results", "true");
-  url.searchParams.set("endpointing", "100");
+  // Endpointing: silence (ms) before Deepgram commits a `speech_final`.
+  // 300ms is tight but reliable on phone audio; the utterance_end_ms
+  // watchdog below covers cases where the model never marks speech_final.
+  url.searchParams.set("endpointing", "300");
+  // VAD events give us a hard UtteranceEnd signal — used to flush any
+  // buffered finals when Deepgram doesn't emit speech_final in time.
+  url.searchParams.set("vad_events", "true");
+  url.searchParams.set("utterance_end_ms", "1000");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
@@ -311,8 +320,12 @@ function openDeepgram(cb: {
       if (msg.type === "Results") {
         const t = msg.channel?.alternatives?.[0]?.transcript ?? "";
         if (!t) return;
-        if (msg.is_final || msg.speech_final) cb.onFinal(t);
+        if (msg.is_final || msg.speech_final) cb.onFinal(t, !!msg.speech_final);
         else cb.onInterim(t);
+      } else if (msg.type === "UtteranceEnd") {
+        cb.onUtteranceEnd();
+      } else if (msg.type === "SpeechStarted") {
+        cb.onSpeechStart();
       }
     } catch (e) {
       cb.onError(e);
