@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Phone } from "lucide-react";
+import logoAsset from "@/assets/logo.png.asset.json";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,12 +76,7 @@ function AuthPage() {
     <div className="min-h-screen bg-surface-base flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center justify-center gap-3 mb-8">
-          <div className="size-9 bg-brand-primary rounded-md grid place-items-center">
-            <Phone className="size-4 text-primary-foreground" strokeWidth={2.5} />
-          </div>
-          <span className="font-medium tracking-tight text-zinc-100 text-lg">
-            BulkCall AI
-          </span>
+          <img src={logoAsset.url} alt="BulkCall AI" className="h-8 w-auto object-contain" />
         </Link>
 
         <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 backdrop-blur-sm">

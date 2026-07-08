@@ -8,13 +8,14 @@ import {
   History,
   Workflow,
   Settings as SettingsIcon,
-  Phone,
+  
   Sparkles,
 } from "lucide-react";
 
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg } from "@/lib/data-store";
+import logoAsset from "@/assets/logo.png.asset.json";
 
 type NavItem = {
   to: string;
@@ -50,13 +51,8 @@ export function Sidebar() {
     <aside className="w-64 flex-shrink-0 border-r border-surface-border/60 bg-surface-base flex flex-col h-screen sticky top-0">
       <div className="p-6">
         <Link to="/dashboard" className="flex items-center gap-3">
-          <div className="size-7 bg-brand-primary rounded-md grid place-items-center">
-            <Phone className="size-3.5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
+          <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain" />
           <div className="min-w-0">
-            <p className="font-medium tracking-tight text-zinc-100 text-sm">
-              BulkCall AI
-            </p>
             <p className="truncate text-[10px] font-mono uppercase tracking-wider text-zinc-500">
               {org?.name ?? "—"}
             </p>

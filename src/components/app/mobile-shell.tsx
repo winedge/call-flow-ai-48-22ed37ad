@@ -25,6 +25,7 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
+import logoAsset from "@/assets/logo.png.asset.json";
 import {
   Sheet,
   SheetContent,
@@ -81,11 +82,8 @@ export function MobileTopBar() {
       </Sheet>
 
       <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
-        <div className="size-7 bg-brand-primary rounded-md grid place-items-center shrink-0">
-          <Phone className="size-3.5 text-primary-foreground" strokeWidth={2.5} />
-        </div>
+        <img src={logoAsset.url} alt="BulkCall AI" className="h-5 w-auto object-contain shrink-0" />
         <div className="min-w-0 leading-tight">
-          <p className="text-sm font-medium text-zinc-100 truncate">BulkCall AI</p>
           <p className="truncate text-[9px] font-mono uppercase tracking-wider text-zinc-500">
             {org?.name ?? "—"}
           </p>
@@ -125,11 +123,8 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
       <SheetHeader className="p-5 pb-3 border-b border-surface-border/60">
         <SheetTitle asChild>
           <div className="flex items-center gap-3">
-            <div className="size-9 bg-brand-primary rounded-lg grid place-items-center shrink-0">
-              <Phone className="size-4 text-primary-foreground" strokeWidth={2.5} />
-            </div>
+            <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain shrink-0" />
             <div className="min-w-0 text-left">
-              <p className="text-sm font-medium text-zinc-100">BulkCall AI</p>
               <p className="truncate text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                 {org?.name ?? "—"}
               </p>
