@@ -137,7 +137,7 @@ function toCall(r: Row): Call {
     status: (r.status as Call["status"]) ?? "queued",
     outcome: (r.outcome as string) ?? "",
     recording_url: (r.recording_url as string | null) ?? null,
-    transcript: (r.transcript as Call["transcript"]) ?? [],
+    transcript: normalizeTranscript(r.transcript),
     summary: (r.summary as string) ?? "",
     sentiment: (r.sentiment as Call["sentiment"]) ?? null,
     cost_cents: Number(r.cost_cents ?? 0),
