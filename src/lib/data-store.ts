@@ -545,9 +545,7 @@ export const useDB = create<DBState>()(
         const uid_ = get().currentUserId;
         const dbPatch: Record<string, unknown> = { ...patch };
         delete dbPatch.org_id;
-        delete dbPatch.has_twilio;
-        delete dbPatch.has_elevenlabs;
-        delete dbPatch.has_openai;
+
         if (uid_) {
           dbWrite(
             supabase.from("org_settings").upsert({ user_id: uid_, ...dbPatch } as never),
