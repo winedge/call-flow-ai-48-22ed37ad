@@ -105,8 +105,10 @@ export type PhoneNumber = {
   twilio_sid: string;
   type: "local" | "toll_free";
   capabilities: ("voice" | "sms")[];
+  inbound_agent_id: UUID | null;
   created_at: string;
 };
+
 
 export type CampaignStatus =
   | "draft"
@@ -241,6 +243,8 @@ type DBState = ReturnType<typeof buildSeed> & {
   duplicateCampaign: (id: UUID) => void;
   addPhone: (number: string, type: PhoneNumber["type"]) => PhoneNumber;
   deletePhone: (id: UUID) => void;
+  setPhoneInboundAgent: (id: UUID, agentId: UUID | null) => void;
+
   saveSettings: (patch: Partial<OrgSettings>) => void;
   addAutomation: (a: Omit<Automation, "id" | "org_id">) => Automation;
   toggleAutomation: (id: UUID) => void;
@@ -497,6 +501,7 @@ export const useDB = create<DBState>()(
           twilio_sid: "PN" + uid().replace(/-/g, "").slice(0, 30),
           type,
           capabilities: ["voice", "sms"],
+          inbound_agent_id: null,
           created_at: new Date().toISOString(),
         };
         set((s) => ({ phones: [...s.phones, phone] }));
@@ -516,6 +521,20 @@ export const useDB = create<DBState>()(
         set((s) => ({ phones: s.phones.filter((p) => p.id !== id) }));
         dbWrite(supabase.from("phone_numbers").delete().eq("id", id));
       },
+      setPhoneInboundAgent: (id, agentId) => {
+        set((s) => ({
+          phones: s.phones.map((p) =>
+            p.id === id ? { ...p, inbound_agent_id: agentId } : p,
+          ),
+        }));
+        dbWrite(
+          supabase
+            .from("phone_numbers")
+            .update({ inbound_agent_id: agentId } as never)
+            .eq("id", id),
+        );
+      },
+
 
       saveSettings: (patch) => {
         set((s) => ({

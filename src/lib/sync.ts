@@ -89,9 +89,11 @@ function toPhone(r: Row): PhoneNumber {
     twilio_sid: (r.twilio_sid as string) ?? "",
     type: (r.type as PhoneNumber["type"]) ?? "local",
     capabilities: (r.capabilities as PhoneNumber["capabilities"]) ?? ["voice"],
+    inbound_agent_id: (r.inbound_agent_id as UUID | null) ?? null,
     created_at: (r.created_at as string) ?? new Date().toISOString(),
   };
 }
+
 
 function toCampaign(r: Row): Campaign {
   return {
@@ -396,8 +398,10 @@ export async function persistPhone(p: PhoneNumber) {
     twilio_sid: p.twilio_sid,
     type: p.type,
     capabilities: p.capabilities,
-  });
+    inbound_agent_id: p.inbound_agent_id,
+  } as never);
 }
+
 
 export async function deletePhoneDb(id: UUID) {
   await supabase.from("phone_numbers").delete().eq("id", id);
