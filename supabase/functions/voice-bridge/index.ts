@@ -254,8 +254,9 @@ async function synthTts(
   text: string,
   voice: string,
   language: string,
+  engine?: string,
 ): Promise<{ audio_url: string }> {
-  const body = JSON.stringify({ text, voice, language });
+  const body = JSON.stringify({ text, voice, language, engine });
   const { ts, sig } = await sign(body);
   const res = await fetch(`${APP_URL}/api/public/bridge/tts`, {
     method: "POST",
