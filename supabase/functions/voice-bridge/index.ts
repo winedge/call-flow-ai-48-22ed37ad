@@ -292,7 +292,7 @@ function openDeepgram(cb: {
   url.searchParams.set("model", "nova-2-phonecall");
   url.searchParams.set("smart_format", "true");
   url.searchParams.set("interim_results", "true");
-  url.searchParams.set("endpointing", "300");
+  url.searchParams.set("endpointing", "150");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
