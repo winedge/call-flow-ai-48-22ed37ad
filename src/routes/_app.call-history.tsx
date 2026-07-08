@@ -1,26 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useShallow } from "zustand/react/shallow";
 import { useMemo, useState } from "react";
-import { Download, Search, FileAudio, FileText } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useDB, type Call } from "@/lib/data-store";
+import { useDB } from "@/lib/data-store";
+import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 
 export const Route = createFileRoute("/_app/call-history")({
   head: () => ({ meta: [{ title: "Call history — BulkCall AI" }] }),
@@ -29,186 +20,227 @@ export const Route = createFileRoute("/_app/call-history")({
 
 function CallHistory() {
   const orgId = useDB((s) => s.currentOrgId);
-  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId && c.status !== "in_progress"),
-  ));
+  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
   const campaigns = useDB((s) => s.campaigns);
+  const contacts = useDB((s) => s.contacts);
 
   const [statusFilter, setStatusFilter] = useState("all");
+  const [campaignFilter, setCampaignFilter] = useState("all");
+  const [agentFilter, setAgentFilter] = useState("all");
+  const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [leadFilter, setLeadFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Call | null>(null);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const fromMs = dateFrom ? new Date(dateFrom).getTime() : 0;
+    const toMs = dateTo ? new Date(dateTo).getTime() + 86_400_000 : Infinity;
     return calls
       .filter((c) => statusFilter === "all" || c.status === statusFilter)
-      .filter((c) => !search || c.phone_to.includes(search) || c.outcome.toLowerCase().includes(search.toLowerCase()))
+      .filter((c) => campaignFilter === "all" || c.campaign_id === campaignFilter)
+      .filter((c) => agentFilter === "all" || c.agent_id === agentFilter)
+      .filter((c) => sentimentFilter === "all" || c.sentiment === sentimentFilter)
+      .filter((c) => {
+        if (leadFilter === "all") return true;
+        if (leadFilter === "qualified") return (c.outcome || "").toLowerCase().includes("qualified") || (c.outcome || "").toLowerCase().includes("interested");
+        if (leadFilter === "appointment") return c.appointment_booked;
+        if (leadFilter === "dnc") return (c.outcome || "").toLowerCase().includes("dnc") || (c.outcome || "").toLowerCase().includes("not interested");
+        return true;
+      })
+      .filter((c) => {
+        const t = new Date(c.started_at).getTime();
+        return t >= fromMs && t <= toMs;
+      })
+      .filter((c) => {
+        if (!q) return true;
+        const contact = contacts.find((x) => x.id === c.contact_id);
+        return (
+          c.phone_to.includes(q) ||
+          (c.outcome || "").toLowerCase().includes(q) ||
+          (contact?.name || "").toLowerCase().includes(q) ||
+          (contact?.company || "").toLowerCase().includes(q)
+        );
+      })
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
-  }, [calls, statusFilter, search]);
+  }, [calls, statusFilter, campaignFilter, agentFilter, sentimentFilter, leadFilter, dateFrom, dateTo, search, contacts]);
+
+  const orgCampaigns = campaigns.filter((c) => c.org_id === orgId);
+  const orgAgents = agents.filter((a) => a.org_id === orgId);
+
+  function exportCsv() {
+    if (filtered.length === 0) return toast.info("Nothing to export");
+    const rows = filtered.map((c) => {
+      const contact = contacts.find((x) => x.id === c.contact_id);
+      const agent = agents.find((a) => a.id === c.agent_id);
+      const camp = campaigns.find((x) => x.id === c.campaign_id);
+      return {
+        started_at: c.started_at,
+        contact_name: contact?.name ?? "",
+        phone: c.phone_to,
+        campaign: camp?.name ?? "",
+        agent: agent?.name ?? "",
+        status: c.status,
+        outcome: c.outcome,
+        sentiment: c.sentiment ?? "",
+        duration_sec: c.duration_sec,
+        ai_minutes: c.ai_minutes,
+        cost_usd: (c.cost_cents / 100).toFixed(2),
+        appointment_booked: c.appointment_booked,
+        lead_score: leadScore(c),
+      };
+    });
+    downloadFile(callsToCsv(rows), `call-history-${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success(`Exported ${filtered.length} calls`);
+  }
+
+  function resetFilters() {
+    setStatusFilter("all");
+    setCampaignFilter("all");
+    setAgentFilter("all");
+    setSentimentFilter("all");
+    setLeadFilter("all");
+    setDateFrom("");
+    setDateTo("");
+    setSearch("");
+  }
 
   return (
     <>
       <PageHeader
         title="Call History"
-        description={`${calls.length.toLocaleString()} historical calls`}
+        description={`${filtered.length.toLocaleString()} of ${calls.length.toLocaleString()} calls`}
+        actions={
+          <Button size="sm" variant="outline" onClick={exportCsv}>
+            <Download className="size-3.5 mr-1" /> Export CSV
+          </Button>
+        }
       />
 
-      <div className="flex gap-3 mb-4">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="no_answer">No answer</SelectItem>
-            <SelectItem value="busy">Busy</SelectItem>
-            <SelectItem value="voicemail">Voicemail</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="relative flex-1">
-          <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search phone or outcome..." className="pl-9" />
+      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-4 mb-4 space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="no_answer">No answer</SelectItem>
+              <SelectItem value="busy">Busy</SelectItem>
+              <SelectItem value="voicemail">Voicemail</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+            <SelectTrigger><SelectValue placeholder="Campaign" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All campaigns</SelectItem>
+              {orgCampaigns.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={agentFilter} onValueChange={setAgentFilter}>
+            <SelectTrigger><SelectValue placeholder="Agent" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All agents</SelectItem>
+              {orgAgents.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+            <SelectTrigger><SelectValue placeholder="Sentiment" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sentiment</SelectItem>
+              <SelectItem value="positive">Positive</SelectItem>
+              <SelectItem value="neutral">Neutral</SelectItem>
+              <SelectItem value="negative">Negative</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={leadFilter} onValueChange={setLeadFilter}>
+            <SelectTrigger><SelectValue placeholder="Lead status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All leads</SelectItem>
+              <SelectItem value="qualified">Qualified</SelectItem>
+              <SelectItem value="appointment">Booked</SelectItem>
+              <SelectItem value="dnc">Not interested / DNC</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={resetFilters}>Reset filters</Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="From" />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="To" />
+          <div className="relative">
+            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, phone, company, outcome…" className="pl-9" />
+          </div>
         </div>
       </div>
 
       <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse min-w-[820px]">
+          <table className="w-full text-sm border-collapse min-w-[1000px]">
             <thead>
               <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
                 <th className="px-4 py-3 text-left font-medium">When</th>
+                <th className="px-4 py-3 text-left font-medium">Contact</th>
                 <th className="px-4 py-3 text-left font-medium">Number</th>
                 <th className="px-4 py-3 text-left font-medium">Campaign</th>
                 <th className="px-4 py-3 text-left font-medium">Agent</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium">Outcome</th>
+                <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                 <th className="px-4 py-3 text-right font-medium">Duration</th>
+                <th className="px-4 py-3 text-right font-medium">Score</th>
                 <th className="px-4 py-3 text-right font-medium">Cost</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.slice(0, 100).map((c) => {
-                const agent = agents.find((a) => a.id === c.agent_id);
-                const camp = campaigns.find((x) => x.id === c.campaign_id);
-                return (
-                  <tr
-                    key={c.id}
-                    className="border-b border-surface-border/30 hover:bg-zinc-800/30 cursor-pointer"
-                    onClick={() => setSelected(c)}
-                  >
-                    <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
-                      {new Date(c.started_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-zinc-200">{c.phone_to}</td>
-                    <td className="px-4 py-3 text-zinc-400">{camp?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-zinc-400">{agent?.name ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-[10px] uppercase tracking-wider font-mono ${
-                        c.status === "completed" ? "text-emerald-400" :
-                        c.status === "failed" ? "text-red-400" :
-                        c.status === "voicemail" ? "text-amber-400" : "text-zinc-500"
-                      }`}>{c.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">{c.outcome}</td>
-                    <td className="px-4 py-3 text-right font-mono text-zinc-400">{c.duration_sec}s</td>
-                    <td className="px-4 py-3 text-right font-mono text-zinc-400">${(c.cost_cents / 100).toFixed(2)}</td>
-                  </tr>
-                );
-              })}
+              {filtered.length === 0 ? (
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
+              ) : (
+                filtered.slice(0, 200).map((c) => {
+                  const agent = agents.find((a) => a.id === c.agent_id);
+                  const camp = campaigns.find((x) => x.id === c.campaign_id);
+                  const contact = contacts.find((x) => x.id === c.contact_id);
+                  return (
+                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/30">
+                      <td className="px-4 py-3 text-zinc-400 font-mono text-xs whitespace-nowrap">
+                        {new Date(c.started_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-200">
+                        <Link to="/calls/$id" params={{ id: c.id }} className="hover:text-brand-primary">
+                          {contact?.name || <span className="text-zinc-500 italic">Unknown</span>}
+                        </Link>
+                        {contact?.company && <p className="text-[10px] text-zinc-500">{contact.company}</p>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-zinc-300">{c.phone_to}</td>
+                      <td className="px-4 py-3 text-zinc-400 truncate max-w-[160px]">{camp?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-zinc-400 truncate max-w-[120px]">{agent?.name ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-[10px] uppercase tracking-wider font-mono ${
+                          c.status === "completed" ? "text-emerald-400" :
+                          c.status === "failed" ? "text-red-400" :
+                          c.status === "voicemail" ? "text-amber-400" :
+                          c.status === "in_progress" ? "text-brand-primary" : "text-zinc-500"
+                        }`}>{c.status}</span>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs">{c.sentiment ?? "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-zinc-300">{leadScore(c)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-zinc-400">${(c.cost_cents / 100).toFixed(2)}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-        {filtered.length > 100 && (
+        {filtered.length > 200 && (
           <div className="px-4 py-3 text-xs text-zinc-500 border-t border-surface-border/40">
-            Showing latest 100 of {filtered.length.toLocaleString()}
+            Showing latest 200 of {filtered.length.toLocaleString()} — refine filters or export to CSV to see the rest.
           </div>
         )}
       </div>
-
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle>Call · {selected.phone_to}</SheetTitle>
-              </SheetHeader>
-              <div className="mt-6 space-y-6">
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <Pair label="Status" value={selected.status} />
-                  <Pair label="Outcome" value={selected.outcome || "—"} />
-                  <Pair label="Duration" value={`${selected.duration_sec}s`} />
-                  <Pair label="AI minutes" value={selected.ai_minutes.toFixed(2)} />
-                  <Pair label="Cost" value={`$${(selected.cost_cents / 100).toFixed(2)}`} />
-                  <Pair label="Sentiment" value={selected.sentiment ?? "—"} />
-                  <Pair label="Appointment" value={selected.appointment_booked ? "Booked ✓" : "—"} />
-                  <Pair label="Twilio SID" value={selected.twilio_call_sid} mono />
-                </div>
-
-                {selected.recording_url && (
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 font-mono">Recording</p>
-                    <div className="p-3 bg-zinc-900/60 rounded-lg ring-1 ring-white/5 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-zinc-300">
-                        <FileAudio className="size-3.5" /> recording.mp3
-                      </div>
-                      <Button size="sm" variant="outline" onClick={() => toast.info("Streams from Twilio in production")}>
-                        <Download className="size-3.5 mr-1" /> Download
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {selected.summary && (
-                  <div>
-                    <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 font-mono">AI Summary</p>
-                    <p className="text-sm text-zinc-300 bg-zinc-900/60 rounded-lg p-3 ring-1 ring-white/5">{selected.summary}</p>
-                  </div>
-                )}
-
-                {selected.transcript.length > 0 && (
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">Transcript</p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          const text = selected.transcript.map(t => `${t.speaker.toUpperCase()}: ${t.text}`).join("\n");
-                          const blob = new Blob([text], { type: "text/plain" });
-                          const a = document.createElement("a");
-                          a.href = URL.createObjectURL(blob);
-                          a.download = `transcript-${selected.id.slice(0, 8)}.txt`;
-                          a.click();
-                        }}
-                      >
-                        <FileText className="size-3.5 mr-1" /> Download
-                      </Button>
-                    </div>
-                    <div className="bg-zinc-950/40 rounded-lg p-3 ring-1 ring-white/5 space-y-2 max-h-96 overflow-y-auto">
-                      {selected.transcript.map((t, i) => (
-                        <div key={i} className="text-xs font-mono">
-                          <span className={t.speaker === "ai" ? "text-brand-primary" : "text-zinc-400"}>
-                            {t.speaker === "ai" ? "AI" : "USR"} ›
-                          </span>{" "}
-                          <span className="text-zinc-200">{t.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </>
-  );
-}
-
-function Pair({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">{label}</p>
-      <p className={`text-zinc-200 ${mono ? "font-mono truncate text-[11px]" : ""}`}>{value}</p>
-    </div>
   );
 }
