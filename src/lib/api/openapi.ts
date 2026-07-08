@@ -497,7 +497,7 @@ export function buildOpenApiSpec(origin: string) {
           tags: ["webhooks"],
           summary: "Twilio status callback receiver",
           description:
-            "Configure this URL as your Twilio statusCallback. Accepts application/json or application/x-www-form-urlencoded. Verifies X-Twilio-Signature when TWILIO_AUTH_TOKEN is configured.",
+            "Configure this URL as your Twilio statusCallback. Accepts application/json or application/x-www-form-urlencoded. Verifies X-Twilio-Signature when TWILIO_AUTH_TOKEN is configured.\n\nOn terminal transitions (completed / failed / no_answer / busy) this endpoint fans out to every enabled automation whose `trigger` matches the call outcome (`call_completed`, `call_failed`, `call_no_answer`). Each webhook automation receives a `PostCallWebhookPayload` — see the schema for the exact shape.",
           security: [],
           requestBody: {
             required: true,
@@ -545,6 +545,27 @@ export function buildOpenApiSpec(origin: string) {
           },
         },
       },
+      "x-post-call-webhook": {
+        post: {
+          tags: ["webhooks"],
+          summary: "Outbound post-call webhook (delivered to your URL)",
+          description:
+            "This is NOT an endpoint on BulkCall AI — it documents the payload BulkCall AI POSTs to the `url` configured on any `webhook`-action automation whose trigger fires after a call ends.\n\nEmitted from two places with the same shape:\n- The voice bridge, when it reports the final transcript (fires `call_completed`).\n- The Twilio status callback, on terminal transitions (fires `call_completed`, `call_failed`, or `call_no_answer`).\n\nContent-Type is `application/json`. There is no signature header on outbound deliveries yet — validate by IP allow-list or a shared secret in the URL until HMAC signing ships.",
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/PostCallWebhookPayload" },
+              },
+            },
+          },
+          responses: {
+            "2XX": { description: "Any 2xx is treated as delivered; non-2xx responses are not retried." },
+          },
+        },
+      },
     },
   };
 }
+
