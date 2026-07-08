@@ -85,6 +85,7 @@ async function fetchFromSupabase(id: string): Promise<BridgeAgent | null> {
       max_call_seconds: 900,
       silence_timeout_seconds: 30,
       tts_engine: (data as { tts_engine?: string }).tts_engine || "kokoro",
+      data_fields: toDataFields((data as { data_fields?: unknown }).data_fields),
     };
   } catch {
     return null;
