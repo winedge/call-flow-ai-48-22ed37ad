@@ -36,8 +36,8 @@ function CampaignDetail() {
 
 
   const metrics = useMemo(
-    () => computeCampaignMetrics(campaign, calls, contacts),
-    [campaign, calls, contacts],
+    () => computeCampaignMetrics(cmp, calls, contacts),
+    [cmp, calls, contacts],
   );
 
   const liveCalls = useMemo(
@@ -90,15 +90,15 @@ function CampaignDetail() {
       lead_score: leadScore(c),
       summary: c.summary,
     }));
-    downloadFile(callsToCsv(rows), `${campaign.name.replace(/\s+/g, "_")}_calls.csv`);
+    downloadFile(callsToCsv(rows), `${cmp.name.replace(/\s+/g, "_")}_calls.csv`);
     toast.success("CSV exported");
   }
 
   function exportReport() {
     const rows = [
-      ["Campaign", campaign.name],
-      ["Status", campaign.status],
-      ["Created", new Date(campaign.created_at).toLocaleString()],
+      ["Campaign", cmp.name],
+      ["Status", cmp.status],
+      ["Created", new Date(cmp.created_at).toLocaleString()],
       ["First call", metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "—"],
       ["Last call", metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "—"],
       ["Total contacts", metrics.totalContacts],
@@ -119,39 +119,39 @@ function CampaignDetail() {
       ["Failed", metrics.failed],
     ];
     const csv = rows.map(([k, v]) => `${k},${String(v).replace(/,/g, ";")}`).join("\n");
-    downloadFile(csv, `${campaign.name.replace(/\s+/g, "_")}_report.csv`);
+    downloadFile(csv, `${cmp.name.replace(/\s+/g, "_")}_report.csv`);
     toast.success("Report exported");
   }
 
   return (
     <>
       <PageHeader
-        title={campaign.name}
-        description={`Created ${new Date(campaign.created_at).toLocaleDateString()} · ${campaign.timezone}`}
+        title={cmp.name}
+        description={`Created ${new Date(cmp.created_at).toLocaleDateString()} · ${cmp.timezone}`}
         crumb={[
           { label: "Campaigns", to: "/campaigns" },
-          { label: campaign.name, to: `/campaigns/${campaign.id}` },
+          { label: cmp.name, to: `/campaigns/${cmp.id}` },
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <StatusPill status={campaign.status} />
-            {campaign.status === "running" ? (
-              <Button size="sm" variant="outline" onClick={() => { setStatus(campaign.id, "paused"); toast.success("Paused"); }}>
+            <StatusPill status={cmp.status} />
+            {cmp.status === "running" ? (
+              <Button size="sm" variant="outline" onClick={() => { setStatus(cmp.id, "paused"); toast.success("Paused"); }}>
                 <Pause className="size-3.5 mr-1" /> Pause
               </Button>
             ) : (
               <Button
                 size="sm"
                 className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110"
-                onClick={() => { setStatus(campaign.id, "running"); toast.success("Running"); }}
+                onClick={() => { setStatus(cmp.id, "running"); toast.success("Running"); }}
               >
-                <Play className="size-3.5 mr-1" /> {campaign.status === "paused" ? "Resume" : "Launch"}
+                <Play className="size-3.5 mr-1" /> {cmp.status === "paused" ? "Resume" : "Launch"}
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => { duplicate(campaign.id); toast.success("Duplicated"); }}>
+            <Button size="sm" variant="outline" onClick={() => { duplicate(cmp.id); toast.success("Duplicated"); }}>
               <Copy className="size-3.5 mr-1" /> Duplicate
             </Button>
-            <Button size="sm" variant="outline" onClick={() => { setStatus(campaign.id, "stopped"); toast.success("Stopped"); }}>
+            <Button size="sm" variant="outline" onClick={() => { setStatus(cmp.id, "stopped"); toast.success("Stopped"); }}>
               <Square className="size-3.5 mr-1" /> Stop
             </Button>
           </div>
@@ -396,9 +396,9 @@ function CampaignDetail() {
             <InfoCard title="Agent" body={agent?.name ?? "—"} sub={agent?.voice_name} />
             <InfoCard title="Contact list" body={list?.name ?? "—"} sub={list?.description} />
             <InfoCard title="From number" body={phone?.number ?? "—"} sub={phone?.type ?? ""} />
-            <InfoCard title="Timezone" body={campaign.timezone} sub={`${campaign.calling_hours.start}–${campaign.calling_hours.end}`} />
-            <InfoCard title="Pace" body={`${campaign.calls_per_minute} calls/min`} />
-            <InfoCard title="Retries" body={`${campaign.retry_rules.max_attempts}× · ${campaign.retry_rules.gap_minutes}m gap`} />
+            <InfoCard title="Timezone" body={cmp.timezone} sub={`${cmp.calling_hours.start}–${cmp.calling_hours.end}`} />
+            <InfoCard title="Pace" body={`${cmp.calls_per_minute} calls/min`} />
+            <InfoCard title="Retries" body={`${cmp.retry_rules.max_attempts}× · ${cmp.retry_rules.gap_minutes}m gap`} />
           </div>
         </TabsContent>
       </Tabs>
