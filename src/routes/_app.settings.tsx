@@ -1,7 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -16,14 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 import { useDB, selectCurrentSettings, type PhoneNumber } from "@/lib/data-store";
+import { persistSettings } from "@/lib/sync";
 
 export const Route = createFileRoute("/_app/settings")({
   head: () => ({ meta: [{ title: "Settings — BulkCall AI" }] }),
   component: SettingsPage,
 });
 
-const TZS = ["America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "Europe/London", "Europe/Berlin", "Asia/Tokyo"];
+const TZS = ["America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "Europe/London", "Europe/Berlin", "Asia/Tokyo", "UTC"];
+
+type Me = { id: string; email: string; full_name: string };
 
 function SettingsPage() {
   const settings = useDB(selectCurrentSettings);
@@ -32,12 +36,54 @@ function SettingsPage() {
   const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addPhone = useDB((s) => s.addPhone);
   const delPhone = useDB((s) => s.deletePhone);
-  const members = useDB(useShallow((s) => s.members.filter((m) => m.org_id === orgId)));
-  const users = useDB((s) => s.users);
+  const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
+
+  const [me, setMe] = useState<Me | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, email, full_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+      setMe({
+        id: data.user.id,
+        email: profile?.email ?? data.user.email ?? "",
+        full_name: profile?.full_name ?? (data.user.user_metadata?.full_name as string) ?? data.user.email ?? "",
+      });
+    });
+  }, []);
+
+  // Real usage this month
+  const usage = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const monthCalls = calls.filter((c) => c.started_at >= start);
+    const minutes = monthCalls.reduce((s, c) => s + (c.ai_minutes ?? 0), 0);
+    const spend = monthCalls.reduce((s, c) => s + (c.cost_cents ?? 0), 0) / 100;
+    const booked = monthCalls.filter((c) => c.appointment_booked).length;
+    return { calls: monthCalls.length, minutes, spend, booked };
+  }, [calls]);
+
+  const saveTz = (v: string) => {
+    saveSettings({ time_zone: v });
+    if (settings) void persistSettings({ ...settings, time_zone: v });
+  };
+  const saveWebhook = (v: string) => {
+    saveSettings({ webhook_url: v });
+    if (settings) void persistSettings({ ...settings, webhook_url: v });
+  };
+  const saveSmtp = (patch: Partial<{ smtp_host: string; smtp_user: string; smtp_port: number }>) => {
+    saveSettings(patch);
+    if (settings) void persistSettings({ ...settings, ...patch });
+  };
+
+  const projectUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
     <>
-      <PageHeader title="Settings" description="API keys, telephony, billing, and team." />
+      <PageHeader title="Settings" description="Integrations, telephony, billing, and API access." />
 
       <Tabs defaultValue="integrations" className="max-w-4xl">
         <TabsList className="mb-6">
@@ -52,27 +98,27 @@ function SettingsPage() {
         <TabsContent value="integrations" className="space-y-6">
           <KeyCard
             title="Twilio"
-            description="Used for outbound/inbound calling, AMD, recording, and ConversationRelay."
+            description="Outbound / inbound calling, AMD, recording, ConversationRelay. Keys are stored securely as backend secrets — ask in chat to add them."
             connected={settings?.has_twilio ?? false}
             fields={[
               { label: "Account SID", placeholder: "ACxxxxxxxxxxxxxx" },
               { label: "Auth Token", placeholder: "••••••••••••", secret: true },
             ]}
-            onSave={() => { saveSettings({ has_twilio: true }); toast.success("Twilio connected"); }}
+            onSave={() => { saveSettings({ has_twilio: true }); toast.success("Twilio marked connected. Ask in chat to save the API secrets."); }}
           />
           <KeyCard
             title="ElevenLabs"
-            description="Streaming TTS, voice cloning, and multilingual voices."
+            description="Streaming TTS, voice cloning, multilingual voices."
             connected={settings?.has_elevenlabs ?? false}
             fields={[{ label: "API Key", placeholder: "sk_••••", secret: true }]}
-            onSave={() => { saveSettings({ has_elevenlabs: true }); toast.success("ElevenLabs connected"); }}
+            onSave={() => { saveSettings({ has_elevenlabs: true }); toast.success("ElevenLabs marked connected. Ask in chat to save the API key."); }}
           />
           <KeyCard
             title="OpenAI"
-            description="Real-time conversations, function calling, and structured outputs."
+            description="Real-time conversations, function calling, structured outputs."
             connected={settings?.has_openai ?? false}
             fields={[{ label: "API Key", placeholder: "sk-••••", secret: true }]}
-            onSave={() => { saveSettings({ has_openai: true }); toast.success("OpenAI connected"); }}
+            onSave={() => { saveSettings({ has_openai: true }); toast.success("OpenAI marked connected. Ask in chat to save the API key."); }}
           />
         </TabsContent>
 
@@ -86,7 +132,7 @@ function SettingsPage() {
                 <div key={p.id} className="flex items-center justify-between bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
                   <div>
                     <p className="font-mono text-zinc-200">{p.number}</p>
-                    <p className="text-[11px] text-zinc-500">{p.type} · voice, sms</p>
+                    <p className="text-[11px] text-zinc-500">{p.type} · {p.capabilities.join(", ")}</p>
                   </div>
                   <Button size="icon" variant="ghost" onClick={() => { delPhone(p.id); toast.success("Number released"); }}>
                     <Trash2 className="size-3.5 text-red-400" />
@@ -105,7 +151,7 @@ function SettingsPage() {
           <Card title="Workspace defaults">
             <div className="space-y-4">
               <FieldRow label="Default time zone">
-                <Select value={settings?.time_zone ?? "UTC"} onValueChange={(v) => saveSettings({ time_zone: v })}>
+                <Select value={settings?.time_zone ?? "UTC"} onValueChange={saveTz}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {TZS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
@@ -113,42 +159,42 @@ function SettingsPage() {
                 </Select>
               </FieldRow>
               <FieldRow label="Webhook URL">
-                <Input defaultValue={settings?.webhook_url ?? ""} placeholder="https://yourapp.com/webhooks/bulkcall" onBlur={(e) => saveSettings({ webhook_url: e.target.value })} />
+                <Input defaultValue={settings?.webhook_url ?? ""} placeholder="https://yourapp.com/webhooks/bulkcall" onBlur={(e) => saveWebhook(e.target.value)} />
               </FieldRow>
             </div>
           </Card>
           <Card title="SMTP">
             <div className="grid grid-cols-2 gap-3">
-              <FieldRow label="Host"><Input defaultValue={settings?.smtp_host ?? ""} onBlur={(e) => saveSettings({ smtp_host: e.target.value })} /></FieldRow>
-              <FieldRow label="Port"><Input type="number" defaultValue={settings?.smtp_port ?? 587} onBlur={(e) => saveSettings({ smtp_port: +e.target.value })} /></FieldRow>
-              <FieldRow label="User"><Input defaultValue={settings?.smtp_user ?? ""} onBlur={(e) => saveSettings({ smtp_user: e.target.value })} /></FieldRow>
-              <FieldRow label="Password"><Input type="password" placeholder="••••••" /></FieldRow>
+              <FieldRow label="Host"><Input defaultValue={settings?.smtp_host ?? ""} onBlur={(e) => saveSmtp({ smtp_host: e.target.value })} /></FieldRow>
+              <FieldRow label="Port"><Input type="number" defaultValue={settings?.smtp_port ?? 587} onBlur={(e) => saveSmtp({ smtp_port: +e.target.value })} /></FieldRow>
+              <FieldRow label="User"><Input defaultValue={settings?.smtp_user ?? ""} onBlur={(e) => saveSmtp({ smtp_user: e.target.value })} /></FieldRow>
+              <FieldRow label="Password"><Input type="password" placeholder="Stored as backend secret" disabled /></FieldRow>
             </div>
+            <p className="text-[11px] text-zinc-500 mt-3">SMTP passwords are stored as backend secrets. Ask in chat to save one.</p>
           </Card>
         </TabsContent>
 
         <TabsContent value="team" className="space-y-6">
           <Card title="Team members">
             <div className="space-y-2">
-              {members.map((m) => {
-                const u = users.find((x) => x.id === m.user_id);
-                return (
-                  <div key={m.user_id} className="flex items-center gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
-                    <div className="size-8 rounded-full bg-zinc-800 ring-1 ring-white/10 grid place-items-center text-xs text-zinc-300">
-                      {u?.full_name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-200">{u?.full_name}</p>
-                      <p className="text-[11px] text-zinc-500">{u?.email}</p>
-                    </div>
-                    <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
-                      {m.role}
-                    </span>
+              {me ? (
+                <div className="flex items-center gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
+                  <div className="size-8 rounded-full bg-zinc-800 ring-1 ring-white/10 grid place-items-center text-xs text-zinc-300">
+                    {me.full_name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase() || <UserIcon className="size-4" />}
                   </div>
-                );
-              })}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-zinc-200">{me.full_name}</p>
+                    <p className="text-[11px] text-zinc-500">{me.email}</p>
+                  </div>
+                  <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                    Owner
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500 italic">Loading…</p>
+              )}
             </div>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info("Invites require Lovable Cloud")}>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info("Team invites are coming soon")}>
               <Plus className="size-3.5 mr-1" /> Invite member
             </Button>
           </Card>
@@ -158,48 +204,59 @@ function SettingsPage() {
           <Card title="Plan">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-100">Growth · $299/mo</p>
-                <p className="text-[11px] text-zinc-500">10,000 AI minutes included · $0.04/min overage</p>
+                <p className="text-sm font-medium text-zinc-100">Starter · Free</p>
+                <p className="text-[11px] text-zinc-500">Pay-as-you-go for calls · connect a payment method to enable higher volume</p>
               </div>
-              <Button variant="outline">Manage plan</Button>
+              <Button variant="outline" onClick={() => toast.info("Billing setup coming soon — ask in chat to enable Stripe.")}>Manage plan</Button>
             </div>
           </Card>
           <Card title="Usage this month">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <MiniStat label="AI minutes" value="3,287" />
-              <MiniStat label="Twilio cost" value="$142.10" />
-              <MiniStat label="ElevenLabs" value="$84.22" />
-              <MiniStat label="OpenAI" value="$61.40" />
+              <MiniStat label="Calls" value={usage.calls.toLocaleString()} />
+              <MiniStat label="AI minutes" value={usage.minutes.toFixed(1)} />
+              <MiniStat label="Appointments" value={usage.booked.toLocaleString()} />
+              <MiniStat label="Spend" value={`$${usage.spend.toFixed(2)}`} />
             </div>
+            {usage.calls === 0 && (
+              <p className="text-[11px] text-zinc-500 mt-3 italic">No calls yet this month — launch a campaign to see usage here.</p>
+            )}
           </Card>
         </TabsContent>
 
         <TabsContent value="api" className="space-y-6">
           <Card title="REST API">
             <p className="text-sm text-zinc-400 mb-4">
-              Programmatic access to campaigns, contacts, calls, and webhooks.
+              Programmatic access to campaigns, contacts, calls, and webhooks. Base URL:
             </p>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300">
-                <span className="text-emerald-400">GET</span> https://api.bulkcall.ai/v1/campaigns
-                <button className="ml-auto text-zinc-500 hover:text-zinc-200" onClick={() => { navigator.clipboard.writeText("https://api.bulkcall.ai/v1/campaigns"); toast.success("Copied"); }}>
-                  <Copy className="size-3" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300">
-                <span className="text-blue-400">POST</span> https://api.bulkcall.ai/v1/campaigns
-              </div>
-              <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300">
-                <span className="text-emerald-400">GET</span> https://api.bulkcall.ai/v1/calls/&#123;id&#125;
-              </div>
+            <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300 mb-4">
+              <span className="truncate">{projectUrl}/api</span>
+              <button className="ml-auto text-zinc-500 hover:text-zinc-200" onClick={() => { navigator.clipboard.writeText(`${projectUrl}/api`); toast.success("Copied"); }}>
+                <Copy className="size-3" />
+              </button>
             </div>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info("OpenAPI spec generated server-side")}>
-              View OpenAPI docs
-            </Button>
+            <div className="space-y-2">
+              <Endpoint method="GET" path={`${projectUrl}/api/campaigns`} />
+              <Endpoint method="POST" path={`${projectUrl}/api/campaigns`} />
+              <Endpoint method="GET" path={`${projectUrl}/api/calls`} />
+              <Endpoint method="GET" path={`${projectUrl}/api/openapi.json`} />
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
     </>
+  );
+}
+
+function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
+  const color = method === "GET" ? "text-emerald-400" : "text-blue-400";
+  return (
+    <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300">
+      <span className={color}>{method}</span>
+      <span className="truncate">{path}</span>
+      <button className="ml-auto text-zinc-500 hover:text-zinc-200" onClick={() => { navigator.clipboard.writeText(path); toast.success("Copied"); }}>
+        <Copy className="size-3" />
+      </button>
+    </div>
   );
 }
 
