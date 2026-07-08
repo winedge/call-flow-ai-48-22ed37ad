@@ -83,14 +83,37 @@ function CallDetail() {
     downloadFile(text, `transcript-${call.id.slice(0, 8)}.txt`, "text/plain;charset=utf-8");
   };
 
-  const extracted: Record<string, string> = {
-    ...(contact?.name ? { Name: contact.name } : {}),
-    ...(contact?.email ? { Email: contact.email } : {}),
-    ...(contact?.company ? { Company: contact.company } : {}),
-    Phone: call.phone_to,
-    ...(contact?.custom_vars ?? {}),
-    ...(call.appointment_booked ? { Appointment: "Yes" } : {}),
-  };
+  // Structured extraction: prefer per-agent field definitions when present,
+  // otherwise fall back to whatever contact metadata we already know.
+  const agentFields = agent?.data_fields ?? [];
+  const extractedByLabel: { label: string; value: string }[] = [];
+  if (agentFields.length > 0) {
+    for (const f of agentFields) {
+      const raw = call.extracted_data?.[f.key];
+      let display: string;
+      if (raw === null || raw === undefined || raw === "") {
+        display = "—";
+      } else if (typeof raw === "boolean") {
+        display = raw ? "Yes" : "No";
+      } else {
+        display = String(raw);
+      }
+      extractedByLabel.push({ label: f.label || f.key, value: display });
+    }
+  } else {
+    const fallback: Record<string, string> = {
+      ...(contact?.name ? { Name: contact.name } : {}),
+      ...(contact?.email ? { Email: contact.email } : {}),
+      ...(contact?.company ? { Company: contact.company } : {}),
+      Phone: call.phone_to,
+      ...(contact?.custom_vars ?? {}),
+      ...(call.appointment_booked ? { Appointment: "Yes" } : {}),
+    };
+    for (const [k, v] of Object.entries(fallback)) {
+      extractedByLabel.push({ label: k, value: v });
+    }
+  }
+
 
   return (
     <>
