@@ -143,6 +143,18 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
         // Fire automations on terminal transitions.
         const trig = TERMINAL.has(status) ? triggerForStatus(status) : null;
         if (trig) {
+          // Re-read to pick up extracted_data written by the bridge, which may
+          // land just before or after this Twilio callback.
+          const { data: fresh } = await supabaseAdmin
+            .from("calls")
+            .select("extracted_data")
+            .eq("id", existing.id)
+            .maybeSingle<{ extracted_data: Record<string, unknown> | null }>();
+          const extracted =
+            (fresh?.extracted_data as Record<string, unknown> | null) ??
+            existing.extracted_data ??
+            {};
+
           const { data: automations } = await supabaseAdmin
             .from("automations")
             .select("id, action, config")
@@ -157,7 +169,9 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   event: trig,
-                  call: { ...existing, ...patch, id: existing.id, twilio_call_sid: callSid },
+                  call_id: existing.id,
+                  twilio_call_sid: callSid,
+                  data: extracted,
                   automation: a.id,
                 }),
               }).catch(() => {});
