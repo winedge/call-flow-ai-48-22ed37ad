@@ -32,7 +32,7 @@ function toAgent(r: Row): AIAgent {
     id: r.id as UUID,
     org_id: r.user_id as UUID,
     name: (r.name as string) ?? "",
-    tts_engine: "kokoro",
+    tts_engine: (r.tts_engine as AIAgent["tts_engine"]) ?? "kokoro",
     voice_id: (r.voice_id as string) ?? "af_bella",
     voice_name: (r.voice_name as string) ?? "",
     language: (r.language as string) ?? "en",
