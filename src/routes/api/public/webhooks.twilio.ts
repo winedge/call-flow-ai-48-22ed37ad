@@ -93,9 +93,9 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
 
         const { data: existing, error: readErr } = await supabaseAdmin
           .from("calls")
-          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to")
+          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to, end_reason")
           .eq("twilio_call_sid", callSid)
-          .maybeSingle();
+          .maybeSingle<{ id: string; user_id: string; status: string; campaign_id: string | null; contact_id: string | null; agent_id: string | null; phone_to: string; end_reason: string | null }>();
         if (readErr) return errorJson(500, `db read: ${readErr.message}`);
 
         if (!existing) {
@@ -109,8 +109,16 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
         };
         if (body.CallDuration) patch.duration_sec = Number(body.CallDuration);
         if (body.RecordingUrl) patch.recording_url = body.RecordingUrl;
-        if (TERMINAL.has(status) && !("ended_at" in patch)) {
+        if (TERMINAL.has(status)) {
           patch.ended_at = nowIso;
+          // Only stamp end_reason if nothing else has yet (bridge + AMD run
+          // independently and are the authoritative source for completed
+          // calls). Twilio-terminal states below the bridge get a canonical
+          // reason here so every terminal row has one.
+          if (!existing.end_reason) {
+            const reason = twilioEndReason(body.CallStatus, status);
+            if (reason) patch.end_reason = reason;
+          }
         }
 
         const { error: updErr } = await supabaseAdmin
@@ -118,6 +126,7 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
           .update(patch as never)
           .eq("id", existing.id);
         if (updErr) return errorJson(500, `db update: ${updErr.message}`);
+
 
         // Fire automations on terminal transitions.
         const trig = TERMINAL.has(status) ? triggerForStatus(status) : null;

@@ -13,9 +13,14 @@ export type EndReason =
   | "caller_hangup"
   | "voicemail_left"
   | "voicemail_hangup"
+  | "no_answer"
+  | "busy"
+  | "carrier_failed"
+  | "canceled"
   | "bridge_error"
   | "agent_config_error"
   | "other";
+
 
 export const END_REASON_LABEL: Record<EndReason, string> = {
   agent_ended: "AI ended",
@@ -25,6 +30,10 @@ export const END_REASON_LABEL: Record<EndReason, string> = {
   caller_hangup: "Caller hung up",
   voicemail_left: "Voicemail left",
   voicemail_hangup: "Voicemail (hung up)",
+  no_answer: "No answer",
+  busy: "Busy",
+  carrier_failed: "Carrier failed",
+  canceled: "Canceled",
   bridge_error: "Bridge error",
   agent_config_error: "Agent config error",
   other: "Other",
@@ -42,6 +51,10 @@ export const END_REASON_TONE: Record<EndReason, "green" | "amber" | "blue" | "re
   caller_hangup: "gray",
   voicemail_left: "blue",
   voicemail_hangup: "gray",
+  no_answer: "gray",
+  busy: "gray",
+  carrier_failed: "red",
+  canceled: "gray",
   bridge_error: "red",
   agent_config_error: "red",
   other: "gray",
@@ -53,12 +66,17 @@ export const END_REASON_ORDER: EndReason[] = [
   "voicemail_left",
   "voicemail_hangup",
   "caller_hangup",
+  "no_answer",
+  "busy",
+  "canceled",
   "silence_timeout",
   "max_duration",
+  "carrier_failed",
   "bridge_error",
   "agent_config_error",
   "other",
 ];
+
 
 export function endReasonLabel(v: string | null | undefined): string {
   if (!v) return "—";
