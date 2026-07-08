@@ -81,11 +81,8 @@ export function MobileTopBar() {
       </Sheet>
 
       <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
-        <div className="size-7 bg-brand-primary rounded-md grid place-items-center shrink-0">
-          <Phone className="size-3.5 text-primary-foreground" strokeWidth={2.5} />
-        </div>
+        <img src={logoAsset.url} alt="BulkCall AI" className="h-5 w-auto object-contain shrink-0" />
         <div className="min-w-0 leading-tight">
-          <p className="text-sm font-medium text-zinc-100 truncate">BulkCall AI</p>
           <p className="truncate text-[9px] font-mono uppercase tracking-wider text-zinc-500">
             {org?.name ?? "—"}
           </p>
