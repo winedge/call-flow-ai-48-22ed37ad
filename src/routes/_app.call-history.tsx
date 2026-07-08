@@ -12,6 +12,15 @@ import {
 } from "@/components/ui/select";
 import { useDB } from "@/lib/data-store";
 import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
+import { endReasonLabel, endReasonTone, END_REASON_ORDER } from "@/lib/voice/call-end-reasons";
+
+const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = {
+  green: "text-emerald-400",
+  amber: "text-amber-400",
+  blue: "text-sky-400",
+  red: "text-red-400",
+  gray: "text-zinc-500",
+};
 
 export const Route = createFileRoute("/_app/call-history")({
   head: () => ({ meta: [{ title: "Call history — BulkCall AI" }] }),
