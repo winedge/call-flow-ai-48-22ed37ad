@@ -17,6 +17,8 @@ import { errorJson, json, preflight } from "@/lib/api/cors";
 
 const MODEL = "google/gemini-3-flash-preview";
 
+type DataField = { key: string; label: string; type?: string; required?: boolean };
+
 type AgentSummary = {
   name: string;
   greeting?: string;
@@ -29,24 +31,38 @@ type AgentSummary = {
   qualification_questions?: string[];
   end_call_conditions?: string[];
   transfer_number?: string;
+  data_fields?: DataField[];
 };
 
 type Turn = { role: "user" | "assistant"; content: string };
 
+function describeField(f: DataField): string {
+  const req = f.required ? " (required)" : "";
+  const hint =
+    f.type === "phone" ? " — collect the full phone number with country/area code, read it back to confirm"
+    : f.type === "email" ? " — spell it back to confirm"
+    : "";
+  return `${f.label} [${f.key}]${req}${hint}`;
+}
+
 function buildSystem(a: AgentSummary): string {
   const canTransfer = !!a.transfer_number?.trim();
+  const fields = a.data_fields ?? [];
   const parts = [
     a.system_prompt?.trim(),
     a.personality ? `Personality: ${a.personality}` : "",
     a.objective ? `Objective: ${a.objective}` : "",
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
+    fields.length
+      ? `Information you MUST collect from the caller during this call (ask for these exact items, one at a time, and confirm each):\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
+      : "",
     a.qualification_questions?.length
       ? `Qualification questions:\n- ${a.qualification_questions.join("\n- ")}`
       : "",
     a.end_call_conditions?.length
-      ? `End the call when: ${a.end_call_conditions.join("; ")}. When ending, prepend [END_CALL] to your reply.`
-      : `When the caller says goodbye, is uninterested, or the conversation is naturally over, prepend [END_CALL] to your reply.`,
+      ? `End the call ONLY when: ${a.end_call_conditions.join("; ")}. When ending, first give a warm closing line (thank them, confirm next step, say goodbye) and prepend [END_CALL] to that closing reply. Never [END_CALL] on the same turn where you just received information — always confirm the info back, share the next step, and wait for the caller's goodbye first.`
+      : `Only end the call after the caller clearly says goodbye or asks to end. Never hang up mid-flow. When ending, prepend [END_CALL] to a warm closing reply.`,
     canTransfer
       ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
       : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
