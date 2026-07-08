@@ -105,8 +105,10 @@ export type PhoneNumber = {
   twilio_sid: string;
   type: "local" | "toll_free";
   capabilities: ("voice" | "sms")[];
+  inbound_agent_id: UUID | null;
   created_at: string;
 };
+
 
 export type CampaignStatus =
   | "draft"
