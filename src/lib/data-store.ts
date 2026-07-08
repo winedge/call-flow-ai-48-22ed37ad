@@ -77,7 +77,7 @@ export type AIAgent = {
   org_id: UUID;
   name: string;
   /** TTS engine key — resolved via src/lib/voice/tts/registry.ts. */
-  tts_engine: "kokoro";
+  tts_engine: "kokoro" | "elevenlabs";
   voice_id: string;
   voice_name: string;
   language: string;
