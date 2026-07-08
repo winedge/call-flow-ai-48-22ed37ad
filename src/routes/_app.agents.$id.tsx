@@ -23,6 +23,7 @@ import {
   KOKORO_VOICES,
 } from "@/lib/voice/tts/registry";
 import { synthesizeSpeechKokoro } from "@/lib/voice/tts/kokoro.functions";
+import { listElevenLabsVoices, previewElevenLabsVoice, type ElevenLabsVoice } from "@/lib/voice/tts/elevenlabs.functions";
 import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
