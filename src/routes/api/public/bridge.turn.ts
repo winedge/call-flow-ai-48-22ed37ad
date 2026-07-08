@@ -20,7 +20,7 @@ const MODEL = "google/gemini-3-flash-preview";
 type DataField = { key: string; label: string; type?: string; required?: boolean };
 
 type AgentSummary = {
-  name: string;
+  name?: string;
   greeting?: string;
   system_prompt?: string;
   prompt?: string;
