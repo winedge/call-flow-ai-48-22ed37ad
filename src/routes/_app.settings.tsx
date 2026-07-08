@@ -129,9 +129,12 @@ function SettingsPage() {
 
         <TabsContent value="telephony" className="space-y-6">
           <Card title="Phone numbers">
-            <p className="text-xs text-zinc-500 mb-4">
-              Numbers provisioned via Twilio for outbound caller ID and inbound webhooks.
-            </p>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <p className="text-xs text-zinc-500">
+                Numbers provisioned via Twilio for outbound caller ID and inbound webhooks.
+              </p>
+              <SyncTwilioButton orgId={orgId} />
+            </div>
             <div className="space-y-2 mb-4">
               {phones.map((p) => (
                 <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
@@ -165,13 +168,14 @@ function SettingsPage() {
                 </div>
               ))}
               {phones.length === 0 && (
-                <p className="text-xs text-zinc-500 italic">No numbers provisioned.</p>
+                <p className="text-xs text-zinc-500 italic">No numbers provisioned. Click “Sync from Twilio” to import numbers from your Twilio account.</p>
               )}
 
             </div>
             <AddPhone onAdd={(n, t) => { addPhone(n, t); toast.success("Number added"); }} />
           </Card>
         </TabsContent>
+
 
         <TabsContent value="webhooks" className="space-y-6">
           <Card title="Workspace defaults">
