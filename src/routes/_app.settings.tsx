@@ -119,6 +119,7 @@ function SettingsPage() {
             connected={settings?.has_elevenlabs ?? false}
             fields={[{ label: "API Key", placeholder: "sk_••••", secret: true }]}
             onSave={() => { saveSettings({ has_elevenlabs: true }); toast.success("ElevenLabs marked connected. Ask in chat to save the API key."); }}
+            extraAction={<TestElevenLabsButton />}
           />
           <KeyCard
             title="OpenAI"
