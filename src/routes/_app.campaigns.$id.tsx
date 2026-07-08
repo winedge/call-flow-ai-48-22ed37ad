@@ -32,6 +32,8 @@ function CampaignDetail() {
   const duplicate = useDB((s) => s.duplicateCampaign);
 
   if (!campaign) throw notFound();
+  const cmp = campaign;
+
 
   const metrics = useMemo(
     () => computeCampaignMetrics(campaign, calls, contacts),
