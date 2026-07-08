@@ -403,7 +403,7 @@ export const useDB = create<DBState>()(
       deleteAutomation: (id) =>
         set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
     }),
-    { name: "bulkcall-db-v1" },
+    { name: "bulkcall-db-v2" },
   ),
 );
 
