@@ -347,10 +347,11 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
-function KeyCard({ title, description, connected, fields, onSave }: {
+function KeyCard({ title, description, connected, fields, onSave, extraAction }: {
   title: string; description: string; connected: boolean;
   fields: { label: string; placeholder: string; secret?: boolean }[];
   onSave: () => void;
+  extraAction?: React.ReactNode;
 }) {
   return (
     <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
@@ -372,12 +373,40 @@ function KeyCard({ title, description, connected, fields, onSave }: {
       <div className="space-y-3">
         {fields.map((f) => <SecretField key={f.label} {...f} />)}
       </div>
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-end gap-2">
+        {extraAction}
         <Button size="sm" onClick={onSave} className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
           <Save className="size-3.5 mr-1" /> Save
         </Button>
       </div>
     </div>
+  );
+}
+
+function TestElevenLabsButton() {
+  const [busy, setBusy] = useState(false);
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      const res = await testElevenLabs();
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      toast.success(`ElevenLabs OK · ${res.voiceCount} voices · playing "${res.sampleVoice.name}"`);
+      const audio = new Audio(`data:${res.mimeType};base64,${res.audioBase64}`);
+      await audio.play().catch(() => toast.info("Sample generated (autoplay blocked)"));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={onClick} disabled={busy}>
+      <Volume2 className={`size-3.5 mr-1 ${busy ? "animate-pulse" : ""}`} />
+      {busy ? "Testing…" : "Test ElevenLabs"}
+    </Button>
   );
 }
 
