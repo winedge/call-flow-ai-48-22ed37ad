@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           business_knowledge: string
           created_at: string
+          data_fields: Json
           end_call_conditions: Json
           greeting: string
           id: string
@@ -43,6 +44,7 @@ export type Database = {
         Insert: {
           business_knowledge?: string
           created_at?: string
+          data_fields?: Json
           end_call_conditions?: Json
           greeting?: string
           id?: string
@@ -68,6 +70,7 @@ export type Database = {
         Update: {
           business_knowledge?: string
           created_at?: string
+          data_fields?: Json
           end_call_conditions?: Json
           greeting?: string
           id?: string
@@ -187,6 +190,7 @@ export type Database = {
           duration_sec: number
           end_reason: string | null
           ended_at: string | null
+          extracted_data: Json
           id: string
           outcome: string
           phone_from: string
@@ -212,6 +216,7 @@ export type Database = {
           duration_sec?: number
           end_reason?: string | null
           ended_at?: string | null
+          extracted_data?: Json
           id?: string
           outcome?: string
           phone_from?: string
@@ -237,6 +242,7 @@ export type Database = {
           duration_sec?: number
           end_reason?: string | null
           ended_at?: string | null
+          extracted_data?: Json
           id?: string
           outcome?: string
           phone_from?: string
