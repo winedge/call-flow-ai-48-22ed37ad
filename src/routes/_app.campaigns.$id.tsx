@@ -348,6 +348,28 @@ function CampaignDetail() {
               )}
             </div>
 
+            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
+              <h3 className="text-sm font-medium text-zinc-200 mb-4">Why calls ended</h3>
+              {endReasonData.length === 0 ? (
+                <div className="h-56 grid place-items-center text-xs text-zinc-500">
+                  No end reasons recorded yet — they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={endReasonData}>
+                    <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
+                    <XAxis dataKey="name" stroke="#71717a" fontSize={11} interval={0} angle={-15} textAnchor="end" height={60} />
+                    <YAxis stroke="#71717a" fontSize={11} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 6, fontSize: 12 }} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                      {endReasonData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+
             {hourlyData.length > 1 && (
               <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
                 <h3 className="text-sm font-medium text-zinc-200 mb-4">Call volume over time</h3>
