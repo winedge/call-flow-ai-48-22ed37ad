@@ -116,8 +116,9 @@ function CallDetail() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         <StatTile label="Status" value={call.status} />
+        <StatTile label="End reason" value={endReasonLabel(call.end_reason)} />
         <StatTile label="Duration" value={formatDuration(call.duration_sec)} />
         <StatTile label="Sentiment" value={call.sentiment ?? "—"} />
         <StatTile label="Lead score" value={score} accent={score >= 70} />
