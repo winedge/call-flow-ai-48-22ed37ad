@@ -436,6 +436,14 @@ async function handleUserTurn(s: Session, text: string) {
 
 function cleanup(s: Session, reason: string) {
   if (s.closed) return;
+  console.log("bridge cleanup", {
+    callSid: s.callSid,
+    streamSid: s.streamSid,
+    reason,
+    hasAgent: !!s.agent,
+    hasDeepgram: !!s.dg,
+    turns: s.history.length,
+  });
   s.closed = true;
   s.speaking = false;
   s.cancelSpeech();
@@ -476,6 +484,12 @@ Deno.serve((req) => {
   const agentId = url.searchParams.get("agent_id") ?? "";
   if (!agentId) return new Response("missing agent_id", { status: 400 });
 
+  console.log("bridge websocket upgrade", {
+    callSid: url.searchParams.get("call_sid"),
+    agentId,
+    path: url.pathname,
+  });
+
   const { socket, response } = Deno.upgradeWebSocket(req);
 
   const session: Session = {
@@ -497,6 +511,12 @@ Deno.serve((req) => {
   fetchAgent(agentId)
     .then((a) => {
       session.agent = a;
+      console.log("bridge agent loaded", {
+        callSid: session.callSid,
+        agentId: a.id,
+        ttsEngine: a.tts_engine,
+        voiceId: a.voice_id,
+      });
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
       session.timers.push(
@@ -539,6 +559,10 @@ Deno.serve((req) => {
       session.streamSid = msg.start!.streamSid;
       // Prefer the authoritative call_sid from Twilio's start frame.
       if (msg.start?.callSid) session.callSid = msg.start.callSid;
+      console.log("bridge stream started", {
+        callSid: session.callSid,
+        streamSid: session.streamSid,
+      });
       session.lastUserAudioAt = Date.now();
       for (let i = 0; i < 50 && !session.agent; i++) {
         await new Promise((r) => setTimeout(r, 40));
@@ -566,11 +590,20 @@ Deno.serve((req) => {
       session.dg.send(bytes);
       session.lastUserAudioAt = Date.now();
     } else if (msg.event === "stop") {
+      console.log("bridge twilio stop", { callSid: session.callSid, streamSid: session.streamSid });
       cleanup(session, "twilio stop");
     }
   };
 
-  socket.onclose = () => cleanup(session, "socket closed");
+  socket.onclose = (ev) => {
+    console.log("bridge socket closed", {
+      callSid: session.callSid,
+      code: ev.code,
+      reason: ev.reason,
+      wasClean: ev.wasClean,
+    });
+    cleanup(session, "socket closed");
+  };
   socket.onerror = (e) => {
     console.error("twilio ws error", e);
     cleanup(session, "socket error");
