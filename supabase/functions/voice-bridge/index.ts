@@ -161,6 +161,7 @@ type AgentConfig = {
   voicemail_message?: string;
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
+  tts_engine?: string;
 };
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
@@ -253,8 +254,9 @@ async function synthTts(
   text: string,
   voice: string,
   language: string,
+  engine?: string,
 ): Promise<{ audio_url: string }> {
-  const body = JSON.stringify({ text, voice, language });
+  const body = JSON.stringify({ text, voice, language, engine });
   const { ts, sig } = await sign(body);
   const res = await fetch(`${APP_URL}/api/public/bridge/tts`, {
     method: "POST",
@@ -344,7 +346,7 @@ async function speak(s: Session, text: string) {
   s.cancelSpeech = () => (cancelled = true);
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language);
+    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine);
     if (cancelled || s.closed) return;
     const buf = await (await fetch(audio_url)).arrayBuffer();
     if (cancelled || s.closed) return;

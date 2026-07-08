@@ -31,6 +31,7 @@ type BridgeAgent = {
   voicemail_message?: string;
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
+  tts_engine?: string;
 };
 
 function toStringArray(v: unknown): string[] {
@@ -65,6 +66,7 @@ async function fetchFromSupabase(id: string): Promise<BridgeAgent | null> {
       voicemail_message: data.voicemail_message || undefined,
       max_call_seconds: 900,
       silence_timeout_seconds: 30,
+      tts_engine: (data as { tts_engine?: string }).tts_engine || "kokoro",
     };
   } catch {
     return null;
