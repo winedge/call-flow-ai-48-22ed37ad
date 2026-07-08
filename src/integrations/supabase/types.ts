@@ -38,6 +38,10 @@ export type Database = {
           user_id: string
           voice_id: string
           voice_name: string
+          voice_similarity_boost: number | null
+          voice_speaker_boost: boolean | null
+          voice_stability: number | null
+          voice_style: number | null
           voicemail_handling: string
           voicemail_message: string
         }
@@ -64,6 +68,10 @@ export type Database = {
           user_id: string
           voice_id?: string
           voice_name?: string
+          voice_similarity_boost?: number | null
+          voice_speaker_boost?: boolean | null
+          voice_stability?: number | null
+          voice_style?: number | null
           voicemail_handling?: string
           voicemail_message?: string
         }
@@ -90,6 +98,10 @@ export type Database = {
           user_id?: string
           voice_id?: string
           voice_name?: string
+          voice_similarity_boost?: number | null
+          voice_speaker_boost?: boolean | null
+          voice_stability?: number | null
+          voice_style?: number | null
           voicemail_handling?: string
           voicemail_message?: string
         }

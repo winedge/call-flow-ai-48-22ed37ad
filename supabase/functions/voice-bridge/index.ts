@@ -162,6 +162,12 @@ type AgentConfig = {
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
   tts_engine?: string;
+  voice_settings?: {
+    stability?: number;
+    similarity_boost?: number;
+    style?: number;
+    use_speaker_boost?: boolean;
+  };
 };
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
@@ -260,8 +266,9 @@ async function synthTts(
   voice: string,
   language: string,
   engine?: string,
+  voice_settings?: AgentConfig["voice_settings"],
 ): Promise<{ audio_url: string }> {
-  const body = JSON.stringify({ text, voice, language, engine });
+  const body = JSON.stringify({ text, voice, language, engine, voice_settings });
   const { ts, sig } = await sign(body);
   const res = await fetch(`${APP_URL}/api/public/bridge/tts`, {
     method: "POST",
@@ -352,7 +359,7 @@ async function speak(s: Session, text: string) {
   s.cancelSpeech = () => (cancelled = true);
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine);
+    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
     if (cancelled || s.closed) return;
 
     // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,10 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     max_retries: 3,
     retry_delay_minutes: 60,
     data_fields: [],
+    voice_stability: 0.35,
+    voice_similarity_boost: 0.8,
+    voice_style: 0.45,
+    voice_speaker_boost: true,
   };
 }
 
@@ -340,6 +345,55 @@ function AgentEditor() {
             </p>
           )}
         </Card>
+
+        {form.tts_engine === "elevenlabs" && (
+          <Card title="Voice tuning (ElevenLabs)">
+            <p className="text-[11px] text-zinc-500 mb-3">
+              Fine-tune how expressive and consistent this voice sounds. Lower stability + higher style = more emotional, varied delivery. Higher stability = flatter, more predictable.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label={`Stability: ${(form.voice_stability ?? 0.35).toFixed(2)}`}>
+                <Slider
+                  value={[form.voice_stability ?? 0.35]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onValueChange={(v) => patch("voice_stability", v[0])}
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">Lower = more emotional variation. Higher = more monotone/consistent.</p>
+              </Field>
+              <Field label={`Similarity boost: ${(form.voice_similarity_boost ?? 0.8).toFixed(2)}`}>
+                <Slider
+                  value={[form.voice_similarity_boost ?? 0.8]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onValueChange={(v) => patch("voice_similarity_boost", v[0])}
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">How closely to match the original voice character.</p>
+              </Field>
+              <Field label={`Style: ${(form.voice_style ?? 0.45).toFixed(2)}`}>
+                <Slider
+                  value={[form.voice_style ?? 0.45]}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onValueChange={(v) => patch("voice_style", v[0])}
+                />
+                <p className="text-[10px] text-zinc-500 mt-1">Style exaggeration. Higher = more expressive, but can drift.</p>
+              </Field>
+              <Field label="Speaker boost">
+                <div className="flex items-center gap-3 h-9">
+                  <Switch
+                    checked={form.voice_speaker_boost ?? true}
+                    onCheckedChange={(v) => patch("voice_speaker_boost", v)}
+                  />
+                  <span className="text-xs text-zinc-500">Enhances clarity and voice similarity.</span>
+                </div>
+              </Field>
+            </div>
+          </Card>
+        )}
 
 
         <Card title="Prompting (OpenAI GPT)">

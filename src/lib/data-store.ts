@@ -105,6 +105,11 @@ export type AIAgent = {
   max_retries: number;
   retry_delay_minutes: number;
   data_fields: DataField[];
+  /** ElevenLabs voice tuning — falls back to sensible defaults when null. */
+  voice_stability?: number | null;
+  voice_similarity_boost?: number | null;
+  voice_style?: number | null;
+  voice_speaker_boost?: boolean | null;
   created_at: string;
 };
 
@@ -334,6 +339,10 @@ export const useDB = create<DBState>()(
             max_retries: agent.max_retries,
             retry_delay_minutes: agent.retry_delay_minutes,
             data_fields: agent.data_fields,
+            voice_stability: agent.voice_stability ?? null,
+            voice_similarity_boost: agent.voice_similarity_boost ?? null,
+            voice_style: agent.voice_style ?? null,
+            voice_speaker_boost: agent.voice_speaker_boost ?? null,
           } as never),
         );
         return agent;
