@@ -77,7 +77,9 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
 
         const { error: updErr } = await supabaseAdmin
           .from("calls")
-          .update(patch)
+          // end_reason column was added after types.ts was generated; cast
+          // until the regeneration lands.
+          .update(patch as never)
           .eq("id", existing.id);
         if (updErr) return errorJson(500, `db update: ${updErr.message}`);
         return json({ ok: true, updated: true });

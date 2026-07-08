@@ -47,6 +47,7 @@ import { Route as ApiPublicTwilioAmdRouteImport } from './routes/api/public/twil
 import { Route as ApiPublicBridgeTurnRouteImport } from './routes/api/public/bridge.turn'
 import { Route as ApiPublicBridgeTtsRouteImport } from './routes/api/public/bridge.tts'
 import { Route as ApiPublicBridgeTransferRouteImport } from './routes/api/public/bridge.transfer'
+import { Route as ApiPublicBridgeCallEventRouteImport } from './routes/api/public/bridge.call-event'
 import { Route as ApiPublicBridgeAgentRouteImport } from './routes/api/public/bridge.agent'
 import { Route as ApiCampaignsIdStartRouteImport } from './routes/api/campaigns.$id.start'
 import { Route as ApiCampaignsIdPauseRouteImport } from './routes/api/campaigns.$id.pause'
@@ -241,6 +242,12 @@ const ApiPublicBridgeTransferRoute = ApiPublicBridgeTransferRouteImport.update({
   path: '/api/public/bridge/transfer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicBridgeCallEventRoute =
+  ApiPublicBridgeCallEventRouteImport.update({
+    id: '/api/public/bridge/call-event',
+    path: '/api/public/bridge/call-event',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicBridgeAgentRoute = ApiPublicBridgeAgentRouteImport.update({
   id: '/api/public/bridge/agent',
   path: '/api/public/bridge/agent',
@@ -290,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/call-event': typeof ApiPublicBridgeCallEventRoute
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
@@ -332,6 +340,7 @@ export interface FileRoutesByTo {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/call-event': typeof ApiPublicBridgeCallEventRoute
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
@@ -376,6 +385,7 @@ export interface FileRoutesById {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/call-event': typeof ApiPublicBridgeCallEventRoute
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/call-event'
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
@@ -462,6 +473,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/call-event'
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
@@ -505,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/call-event'
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
@@ -527,6 +540,7 @@ export interface RootRouteChildren {
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   DocsApiRoute: typeof DocsApiRoute
   ApiPublicBridgeAgentRoute: typeof ApiPublicBridgeAgentRoute
+  ApiPublicBridgeCallEventRoute: typeof ApiPublicBridgeCallEventRoute
   ApiPublicBridgeTransferRoute: typeof ApiPublicBridgeTransferRoute
   ApiPublicBridgeTtsRoute: typeof ApiPublicBridgeTtsRoute
   ApiPublicBridgeTurnRoute: typeof ApiPublicBridgeTurnRoute
@@ -805,6 +819,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBridgeTransferRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/bridge/call-event': {
+      id: '/api/public/bridge/call-event'
+      path: '/api/public/bridge/call-event'
+      fullPath: '/api/public/bridge/call-event'
+      preLoaderRoute: typeof ApiPublicBridgeCallEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bridge/agent': {
       id: '/api/public/bridge/agent'
       path: '/api/public/bridge/agent'
@@ -961,6 +982,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   DocsApiRoute: DocsApiRoute,
   ApiPublicBridgeAgentRoute: ApiPublicBridgeAgentRoute,
+  ApiPublicBridgeCallEventRoute: ApiPublicBridgeCallEventRoute,
   ApiPublicBridgeTransferRoute: ApiPublicBridgeTransferRoute,
   ApiPublicBridgeTtsRoute: ApiPublicBridgeTtsRoute,
   ApiPublicBridgeTurnRoute: ApiPublicBridgeTurnRoute,
