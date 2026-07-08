@@ -243,27 +243,73 @@ function AgentEditor() {
           </div>
         </Card>
 
-        <Card title="Voice & Language (Kokoro-82M)">
+        <Card title="Voice & Language">
+          <Field label="TTS engine">
+            <Select
+              value={form.tts_engine}
+              onValueChange={(v) => {
+                const engine = v as AIAgent["tts_engine"];
+                if (engine === "kokoro") {
+                  const dv = VOICES[0];
+                  setForm((f) => ({ ...f, tts_engine: engine, voice_id: dv.id, voice_name: dv.name }));
+                } else {
+                  setForm((f) => ({ ...f, tts_engine: engine, voice_id: "", voice_name: "" }));
+                }
+              }}
+            >
+              <SelectTrigger className="sm:w-64"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="kokoro">Kokoro-82M (Replicate)</SelectItem>
+                <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
               <div className="flex gap-2">
-                <Select
-                  value={form.voice_id}
-                  onValueChange={(v) => {
-                    const voice = VOICES.find((x) => x.id === v)!;
-                    setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
-                  }}
-                >
-                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                {form.tts_engine === "elevenlabs" ? (
+                  <Select
+                    value={form.voice_id}
+                    onValueChange={(v) => {
+                      const voice = elVoices?.find((x) => x.voice_id === v);
+                      if (!voice) return;
+                      setForm((f) => ({ ...f, voice_id: voice.voice_id, voice_name: voice.name }));
+                    }}
+                    disabled={elLoading || !!elError}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={elLoading ? "Loading voices…" : elError ? "Error loading voices" : "Select a voice"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(elVoices ?? []).map((v) => (
+                        <SelectItem key={v.voice_id} value={v.voice_id}>
+                          {v.name}
+                          {v.labels?.accent ? ` · ${v.labels.accent}` : ""}
+                          {v.category ? ` · ${v.category}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select
+                    value={form.voice_id}
+                    onValueChange={(v) => {
+                      const voice = VOICES.find((x) => x.id === v)!;
+                      setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
+                    }}
+                  >
+                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={previewing}
+                  disabled={previewing || !form.voice_id}
                   onClick={previewVoice}
                   title="Play a preview using the greeting (or a sample line)"
                 >
@@ -281,10 +327,19 @@ function AgentEditor() {
               </Select>
             </Field>
           </div>
-          <p className="text-[10px] text-zinc-500 font-mono pt-1">
-            Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed. Tamil/Telugu coming with the next engine.
-          </p>
+          {form.tts_engine === "elevenlabs" ? (
+            <p className="text-[10px] text-zinc-500 font-mono pt-1">
+              {elError
+                ? `ElevenLabs: ${elError}`
+                : `ElevenLabs · ${elVoices?.length ?? 0} voices loaded from your account. Uses eleven_multilingual_v2.`}
+            </p>
+          ) : (
+            <p className="text-[10px] text-zinc-500 font-mono pt-1">
+              Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed.
+            </p>
+          )}
         </Card>
+
 
         <Card title="Prompting (OpenAI GPT)">
           <Field label="Greeting (spoken first)">
