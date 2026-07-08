@@ -91,25 +91,15 @@ type DB = {
 const g = globalThis as unknown as { __bulkcall_db?: DB };
 
 function seed(): DB {
-  const now = new Date().toISOString();
-  const agent: Agent = {
-    id: uid(),
-    name: "Default Sales Agent",
-    voice_id: "21m00Tcm4TlvDq8ikWAM",
-    language: "en-US",
-    greeting: "Hi, this is Ava from Acme.",
-    system_prompt: "You are a friendly outbound sales agent.",
-    temperature: 0.6,
-    created_at: now,
-  };
   return {
-    agents: [agent],
+    agents: [],
     contacts: [],
     campaigns: [],
     calls: [],
     automations: [],
   };
 }
+
 
 export function db(): DB {
   if (!g.__bulkcall_db) g.__bulkcall_db = seed();

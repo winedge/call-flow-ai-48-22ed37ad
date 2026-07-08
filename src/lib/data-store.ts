@@ -1,13 +1,23 @@
 /**
- * In-memory data layer for BulkCall AI.
+ * Client-side data cache backed by Supabase.
  *
- * NOTE: Lovable Cloud (Supabase) couldn't be provisioned (workspace credits).
- * This module is intentionally shaped like a typed Supabase client so swapping
- * it for createServerFn + Supabase later is mechanical — same entity names,
- * same shapes, same "org_id" multi-tenancy.
+ * The store hydrates from Supabase on auth (see src/lib/sync.ts) and every
+ * mutation below fires a write-through to the corresponding table. The
+ * zustand persist middleware keeps a per-browser cache for instant paints.
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { supabase } from "@/integrations/supabase/client";
+
+// Fire-and-forget DB write. Errors log to console — UI stays responsive.
+function dbWrite(p: PromiseLike<unknown>) {
+  Promise.resolve(p).then((r) => {
+    const err = (r as { error?: { message?: string } })?.error;
+    if (err) console.error("[data-store] write failed:", err);
+  });
+}
+
+
 
 export type UUID = string;
 export const uid = () =>
@@ -189,305 +199,29 @@ export type OrgSettings = {
 };
 
 // ============================================================
-// Seed data
+// Empty initial state — no demo data. Real data is loaded from
+// Supabase after auth via the sync layer in src/lib/sync.ts.
 // ============================================================
 
-const seedUserId = "u_demo_owner" as UUID;
-const seedOrgId = "o_demo" as UUID;
-const seedAgentId = "ag_sarah" as UUID;
-const seedAgent2Id = "ag_nexus" as UUID;
-const seedListId = "cl_demo" as UUID;
-const seedPhoneId = "pn_demo" as UUID;
-
-function seedTranscript(): Call["transcript"] {
-  return [
-    { speaker: "ai", text: "Hi, is this John? This is Sarah with BulkCall AI.", at: 0 },
-    { speaker: "human", text: "Uh, yes — what's this about?", at: 4 },
-    { speaker: "ai", text: "Just a quick call — would you have a moment to talk about your insurance coverage?", at: 7 },
-    { speaker: "human", text: "Sure, I have a couple of minutes.", at: 13 },
-    { speaker: "ai", text: "Great. Would you like to schedule a demo for Wednesday at 2pm?", at: 17 },
-  ];
-}
-
 function buildSeed() {
-  const now = Date.now();
-  const user: User = {
-    id: seedUserId,
-    email: "operator@bulkcall.ai",
-    full_name: "Demo Operator",
-    created_at: new Date(now - 86400_000 * 30).toISOString(),
-  };
-  const org: Organization = {
-    id: seedOrgId,
-    name: "Global Operations",
-    slug: "global-operations",
-    created_by: seedUserId,
-    created_at: new Date(now - 86400_000 * 30).toISOString(),
-  };
-  const members: OrgMember[] = [
-    { org_id: seedOrgId, user_id: seedUserId, role: "owner", joined_at: org.created_at },
-  ];
-  const lists: ContactList[] = [
-    {
-      id: seedListId,
-      org_id: seedOrgId,
-      name: "Q4 Outreach Leads",
-      description: "Inbound leads from website forms, Q4 2025",
-      created_at: new Date(now - 86400_000 * 7).toISOString(),
-    },
-  ];
-  const sampleContacts: Contact[] = Array.from({ length: 8 }).map((_, i) => ({
-    id: uid(),
-    org_id: seedOrgId,
-    list_id: seedListId,
-    name: ["John Doe", "Jane Smith", "Carlos Reyes", "Aisha Patel", "Liam Chen", "Maya Brooks", "Owen Park", "Sofia Russo"][i],
-    company: ["Acme", "Globex", "Initech", "Soylent", "Hooli", "Pied Piper", "Stark", "Wayne"][i],
-    phone: `+1555${String(1000000 + i * 12347).slice(0, 7)}`,
-    email: `contact${i + 1}@example.com`,
-    custom_vars: {},
-    tags: i % 2 === 0 ? ["warm"] : ["cold"],
-    notes: "",
-    status: "new",
-    created_at: new Date(now - 86400_000 * (7 - i)).toISOString(),
-  }));
-  const agents: AIAgent[] = [
-    {
-      id: seedAgentId,
-      org_id: seedOrgId,
-      name: "Sarah-AI",
-      tts_engine: "kokoro",
-      voice_id: "af_bella",
-      voice_name: "Bella (American Female, warm)",
-      language: "en",
-      greeting: "Hi, this is Sarah with BulkCall AI. Do you have a quick moment?",
-      system_prompt: "You are Sarah, a friendly outbound sales SDR. Keep replies under two sentences. Be warm and professional.",
-      prompt: "Qualify the prospect's interest in scheduling a 15-minute product demo this week.",
-      business_knowledge: "BulkCall AI helps teams run AI-powered outbound calling campaigns. Pricing starts at $99/mo.",
-      personality: "Friendly, concise, slightly upbeat.",
-      temperature: 0.6,
-      objective: "Book a 15-minute demo for the calendar.",
-      qualification_questions: [
-        "Are you the decision-maker for outbound calling?",
-        "How many calls per month does your team currently make?",
-      ],
-      transfer_number: "+15551234567",
-      voicemail_handling: "leave_message",
-      voicemail_message: "Hi, this is Sarah from BulkCall AI — sorry I missed you. I'll try again later.",
-      end_call_conditions: ["Prospect says not interested", "Demo booked"],
-      max_retries: 3,
-      retry_delay_minutes: 60,
-      created_at: new Date(now - 86400_000 * 10).toISOString(),
-    },
-    {
-      id: seedAgent2Id,
-      org_id: seedOrgId,
-      name: "Nexus-V3",
-      tts_engine: "kokoro",
-      voice_id: "am_michael",
-      voice_name: "Michael (American Male, deep)",
-      language: "en",
-      greeting: "Good day, this is Nexus calling on behalf of BulkCall AI.",
-      system_prompt: "You are Nexus, a research agent collecting product feedback. Be polite and brief.",
-      prompt: "Collect a customer satisfaction score 1-10 plus one improvement suggestion.",
-      business_knowledge: "We're surveying existing customers about their experience.",
-      personality: "Calm, formal, neutral.",
-      temperature: 0.4,
-      objective: "Collect a CSAT score.",
-      qualification_questions: ["Are you a current BulkCall AI customer?"],
-      transfer_number: "",
-      voicemail_handling: "hangup",
-      voicemail_message: "",
-      end_call_conditions: ["Score collected"],
-      max_retries: 2,
-      retry_delay_minutes: 240,
-      created_at: new Date(now - 86400_000 * 5).toISOString(),
-    },
-  ];
-  const phones: PhoneNumber[] = [
-    {
-      id: seedPhoneId,
-      org_id: seedOrgId,
-      number: "+14155551200",
-      twilio_sid: "PNxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      type: "local",
-      capabilities: ["voice", "sms"],
-      created_at: new Date(now - 86400_000 * 20).toISOString(),
-    },
-  ];
-  const campaigns: Campaign[] = [
-    {
-      id: uid(),
-      org_id: seedOrgId,
-      name: "Q3 Outreach Alpha",
-      agent_id: seedAgentId,
-      list_id: seedListId,
-      phone_number_id: seedPhoneId,
-      timezone: "America/Los_Angeles",
-      calling_hours: { start: "09:00", end: "18:00", days: [1, 2, 3, 4, 5] },
-      calls_per_minute: 12,
-      retry_rules: { max_attempts: 3, gap_minutes: 60 },
-      voicemail_rules: { action: "leave" },
-      status: "running",
-      created_by: seedUserId,
-      created_at: new Date(now - 86400_000 * 2).toISOString(),
-    },
-    {
-      id: uid(),
-      org_id: seedOrgId,
-      name: "Inbound Qualification",
-      agent_id: seedAgentId,
-      list_id: seedListId,
-      phone_number_id: seedPhoneId,
-      timezone: "America/New_York",
-      calling_hours: { start: "10:00", end: "17:00", days: [1, 2, 3, 4, 5] },
-      calls_per_minute: 6,
-      retry_rules: { max_attempts: 2, gap_minutes: 120 },
-      voicemail_rules: { action: "skip" },
-      status: "paused",
-      created_by: seedUserId,
-      created_at: new Date(now - 86400_000 * 5).toISOString(),
-    },
-    {
-      id: uid(),
-      org_id: seedOrgId,
-      name: "Market Research V2",
-      agent_id: seedAgent2Id,
-      list_id: seedListId,
-      phone_number_id: seedPhoneId,
-      timezone: "Europe/London",
-      calling_hours: { start: "09:00", end: "17:00", days: [1, 2, 3, 4, 5] },
-      calls_per_minute: 4,
-      retry_rules: { max_attempts: 2, gap_minutes: 240 },
-      voicemail_rules: { action: "skip" },
-      status: "completed",
-      created_by: seedUserId,
-      created_at: new Date(now - 86400_000 * 14).toISOString(),
-    },
-  ];
-
-  // Synthesize a realistic 24h call history
-  const calls: Call[] = [];
-  for (let h = 23; h >= 0; h--) {
-    const count = Math.floor(20 + Math.random() * 80);
-    for (let i = 0; i < count; i++) {
-      const startedAt = new Date(now - h * 3600_000 - Math.random() * 3600_000);
-      const dur = Math.floor(20 + Math.random() * 260);
-      const outcomes: { s: CallStatus; o: string }[] = [
-        { s: "completed", o: "Demo booked" },
-        { s: "completed", o: "Not interested" },
-        { s: "completed", o: "Callback requested" },
-        { s: "no_answer", o: "No answer" },
-        { s: "busy", o: "Line busy" },
-        { s: "voicemail", o: "Voicemail left" },
-        { s: "failed", o: "Failed to connect" },
-      ];
-      const pick = outcomes[Math.floor(Math.random() * outcomes.length)];
-      calls.push({
-        id: uid(),
-        org_id: seedOrgId,
-        campaign_id: campaigns[i % campaigns.length].id,
-        contact_id: sampleContacts[i % sampleContacts.length].id,
-        agent_id: i % 3 === 0 ? seedAgent2Id : seedAgentId,
-        phone_to: sampleContacts[i % sampleContacts.length].phone,
-        phone_from: "+14155551200",
-        twilio_call_sid: "CA" + uid().replace(/-/g, "").slice(0, 30),
-        started_at: startedAt.toISOString(),
-        ended_at: new Date(startedAt.getTime() + dur * 1000).toISOString(),
-        duration_sec: pick.s === "completed" ? dur : Math.floor(dur / 4),
-        status: pick.s,
-        outcome: pick.o,
-        recording_url: pick.s === "completed" ? "https://example.com/recording.mp3" : null,
-        transcript: pick.s === "completed" ? seedTranscript() : [],
-        summary: pick.s === "completed" ? "Prospect engaged. Demo scheduled for next Wed 2pm PT." : pick.o,
-        sentiment: pick.s === "completed" ? "positive" : pick.s === "no_answer" ? null : "neutral",
-        cost_cents: Math.floor(dur * 0.4),
-        ai_minutes: +(dur / 60).toFixed(2),
-        appointment_booked: pick.o === "Demo booked",
-      });
-    }
-  }
-
-  // Live calls (still ringing / in-progress)
-  for (let i = 0; i < 4; i++) {
-    calls.unshift({
-      id: uid(),
-      org_id: seedOrgId,
-      campaign_id: campaigns[0].id,
-      contact_id: sampleContacts[i].id,
-      agent_id: i % 2 ? seedAgent2Id : seedAgentId,
-      phone_to: sampleContacts[i].phone,
-      phone_from: "+14155551200",
-      twilio_call_sid: "CA" + uid().replace(/-/g, "").slice(0, 30),
-      started_at: new Date(now - (60 + i * 30) * 1000).toISOString(),
-      ended_at: null,
-      duration_sec: 60 + i * 30,
-      status: "in_progress",
-      outcome: "",
-      recording_url: null,
-      transcript: seedTranscript().slice(0, 2 + i),
-      summary: "",
-      sentiment: null,
-      cost_cents: 0,
-      ai_minutes: 0,
-      appointment_booked: false,
-    });
-  }
-
-  const appointments: Appointment[] = calls
-    .filter((c) => c.appointment_booked)
-    .slice(0, 12)
-    .map((c) => ({
-      id: uid(),
-      org_id: seedOrgId,
-      call_id: c.id,
-      contact_name: sampleContacts.find((x) => x.id === c.contact_id)?.name ?? "Contact",
-      contact_phone: c.phone_to,
-      scheduled_at: new Date(now + 86400_000 * (1 + Math.random() * 6)).toISOString(),
-      status: "scheduled",
-      notes: c.summary,
-    }));
-
-  const automations: Automation[] = [
-    {
-      id: uid(),
-      org_id: seedOrgId,
-      name: "Post-call SMS confirmation",
-      trigger: "appointment_booked",
-      action: "send_sms",
-      config: { template: "Thanks {{name}} — your demo is confirmed for {{date}}." },
-      enabled: true,
-    },
-  ];
-
-  const settings: OrgSettings = {
-    org_id: seedOrgId,
-    time_zone: "America/Los_Angeles",
-    webhook_url: "",
-    smtp_host: "",
-    smtp_user: "",
-    smtp_port: 587,
-    has_twilio: false,
-    has_elevenlabs: false,
-    has_openai: false,
-  };
-
   return {
-    users: [user] as User[],
-    organizations: [org] as Organization[],
-    members,
-    lists,
-    contacts: sampleContacts,
-    agents,
-    phones,
-    campaigns,
-    calls,
-    appointments,
-    automations,
-    settings: [settings] as OrgSettings[],
-    currentUserId: seedUserId as UUID,
-    currentOrgId: seedOrgId as UUID,
+    users: [] as User[],
+    organizations: [] as Organization[],
+    members: [] as OrgMember[],
+    lists: [] as ContactList[],
+    contacts: [] as Contact[],
+    agents: [] as AIAgent[],
+    phones: [] as PhoneNumber[],
+    campaigns: [] as Campaign[],
+    calls: [] as Call[],
+    appointments: [] as Appointment[],
+    automations: [] as Automation[],
+    settings: [] as OrgSettings[],
+    currentUserId: "" as UUID,
+    currentOrgId: "" as UUID,
   };
 }
+
 
 type DBState = ReturnType<typeof buildSeed> & {
   reset: () => void;
@@ -560,14 +294,47 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ agents: [...s.agents, agent] }));
+        dbWrite(
+          supabase.from("agents").insert({
+            id: agent.id,
+            user_id: agent.org_id,
+            name: agent.name,
+            voice_id: agent.voice_id,
+            voice_name: agent.voice_name,
+            language: agent.language,
+            greeting: agent.greeting,
+            system_prompt: agent.system_prompt,
+            prompt: agent.prompt,
+            business_knowledge: agent.business_knowledge,
+            personality: agent.personality,
+            temperature: agent.temperature,
+            objective: agent.objective,
+            qualification_questions: agent.qualification_questions,
+            transfer_number: agent.transfer_number,
+            voicemail_handling: agent.voicemail_handling,
+            voicemail_message: agent.voicemail_message,
+            end_call_conditions: agent.end_call_conditions,
+            max_retries: agent.max_retries,
+            retry_delay_minutes: agent.retry_delay_minutes,
+          }),
+        );
         return agent;
       },
-      updateAgent: (id, patch) =>
+      updateAgent: (id, patch) => {
         set((s) => ({
           agents: s.agents.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-        })),
-      deleteAgent: (id) =>
-        set((s) => ({ agents: s.agents.filter((a) => a.id !== id) })),
+        }));
+        const dbPatch: Record<string, unknown> = { ...patch };
+        delete dbPatch.id;
+        delete dbPatch.org_id;
+        delete dbPatch.created_at;
+        delete dbPatch.tts_engine;
+        dbWrite(supabase.from("agents").update(dbPatch as never).eq("id", id));
+      },
+      deleteAgent: (id) => {
+        set((s) => ({ agents: s.agents.filter((a) => a.id !== id) }));
+        dbWrite(supabase.from("agents").delete().eq("id", id));
+      },
 
       addList: (name, description) => {
         const list: ContactList = {
@@ -578,6 +345,14 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ lists: [...s.lists, list] }));
+        dbWrite(
+          supabase.from("contact_lists").insert({
+            id: list.id,
+            user_id: list.org_id,
+            name: list.name,
+            description: list.description,
+          }),
+        );
         return list;
       },
       addContact: (c) => {
@@ -588,6 +363,21 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ contacts: [...s.contacts, contact] }));
+        dbWrite(
+          supabase.from("contacts").insert({
+            id: contact.id,
+            user_id: contact.org_id,
+            list_id: contact.list_id,
+            name: contact.name,
+            company: contact.company,
+            phone: contact.phone,
+            email: contact.email,
+            custom_vars: contact.custom_vars,
+            tags: contact.tags,
+            notes: contact.notes,
+            status: contact.status,
+          }),
+        );
         return contact;
       },
       addContactsBulk: (cs) => {
@@ -606,11 +396,33 @@ export const useDB = create<DBState>()(
           created_at: now,
         }));
         set((s) => ({ contacts: [...s.contacts, ...made] }));
+        if (made.length > 0) {
+          dbWrite(
+            supabase.from("contacts").insert(
+              made.map((m) => ({
+                id: m.id,
+                user_id: m.org_id,
+                list_id: m.list_id,
+                name: m.name,
+                company: m.company,
+                phone: m.phone,
+                email: m.email,
+                custom_vars: m.custom_vars,
+                tags: m.tags,
+                notes: m.notes,
+                status: m.status,
+              })),
+            ),
+          );
+        }
         return made.length;
       },
       deleteContacts: (ids) => {
         const set2 = new Set(ids);
         set((s) => ({ contacts: s.contacts.filter((c) => !set2.has(c.id)) }));
+        if (ids.length > 0) {
+          dbWrite(supabase.from("contacts").delete().in("id", ids));
+        }
       },
 
       addCampaign: (c) => {
@@ -623,12 +435,30 @@ export const useDB = create<DBState>()(
           status: "draft",
         };
         set((s) => ({ campaigns: [...s.campaigns, campaign] }));
+        dbWrite(
+          supabase.from("campaigns").insert({
+            id: campaign.id,
+            user_id: campaign.org_id,
+            name: campaign.name,
+            agent_id: campaign.agent_id,
+            list_id: campaign.list_id,
+            phone_number_id: campaign.phone_number_id,
+            timezone: campaign.timezone,
+            calling_hours: campaign.calling_hours,
+            calls_per_minute: campaign.calls_per_minute,
+            retry_rules: campaign.retry_rules,
+            voicemail_rules: campaign.voicemail_rules,
+            status: campaign.status,
+          }),
+        );
         return campaign;
       },
-      setCampaignStatus: (id, status) =>
+      setCampaignStatus: (id, status) => {
         set((s) => ({
           campaigns: s.campaigns.map((c) => (c.id === id ? { ...c, status } : c)),
-        })),
+        }));
+        dbWrite(supabase.from("campaigns").update({ status }).eq("id", id));
+      },
       duplicateCampaign: (id) => {
         const orig = get().campaigns.find((c) => c.id === id);
         if (!orig) return;
@@ -640,6 +470,22 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ campaigns: [...s.campaigns, copy] }));
+        dbWrite(
+          supabase.from("campaigns").insert({
+            id: copy.id,
+            user_id: copy.org_id,
+            name: copy.name,
+            agent_id: copy.agent_id,
+            list_id: copy.list_id,
+            phone_number_id: copy.phone_number_id,
+            timezone: copy.timezone,
+            calling_hours: copy.calling_hours,
+            calls_per_minute: copy.calls_per_minute,
+            retry_rules: copy.retry_rules,
+            voicemail_rules: copy.voicemail_rules,
+            status: copy.status,
+          }),
+        );
       },
 
       addPhone: (number, type) => {
@@ -653,33 +499,75 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ phones: [...s.phones, phone] }));
+        dbWrite(
+          supabase.from("phone_numbers").insert({
+            id: phone.id,
+            user_id: phone.org_id,
+            number: phone.number,
+            twilio_sid: phone.twilio_sid,
+            type: phone.type,
+            capabilities: phone.capabilities,
+          }),
+        );
         return phone;
       },
-      deletePhone: (id) =>
-        set((s) => ({ phones: s.phones.filter((p) => p.id !== id) })),
+      deletePhone: (id) => {
+        set((s) => ({ phones: s.phones.filter((p) => p.id !== id) }));
+        dbWrite(supabase.from("phone_numbers").delete().eq("id", id));
+      },
 
-      saveSettings: (patch) =>
+      saveSettings: (patch) => {
         set((s) => ({
           settings: s.settings.map((x) =>
             x.org_id === s.currentOrgId ? { ...x, ...patch } : x,
           ),
-        })),
+        }));
+        const uid_ = get().currentUserId;
+        const dbPatch: Record<string, unknown> = { ...patch };
+        delete dbPatch.org_id;
+        delete dbPatch.has_twilio;
+        delete dbPatch.has_elevenlabs;
+        delete dbPatch.has_openai;
+        if (uid_) {
+          dbWrite(
+            supabase.from("org_settings").upsert({ user_id: uid_, ...dbPatch } as never),
+          );
+        }
+      },
 
       addAutomation: (a) => {
         const auto: Automation = { ...a, id: uid(), org_id: get().currentOrgId };
         set((s) => ({ automations: [...s.automations, auto] }));
+        dbWrite(
+          supabase.from("automations").insert({
+            id: auto.id,
+            user_id: auto.org_id,
+            name: auto.name,
+            trigger: auto.trigger,
+            action: auto.action,
+            config: auto.config,
+            enabled: auto.enabled,
+          }),
+        );
         return auto;
       },
-      toggleAutomation: (id) =>
+      toggleAutomation: (id) => {
+        const cur = get().automations.find((a) => a.id === id);
+        const next = !cur?.enabled;
         set((s) => ({
           automations: s.automations.map((a) =>
-            a.id === id ? { ...a, enabled: !a.enabled } : a,
+            a.id === id ? { ...a, enabled: next } : a,
           ),
-        })),
-      deleteAutomation: (id) =>
-        set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
+        }));
+        dbWrite(supabase.from("automations").update({ enabled: next }).eq("id", id));
+      },
+      deleteAutomation: (id) => {
+        set((s) => ({ automations: s.automations.filter((a) => a.id !== id) }));
+        dbWrite(supabase.from("automations").delete().eq("id", id));
+      },
+
     }),
-    { name: "bulkcall-db-v1" },
+    { name: "bulkcall-db-v2" },
   ),
 );
 
