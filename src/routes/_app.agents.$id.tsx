@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDB, type AIAgent } from "@/lib/data-store";
+import { useDB, type AIAgent, type DataField, type DataFieldType } from "@/lib/data-store";
 import {
   KOKORO_LANGUAGES,
   KOKORO_VOICES,
