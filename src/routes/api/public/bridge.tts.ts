@@ -12,6 +12,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { verifyBridge } from "@/lib/voice/bridge-auth";
 import { errorJson, json, preflight } from "@/lib/api/cors";
+import { mixOfficeAmbience } from "@/lib/voice/ambience";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/replicate/v1";
 const MODEL = "jaaari/kokoro-82m";
