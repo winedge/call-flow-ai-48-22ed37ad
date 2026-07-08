@@ -105,9 +105,9 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
 
         const { data: existing, error: readErr } = await supabaseAdmin
           .from("calls")
-          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to, end_reason, extracted_data")
+          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to, phone_from, direction, started_at, ended_at, duration_sec, recording_url, transcript, end_reason, extracted_data")
           .eq("twilio_call_sid", callSid)
-          .maybeSingle<{ id: string; user_id: string; status: string; campaign_id: string | null; contact_id: string | null; agent_id: string | null; phone_to: string; end_reason: string | null; extracted_data: Record<string, unknown> | null }>();
+          .maybeSingle<{ id: string; user_id: string; status: string; campaign_id: string | null; contact_id: string | null; agent_id: string | null; phone_to: string; phone_from: string | null; direction: string | null; started_at: string | null; ended_at: string | null; duration_sec: number | null; recording_url: string | null; transcript: unknown; end_reason: string | null; extracted_data: Record<string, unknown> | null }>();
         if (readErr) return errorJson(500, `db read: ${readErr.message}`);
 
         if (!existing) {
@@ -143,17 +143,39 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
         // Fire automations on terminal transitions.
         const trig = TERMINAL.has(status) ? triggerForStatus(status) : null;
         if (trig) {
-          // Re-read to pick up extracted_data written by the bridge, which may
-          // land just before or after this Twilio callback.
+          // Re-read to pick up transcript + extracted_data written by the
+          // bridge, which may land just before or after this Twilio callback.
           const { data: fresh } = await supabaseAdmin
             .from("calls")
-            .select("extracted_data")
+            .select("transcript, extracted_data")
             .eq("id", existing.id)
-            .maybeSingle<{ extracted_data: Record<string, unknown> | null }>();
+            .maybeSingle<{ transcript: unknown; extracted_data: Record<string, unknown> | null }>();
           const extracted =
             (fresh?.extracted_data as Record<string, unknown> | null) ??
             existing.extracted_data ??
             {};
+          const transcript = fresh?.transcript ?? existing.transcript ?? null;
+
+          const merged = { ...existing, ...patch };
+          const callPayload = {
+            id: existing.id,
+            twilio_call_sid: callSid,
+            user_id: existing.user_id,
+            agent_id: existing.agent_id,
+            campaign_id: existing.campaign_id,
+            contact_id: existing.contact_id,
+            direction: existing.direction,
+            phone_to: existing.phone_to,
+            phone_from: existing.phone_from,
+            status: merged.status,
+            started_at: existing.started_at,
+            ended_at: merged.ended_at ?? existing.ended_at,
+            duration_sec: merged.duration_sec ?? existing.duration_sec,
+            recording_url: merged.recording_url ?? existing.recording_url,
+            end_reason: merged.end_reason ?? existing.end_reason,
+            transcript,
+            extracted_data: extracted,
+          };
 
           const { data: automations } = await supabaseAdmin
             .from("automations")
@@ -169,8 +191,7 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   event: trig,
-                  call_id: existing.id,
-                  twilio_call_sid: callSid,
+                  call: callPayload,
                   data: extracted,
                   automation: a.id,
                 }),
