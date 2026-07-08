@@ -121,6 +121,23 @@ function toCampaign(r: Row): Campaign {
   };
 }
 
+function normalizeTranscript(v: unknown): Call["transcript"] {
+  if (!Array.isArray(v)) return [];
+  const out: Call["transcript"] = [];
+  for (const raw of v) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as Record<string, unknown>;
+    const text = typeof r.text === "string" ? r.text : typeof r.content === "string" ? r.content : "";
+    if (!text) continue;
+    const roleOrSpeaker = (r.speaker ?? r.role) as string | undefined;
+    const speaker: "ai" | "human" =
+      roleOrSpeaker === "ai" || roleOrSpeaker === "assistant" ? "ai" : "human";
+    const at = typeof r.at === "number" ? r.at : Date.now();
+    out.push({ speaker, text, at });
+  }
+  return out;
+}
+
 function toCall(r: Row): Call {
   return {
     id: r.id as UUID,
@@ -137,7 +154,7 @@ function toCall(r: Row): Call {
     status: (r.status as Call["status"]) ?? "queued",
     outcome: (r.outcome as string) ?? "",
     recording_url: (r.recording_url as string | null) ?? null,
-    transcript: (r.transcript as Call["transcript"]) ?? [],
+    transcript: normalizeTranscript(r.transcript),
     summary: (r.summary as string) ?? "",
     sentiment: (r.sentiment as Call["sentiment"]) ?? null,
     cost_cents: Number(r.cost_cents ?? 0),
