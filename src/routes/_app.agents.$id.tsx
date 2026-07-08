@@ -71,6 +71,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
     voice_similarity_boost: 0.8,
     voice_style: 0.45,
     voice_speaker_boost: true,
+    speak_first: true,
   };
 }
 
