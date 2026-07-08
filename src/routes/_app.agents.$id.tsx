@@ -91,13 +91,68 @@ function AgentEditor() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  // ---- Voice preview (Kokoro via Replicate) ----
-  const synth = useServerFn(synthesizeSpeechKokoro);
+  // ---- Voice preview ----
+  const synthKokoro = useServerFn(synthesizeSpeechKokoro);
+  const loadVoices = useServerFn(listElevenLabsVoices);
+  const previewEleven = useServerFn(previewElevenLabsVoice);
   const [previewing, setPreviewing] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cacheRef = useRef<Map<string, string>>(new Map());
 
+  const [elVoices, setElVoices] = useState<ElevenLabsVoice[] | null>(null);
+  const [elLoading, setElLoading] = useState(false);
+  const [elError, setElError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (form.tts_engine !== "elevenlabs" || elVoices !== null || elLoading) return;
+    setElLoading(true);
+    setElError(null);
+    loadVoices()
+      .then((res) => {
+        if (res.ok) setElVoices(res.voices);
+        else setElError(res.message);
+      })
+      .catch((e) => setElError(e instanceof Error ? e.message : "Failed to load voices"))
+      .finally(() => setElLoading(false));
+  }, [form.tts_engine, elVoices, elLoading, loadVoices]);
+
   async function previewVoice() {
+    if (form.tts_engine === "elevenlabs") {
+      if (!form.voice_id) {
+        toast.error("Pick a voice first.");
+        return;
+      }
+      const text = (form.greeting.trim() || "Hi, this is a quick voice sample so you can hear how I sound.").slice(0, 400);
+      const cacheKey = `el|${form.voice_id}|${text}`;
+      const cached = cacheRef.current.get(cacheKey);
+      audioRef.current?.pause();
+      if (cached) {
+        const a = new Audio(cached);
+        audioRef.current = a;
+        a.play().catch(() => toast.error("Browser blocked audio playback."));
+        return;
+      }
+      setPreviewing(true);
+      try {
+        const res = await previewEleven({ data: { voiceId: form.voice_id, text } });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        const url = `data:${res.mimeType};base64,${res.audioBase64}`;
+        cacheRef.current.set(cacheKey, url);
+        const a = new Audio(url);
+        audioRef.current = a;
+        await a.play();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Voice preview failed.");
+      } finally {
+        setPreviewing(false);
+      }
+      return;
+    }
+
+    // Kokoro path
     const lang = form.language as KokoroLang;
     if (!(lang in KOKORO_LANGUAGES)) {
       toast.error("Pick English or Hindi first.");
@@ -119,7 +174,7 @@ function AgentEditor() {
     }
     setPreviewing(true);
     try {
-      const res = await synth({
+      const res = await synthKokoro({
         data: { text, language: lang, voice: form.voice_id },
       });
       cacheRef.current.set(cacheKey, res.audioUrl);
