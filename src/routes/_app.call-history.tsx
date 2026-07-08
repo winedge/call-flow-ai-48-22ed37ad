@@ -76,7 +76,7 @@ function CallHistory() {
         );
       })
       .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
-  }, [calls, statusFilter, campaignFilter, agentFilter, sentimentFilter, leadFilter, dateFrom, dateTo, search, contacts]);
+  }, [calls, statusFilter, endReasonFilter, campaignFilter, agentFilter, sentimentFilter, leadFilter, dateFrom, dateTo, search, contacts]);
 
   const orgCampaigns = campaigns.filter((c) => c.org_id === orgId);
   const orgAgents = agents.filter((a) => a.org_id === orgId);
