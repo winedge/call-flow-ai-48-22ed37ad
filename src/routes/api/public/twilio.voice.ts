@@ -109,11 +109,19 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         stream.searchParams.set("call_sid", callSid);
         const wsUrl = escapeXml(stream.toString());
 
-        // <Connect> gives the bridge full-duplex audio and holds the call open
-        // until it closes the socket or Twilio times out.
+        // <Start><Record> runs a dual-channel recording in the background
+        // and posts to our status webhook when it's ready. <Connect> then
+        // hands audio to the bridge and holds the call open.
+        const appUrl = process.env.PUBLIC_APP_URL ?? "";
+        const recordingCb = appUrl
+          ? escapeXml(`${appUrl.replace(/\/$/, "")}/api/public/webhooks/twilio`)
+          : "";
+        const recordTag = recordingCb
+          ? `<Start><Record recordingStatusCallback="${recordingCb}" recordingStatusCallbackEvent="completed" recordingChannels="dual"/></Start>`
+          : "";
         const twiml =
           `<?xml version="1.0" encoding="UTF-8"?>` +
-          `<Response><Connect><Stream url="${wsUrl}"/></Connect></Response>`;
+          `<Response>${recordTag}<Connect><Stream url="${wsUrl}"/></Connect></Response>`;
         return new Response(twiml, {
           status: 200,
           headers: { "Content-Type": "text/xml" },

@@ -212,12 +212,17 @@ async function requestTransfer(callSid: string, to: string): Promise<void> {
  * Fire-and-forget: tell the app why this call ended so the UI can show it.
  * Never throws — we're mid-cleanup and can't afford to interrupt.
  */
-async function reportCallEvent(callSid: string, endReason: string): Promise<void> {
+async function reportCallEvent(
+  callSid: string,
+  endReason: string,
+  transcript?: { role: "user" | "assistant"; content: string }[],
+): Promise<void> {
   try {
     const body = JSON.stringify({
       call_sid: callSid,
       end_reason: endReason,
       ended_at: new Date().toISOString(),
+      transcript,
     });
     const { ts, sig } = await sign(body);
     await fetch(`${APP_URL}/api/public/bridge/call-event`, {
@@ -406,7 +411,7 @@ async function handleUserTurn(s: Session, text: string) {
           // as soon as it fetches new TwiML, and socket.onclose fires
           // cleanup with "socket closed" which would otherwise be
           // (mis)classified as caller_hangup.
-          void reportCallEvent(s.callSid, "transfer");
+          void reportCallEvent(s.callSid, "transfer", s.history);
           s.callSid = null; // suppress duplicate report from cleanup
         } catch (e) {
           console.error("transfer failed", e);
@@ -438,7 +443,7 @@ function cleanup(s: Session, reason: string) {
   for (const t of s.timers) clearTimeout(t);
   s.timers = [];
   if (s.callSid) {
-    void reportCallEvent(s.callSid, classifyEndReason(reason));
+    void reportCallEvent(s.callSid, classifyEndReason(reason), s.history);
   }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
