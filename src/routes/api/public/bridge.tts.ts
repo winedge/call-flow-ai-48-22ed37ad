@@ -74,11 +74,13 @@ async function synthesizeElevenLabs(
       },
       body: JSON.stringify({
         text,
-        // flash_v2_5 is ElevenLabs' lowest-latency model (~75ms TTFB).
-        model_id: "eleven_flash_v2_5",
+        // turbo_v2_5 has noticeably more natural prosody than flash while
+        // still keeping TTFB low. Flash sounds robotic on numbers/read-backs.
+        model_id: "eleven_turbo_v2_5",
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          stability: 0.35,
+          similarity_boost: 0.8,
+          style: 0.45,
           use_speaker_boost: true,
         },
       }),
