@@ -71,6 +71,21 @@ function CampaignDetail() {
     { name: "Failed", value: metrics.failed, fill: "#ef4444" },
   ].filter((d) => d.value > 0);
 
+  const endReasonData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of calls) {
+      if (!c.end_reason) continue;
+      map.set(c.end_reason, (map.get(c.end_reason) ?? 0) + 1);
+    }
+    return END_REASON_ORDER
+      .filter((r) => map.has(r))
+      .map((r) => ({
+        name: endReasonLabel(r),
+        value: map.get(r)!,
+        fill: END_REASON_FILL[END_REASON_TONE[r]],
+      }));
+  }, [calls]);
+
   const hourlyData = useMemo(() => {
     const bins: Record<string, { hour: string; calls: number; answered: number }> = {};
     for (const c of calls) {
