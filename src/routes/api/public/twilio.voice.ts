@@ -137,19 +137,13 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         stream.searchParams.set("call_sid", callSid);
         const wsUrl = escapeXml(stream.toString());
 
-        // <Start><Record> runs a dual-channel recording in the background
-        // and posts to our status webhook when it's ready. <Connect> then
-        // hands audio to the bridge and holds the call open.
-        const appUrl = process.env.PUBLIC_APP_URL ?? "";
-        const recordingCb = appUrl
-          ? escapeXml(`${appUrl.replace(/\/$/, "")}/api/public/webhooks/twilio`)
-          : "";
-        const recordTag = recordingCb
-          ? `<Start><Record recordingStatusCallback="${recordingCb}" recordingStatusCallbackEvent="completed" recordingChannels="dual"/></Start>`
-          : "";
+        // <Connect><Stream> hands audio to the bridge and holds the call open.
+        // Do not add <Start><Record> here: Twilio Voice TwiML does not support
+        // <Record> as a <Start> noun, and rejects the response before opening
+        // the media stream, which makes the call hang up right after pickup.
         const twiml =
           `<?xml version="1.0" encoding="UTF-8"?>` +
-          `<Response>${recordTag}<Connect><Stream url="${wsUrl}"/></Connect></Response>`;
+          `<Response><Connect><Stream url="${wsUrl}"/></Connect></Response>`;
         return new Response(twiml, {
           status: 200,
           headers: { "Content-Type": "text/xml" },
