@@ -42,8 +42,11 @@ import { Route as AppAgentsIdRouteImport } from './routes/_app.agents.$id'
 import { Route as ApiPublicWebhooksTwilioRouteImport } from './routes/api/public/webhooks.twilio'
 import { Route as ApiPublicWebhooksAutomationsRouteImport } from './routes/api/public/webhooks.automations'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio.voice'
+import { Route as ApiPublicTwilioTransferRouteImport } from './routes/api/public/twilio.transfer'
+import { Route as ApiPublicTwilioAmdRouteImport } from './routes/api/public/twilio.amd'
 import { Route as ApiPublicBridgeTurnRouteImport } from './routes/api/public/bridge.turn'
 import { Route as ApiPublicBridgeTtsRouteImport } from './routes/api/public/bridge.tts'
+import { Route as ApiPublicBridgeTransferRouteImport } from './routes/api/public/bridge.transfer'
 import { Route as ApiPublicBridgeAgentRouteImport } from './routes/api/public/bridge.agent'
 import { Route as ApiCampaignsIdStartRouteImport } from './routes/api/campaigns.$id.start'
 import { Route as ApiCampaignsIdPauseRouteImport } from './routes/api/campaigns.$id.pause'
@@ -213,6 +216,16 @@ const ApiPublicTwilioVoiceRoute = ApiPublicTwilioVoiceRouteImport.update({
   path: '/api/public/twilio/voice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioTransferRoute = ApiPublicTwilioTransferRouteImport.update({
+  id: '/api/public/twilio/transfer',
+  path: '/api/public/twilio/transfer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicTwilioAmdRoute = ApiPublicTwilioAmdRouteImport.update({
+  id: '/api/public/twilio/amd',
+  path: '/api/public/twilio/amd',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBridgeTurnRoute = ApiPublicBridgeTurnRouteImport.update({
   id: '/api/public/bridge/turn',
   path: '/api/public/bridge/turn',
@@ -221,6 +234,11 @@ const ApiPublicBridgeTurnRoute = ApiPublicBridgeTurnRouteImport.update({
 const ApiPublicBridgeTtsRoute = ApiPublicBridgeTtsRouteImport.update({
   id: '/api/public/bridge/tts',
   path: '/api/public/bridge/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicBridgeTransferRoute = ApiPublicBridgeTransferRouteImport.update({
+  id: '/api/public/bridge/transfer',
+  path: '/api/public/bridge/transfer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicBridgeAgentRoute = ApiPublicBridgeAgentRouteImport.update({
@@ -272,8 +290,11 @@ export interface FileRoutesByFullPath {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
+  '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
@@ -311,8 +332,11 @@ export interface FileRoutesByTo {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
+  '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
@@ -352,8 +376,11 @@ export interface FileRoutesById {
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
+  '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
+  '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
@@ -393,8 +420,11 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/twilio/amd'
+    | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
@@ -432,8 +462,11 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/twilio/amd'
+    | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
@@ -472,8 +505,11 @@ export interface FileRouteTypes {
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
+    | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/twilio/amd'
+    | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
@@ -491,8 +527,11 @@ export interface RootRouteChildren {
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   DocsApiRoute: typeof DocsApiRoute
   ApiPublicBridgeAgentRoute: typeof ApiPublicBridgeAgentRoute
+  ApiPublicBridgeTransferRoute: typeof ApiPublicBridgeTransferRoute
   ApiPublicBridgeTtsRoute: typeof ApiPublicBridgeTtsRoute
   ApiPublicBridgeTurnRoute: typeof ApiPublicBridgeTurnRoute
+  ApiPublicTwilioAmdRoute: typeof ApiPublicTwilioAmdRoute
+  ApiPublicTwilioTransferRoute: typeof ApiPublicTwilioTransferRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicWebhooksAutomationsRoute: typeof ApiPublicWebhooksAutomationsRoute
   ApiPublicWebhooksTwilioRoute: typeof ApiPublicWebhooksTwilioRoute
@@ -731,6 +770,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioVoiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/transfer': {
+      id: '/api/public/twilio/transfer'
+      path: '/api/public/twilio/transfer'
+      fullPath: '/api/public/twilio/transfer'
+      preLoaderRoute: typeof ApiPublicTwilioTransferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/twilio/amd': {
+      id: '/api/public/twilio/amd'
+      path: '/api/public/twilio/amd'
+      fullPath: '/api/public/twilio/amd'
+      preLoaderRoute: typeof ApiPublicTwilioAmdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bridge/turn': {
       id: '/api/public/bridge/turn'
       path: '/api/public/bridge/turn'
@@ -743,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/bridge/tts'
       fullPath: '/api/public/bridge/tts'
       preLoaderRoute: typeof ApiPublicBridgeTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/bridge/transfer': {
+      id: '/api/public/bridge/transfer'
+      path: '/api/public/bridge/transfer'
+      fullPath: '/api/public/bridge/transfer'
+      preLoaderRoute: typeof ApiPublicBridgeTransferRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/bridge/agent': {
@@ -901,8 +961,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   DocsApiRoute: DocsApiRoute,
   ApiPublicBridgeAgentRoute: ApiPublicBridgeAgentRoute,
+  ApiPublicBridgeTransferRoute: ApiPublicBridgeTransferRoute,
   ApiPublicBridgeTtsRoute: ApiPublicBridgeTtsRoute,
   ApiPublicBridgeTurnRoute: ApiPublicBridgeTurnRoute,
+  ApiPublicTwilioAmdRoute: ApiPublicTwilioAmdRoute,
+  ApiPublicTwilioTransferRoute: ApiPublicTwilioTransferRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicWebhooksAutomationsRoute: ApiPublicWebhooksAutomationsRoute,
   ApiPublicWebhooksTwilioRoute: ApiPublicWebhooksTwilioRoute,

@@ -2,7 +2,11 @@
  * Bridge → Lovable: run one LLM turn for a call.
  *
  * Body: { agent: AgentSummary, history: {role:"user"|"assistant",content:string}[] }
- * Returns: { reply: string, end_call: boolean }
+ * Returns: { reply: string, end_call: boolean, transfer: boolean }
+ *
+ * Control tokens the model may prepend to the reply:
+ *   [END_CALL]  — hang up after speaking `reply`
+ *   [TRANSFER]  — warm-transfer to agent.transfer_number after speaking `reply`
  *
  * Uses the Lovable AI Gateway (Gemini 3 Flash). Keeps LOVABLE_API_KEY server-side.
  * Auth: HMAC via BRIDGE_SHARED_SECRET (see bridge-auth.ts).
@@ -24,11 +28,13 @@ type AgentSummary = {
   objective?: string;
   qualification_questions?: string[];
   end_call_conditions?: string[];
+  transfer_number?: string;
 };
 
 type Turn = { role: "user" | "assistant"; content: string };
 
 function buildSystem(a: AgentSummary): string {
+  const canTransfer = !!a.transfer_number?.trim();
   const parts = [
     a.system_prompt?.trim(),
     a.personality ? `Personality: ${a.personality}` : "",
@@ -40,7 +46,11 @@ function buildSystem(a: AgentSummary): string {
       : "",
     a.end_call_conditions?.length
       ? `End the call when: ${a.end_call_conditions.join("; ")}. When ending, prepend [END_CALL] to your reply.`
-      : "",
+      : `When the caller says goodbye, is uninterested, or the conversation is naturally over, prepend [END_CALL] to your reply.`,
+    canTransfer
+      ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
+      : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
+    "Never use both [END_CALL] and [TRANSFER] in the same reply.",
     "Keep replies under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
@@ -93,11 +103,20 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         };
         let reply = data.choices?.[0]?.message?.content?.trim() ?? "";
         let endCall = false;
-        if (reply.startsWith("[END_CALL]")) {
-          endCall = true;
-          reply = reply.replace(/^\[END_CALL\]\s*/, "");
+        let transfer = false;
+
+        // Strip control tokens (case-insensitive, in either order).
+        for (let i = 0; i < 2; i++) {
+          const m = reply.match(/^\s*\[(END_CALL|TRANSFER)\]\s*/i);
+          if (!m) break;
+          if (m[1].toUpperCase() === "END_CALL") endCall = true;
+          else transfer = true;
+          reply = reply.slice(m[0].length);
         }
-        return json({ reply, end_call: endCall });
+        // Transfer wins over end_call if both were emitted.
+        if (transfer) endCall = false;
+
+        return json({ reply, end_call: endCall, transfer });
       },
     },
   },
