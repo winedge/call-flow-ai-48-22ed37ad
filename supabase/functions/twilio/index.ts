@@ -334,6 +334,7 @@ type Session = {
   twilio: WebSocket;
   streamSid: string | null;
   callSid: string | null;
+  agentId: string | null;
   agent: AgentConfig | null;
   dg: DgHandle | null;
   history: { role: "user" | "assistant"; content: string }[];
@@ -481,12 +482,11 @@ Deno.serve((req) => {
     return new Response("bridge misconfigured", { status: 500 });
   }
 
-  const agentId = url.searchParams.get("agent_id") ?? "";
-  if (!agentId) return new Response("missing agent_id", { status: 400 });
+  const initialAgentId = url.searchParams.get("agent_id") ?? "";
 
   console.log("bridge websocket upgrade", {
     callSid: url.searchParams.get("call_sid"),
-    agentId,
+    agentId: initialAgentId || null,
     path: url.pathname,
   });
 
@@ -496,6 +496,7 @@ Deno.serve((req) => {
     twilio: socket,
     streamSid: null,
     callSid: url.searchParams.get("call_sid"),
+    agentId: initialAgentId || null,
     agent: null,
     dg: null,
     history: [],
@@ -507,8 +508,7 @@ Deno.serve((req) => {
     timers: [],
   };
 
-  // Kick off agent fetch immediately.
-  fetchAgent(agentId)
+  const loadAgent = (agentId: string) => fetchAgent(agentId)
     .then((a) => {
       session.agent = a;
       console.log("bridge agent loaded", {
@@ -541,13 +541,22 @@ Deno.serve((req) => {
       cleanup(session, "agent config unavailable");
     });
 
+  // Backward compatibility for manual tests / old URLs. Real Twilio calls use
+  // <Parameter> values delivered in the start frame because <Stream url> does
+  // not support query strings.
+  if (session.agentId) void loadAgent(session.agentId);
+
   socket.onmessage = async (ev) => {
     if (session.closed) return;
     let msg: {
       event: string;
       streamSid?: string;
       media?: { payload: string };
-      start?: { streamSid: string; callSid: string };
+      start?: {
+        streamSid: string;
+        callSid: string;
+        customParameters?: Record<string, string>;
+      };
     };
     try {
       msg = JSON.parse(typeof ev.data === "string" ? ev.data : new TextDecoder().decode(ev.data as ArrayBuffer));
@@ -559,9 +568,16 @@ Deno.serve((req) => {
       session.streamSid = msg.start!.streamSid;
       // Prefer the authoritative call_sid from Twilio's start frame.
       if (msg.start?.callSid) session.callSid = msg.start.callSid;
+      const params = msg.start?.customParameters ?? {};
+      if (params.call_sid) session.callSid = params.call_sid;
+      if (params.agent_id && !session.agentId) {
+        session.agentId = params.agent_id;
+        void loadAgent(params.agent_id);
+      }
       console.log("bridge stream started", {
         callSid: session.callSid,
         streamSid: session.streamSid,
+        agentId: session.agentId,
       });
       session.lastUserAudioAt = Date.now();
       for (let i = 0; i < 50 && !session.agent; i++) {

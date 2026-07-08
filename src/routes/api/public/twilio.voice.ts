@@ -129,13 +129,14 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
           } as never);
         }
 
-        // Media Streams URL: wss with query params on the configured bridge
-        // path. Bridge validates on connect. We preserve BRIDGE_URL's path
-        // (e.g. Supabase edge function `/voice-bridge`), only appending query.
+        // Media Streams URL: Twilio does not support query strings on
+        // <Stream url="...">. Pass call metadata with nested <Parameter>
+        // tags instead; Twilio delivers them in the WebSocket start frame.
         const stream = bridgeStreamUrl(bridge);
-        stream.searchParams.set("agent_id", agentId);
-        stream.searchParams.set("call_sid", callSid);
+        stream.search = "";
         const wsUrl = escapeXml(stream.toString());
+        const agentParam = escapeXml(agentId);
+        const callParam = escapeXml(callSid);
 
         // <Connect><Stream> hands audio to the bridge and holds the call open.
         // Do not add <Start><Record> here: Twilio Voice TwiML does not support
@@ -143,7 +144,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         // the media stream, which makes the call hang up right after pickup.
         const twiml =
           `<?xml version="1.0" encoding="UTF-8"?>` +
-          `<Response><Connect><Stream url="${wsUrl}"/></Connect></Response>`;
+          `<Response><Connect><Stream url="${wsUrl}">` +
+          `<Parameter name="agent_id" value="${agentParam}"/>` +
+          `<Parameter name="call_sid" value="${callParam}"/>` +
+          `</Stream></Connect></Response>`;
         return new Response(twiml, {
           status: 200,
           headers: { "Content-Type": "text/xml" },
