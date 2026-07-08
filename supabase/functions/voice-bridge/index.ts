@@ -354,6 +354,7 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
+  greetingAudio: Promise<{ audio_url: string }> | null;
 };
 
 async function speak(s: Session, text: string) {
