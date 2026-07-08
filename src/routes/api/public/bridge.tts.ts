@@ -60,19 +60,22 @@ async function synthesizeElevenLabs(
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { error: "ElevenLabs not configured", status: 500 };
 
-  const sampleRate = 16000;
+  // Request μ-law 8kHz directly — matches Twilio's wire format so the bridge
+  // forwards bytes with zero resample/encode work. Biggest latency win and
+  // eliminates the pitch drift that comes from off-rate playback.
   const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=pcm_${sampleRate}`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=ulaw_8000`,
     {
       method: "POST",
       headers: {
         "xi-api-key": apiKey,
         "Content-Type": "application/json",
-        Accept: "audio/pcm",
+        Accept: "audio/basic",
       },
       body: JSON.stringify({
         text,
-        model_id: "eleven_turbo_v2_5",
+        // flash_v2_5 is ElevenLabs' lowest-latency model (~75ms TTFB).
+        model_id: "eleven_flash_v2_5",
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
@@ -85,9 +88,9 @@ async function synthesizeElevenLabs(
     const t = await res.text().catch(() => "");
     return { error: `ElevenLabs ${res.status}: ${t.slice(0, 200)}`, status: 502 };
   }
-  const pcm = new Uint8Array(await res.arrayBuffer());
-  const wav = pcmToWav(pcm, sampleRate);
-  return { audio_url: `data:audio/wav;base64,${toBase64(wav)}` };
+  const mulaw = new Uint8Array(await res.arrayBuffer());
+  // Custom media type — the bridge detects this and skips WAV parsing.
+  return { audio_url: `data:audio/mulaw;base64,${toBase64(mulaw)}` };
 }
 
 async function synthesizeKokoro(
