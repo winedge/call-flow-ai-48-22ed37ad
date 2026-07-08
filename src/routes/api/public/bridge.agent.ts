@@ -13,6 +13,8 @@ import { verifyBridge } from "@/lib/voice/bridge-auth";
 import { db } from "@/lib/api/store.server";
 import { errorJson, json, preflight } from "@/lib/api/cors";
 
+type DataField = { key: string; label: string; type?: string; required?: boolean };
+
 type BridgeAgent = {
   id: string;
   name: string;
@@ -32,11 +34,27 @@ type BridgeAgent = {
   max_call_seconds?: number;
   silence_timeout_seconds?: number;
   tts_engine?: string;
+  data_fields?: DataField[];
 };
 
 function toStringArray(v: unknown): string[] {
   if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string");
   return [];
+}
+
+function toDataFields(v: unknown): DataField[] {
+  if (!Array.isArray(v)) return [];
+  return v.flatMap((x): DataField[] => {
+    if (!x || typeof x !== "object") return [];
+    const o = x as Record<string, unknown>;
+    if (typeof o.key !== "string" || typeof o.label !== "string") return [];
+    return [{
+      key: o.key,
+      label: o.label,
+      type: typeof o.type === "string" ? o.type : undefined,
+      required: typeof o.required === "boolean" ? o.required : undefined,
+    }];
+  });
 }
 
 async function fetchFromSupabase(id: string): Promise<BridgeAgent | null> {
