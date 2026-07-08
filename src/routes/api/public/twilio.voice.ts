@@ -53,10 +53,11 @@ function bridgeStreamUrl(rawBridgeUrl: string): URL {
 
   if (
     stream.hostname.endsWith(".functions.supabase.co") &&
-    (!stream.pathname || stream.pathname === "/" || stream.pathname === "/twilio")
+    (!stream.pathname || stream.pathname === "/")
   ) {
-    stream.pathname = "/voice-bridge";
+    stream.pathname = "/twilio";
   }
+
 
   return stream;
 }
