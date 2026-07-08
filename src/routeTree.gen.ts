@@ -37,6 +37,7 @@ import { Route as ApiAutomationsIdRouteImport } from './routes/api/automations.$
 import { Route as ApiAgentsIdRouteImport } from './routes/api/agents.$id'
 import { Route as AppCampaignsNewRouteImport } from './routes/_app.campaigns.new'
 import { Route as AppCampaignsIdRouteImport } from './routes/_app.campaigns.$id'
+import { Route as AppCallsIdRouteImport } from './routes/_app.calls.$id'
 import { Route as AppAgentsIdRouteImport } from './routes/_app.agents.$id'
 import { Route as ApiPublicWebhooksTwilioRouteImport } from './routes/api/public/webhooks.twilio'
 import { Route as ApiPublicWebhooksAutomationsRouteImport } from './routes/api/public/webhooks.automations'
@@ -186,6 +187,11 @@ const AppCampaignsIdRoute = AppCampaignsIdRouteImport.update({
   path: '/campaigns/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCallsIdRoute = AppCallsIdRouteImport.update({
+  id: '/calls/$id',
+  path: '/calls/$id',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
   id: '/agents/$id',
   path: '/agents/$id',
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/docs/api': typeof DocsApiRoute
   '/agents/$id': typeof AppAgentsIdRoute
+  '/calls/$id': typeof AppCallsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/docs/api': typeof DocsApiRoute
   '/agents/$id': typeof AppAgentsIdRoute
+  '/calls/$id': typeof AppCallsIdRoute
   '/campaigns/$id': typeof AppCampaignsIdRoute
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/docs/api': typeof DocsApiRoute
   '/_app/agents/$id': typeof AppAgentsIdRoute
+  '/_app/calls/$id': typeof AppCallsIdRoute
   '/_app/campaigns/$id': typeof AppCampaignsIdRoute
   '/_app/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/docs/api'
     | '/agents/$id'
+    | '/calls/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
     | '/api/agents/$id'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/docs/api'
     | '/agents/$id'
+    | '/calls/$id'
     | '/campaigns/$id'
     | '/campaigns/new'
     | '/api/agents/$id'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/auth/reset-password'
     | '/docs/api'
     | '/_app/agents/$id'
+    | '/_app/calls/$id'
     | '/_app/campaigns/$id'
     | '/_app/campaigns/new'
     | '/api/agents/$id'
@@ -684,6 +696,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCampaignsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/calls/$id': {
+      id: '/_app/calls/$id'
+      path: '/calls/$id'
+      fullPath: '/calls/$id'
+      preLoaderRoute: typeof AppCallsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/agents/$id': {
       id: '/_app/agents/$id'
       path: '/agents/$id'
@@ -759,6 +778,7 @@ interface AppRouteChildren {
   AppLiveCallsRoute: typeof AppLiveCallsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppAgentsIdRoute: typeof AppAgentsIdRoute
+  AppCallsIdRoute: typeof AppCallsIdRoute
   AppCampaignsIdRoute: typeof AppCampaignsIdRoute
   AppCampaignsNewRoute: typeof AppCampaignsNewRoute
   AppAgentsIndexRoute: typeof AppAgentsIndexRoute
@@ -774,6 +794,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLiveCallsRoute: AppLiveCallsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppAgentsIdRoute: AppAgentsIdRoute,
+  AppCallsIdRoute: AppCallsIdRoute,
   AppCampaignsIdRoute: AppCampaignsIdRoute,
   AppCampaignsNewRoute: AppCampaignsNewRoute,
   AppAgentsIndexRoute: AppAgentsIndexRoute,

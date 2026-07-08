@@ -212,16 +212,85 @@ async function loadAll(userId: UUID) {
 export function useSupabaseSync() {
   useEffect(() => {
     let cancelled = false;
+    let realtimeCleanup: (() => void) | null = null;
+
+    function subscribeRealtime(userId: UUID) {
+      const channel = supabase
+        .channel(`db-changes-${userId}`)
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "calls", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            useDB.setState((s) => {
+              if (payload.eventType === "DELETE") {
+                const id = (payload.old as { id?: string })?.id;
+                return { calls: s.calls.filter((c) => c.id !== id) };
+              }
+              const row = toCall(payload.new as Row);
+              const idx = s.calls.findIndex((c) => c.id === row.id);
+              if (idx === -1) return { calls: [row, ...s.calls] };
+              const next = s.calls.slice();
+              next[idx] = row;
+              return { calls: next };
+            });
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "campaigns", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            useDB.setState((s) => {
+              if (payload.eventType === "DELETE") {
+                const id = (payload.old as { id?: string })?.id;
+                return { campaigns: s.campaigns.filter((c) => c.id !== id) };
+              }
+              const row = toCampaign(payload.new as Row);
+              const idx = s.campaigns.findIndex((c) => c.id === row.id);
+              if (idx === -1) return { campaigns: [row, ...s.campaigns] };
+              const next = s.campaigns.slice();
+              next[idx] = row;
+              return { campaigns: next };
+            });
+          },
+        )
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "appointments", filter: `user_id=eq.${userId}` },
+          (payload) => {
+            useDB.setState((s) => {
+              if (payload.eventType === "DELETE") {
+                const id = (payload.old as { id?: string })?.id;
+                return { appointments: s.appointments.filter((a) => a.id !== id) };
+              }
+              const row = toAppointment(payload.new as Row);
+              const idx = s.appointments.findIndex((a) => a.id === row.id);
+              if (idx === -1) return { appointments: [row, ...s.appointments] };
+              const next = s.appointments.slice();
+              next[idx] = row;
+              return { appointments: next };
+            });
+          },
+        )
+        .subscribe();
+      return () => {
+        void supabase.removeChannel(channel);
+      };
+    }
+
     async function hydrate() {
       const { data } = await supabase.auth.getUser();
       if (cancelled) return;
       if (!data.user) return;
       await loadAll(data.user.id as UUID);
+      if (cancelled) return;
+      realtimeCleanup = subscribeRealtime(data.user.id as UUID);
     }
     void hydrate();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       if (event === "SIGNED_OUT") {
+        realtimeCleanup?.();
+        realtimeCleanup = null;
         useDB.setState({
           currentUserId: "" as UUID,
           currentOrgId: "" as UUID,
@@ -238,15 +307,21 @@ export function useSupabaseSync() {
         return;
       }
       if (event === "SIGNED_IN" && session?.user) {
-        void loadAll(session.user.id as UUID);
+        void loadAll(session.user.id as UUID).then(() => {
+          if (!cancelled && !realtimeCleanup) {
+            realtimeCleanup = subscribeRealtime(session.user.id as UUID);
+          }
+        });
       }
     });
     return () => {
       cancelled = true;
+      realtimeCleanup?.();
       sub.subscription.unsubscribe();
     };
   }, []);
 }
+
 
 // -------- write-through helpers used by pages ----------
 
