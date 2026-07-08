@@ -8,7 +8,7 @@ import {
   History,
   Workflow,
   Settings as SettingsIcon,
-  Phone,
+  
   Sparkles,
 } from "lucide-react";
 
