@@ -415,7 +415,16 @@ function AgentEditor() {
           </div>
         </Card>
 
+        <Card title="Data collection">
+          <p className="text-[11px] text-zinc-500 mb-3">
+            Define the fields this agent should collect from callers. After each call ends, the transcript is
+            scanned for these fields and the values are saved on the call record.
+          </p>
+          <DataFieldsEditor value={form.data_fields} onChange={(v) => patch("data_fields", v)} />
+        </Card>
+
         <TestCallCard agentId={id} isNew={isNew} />
+
 
 
 
