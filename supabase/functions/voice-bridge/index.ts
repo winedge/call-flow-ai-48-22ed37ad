@@ -411,7 +411,7 @@ async function handleUserTurn(s: Session, text: string) {
           // as soon as it fetches new TwiML, and socket.onclose fires
           // cleanup with "socket closed" which would otherwise be
           // (mis)classified as caller_hangup.
-          void reportCallEvent(s.callSid, "transfer");
+          void reportCallEvent(s.callSid, "transfer", s.history);
           s.callSid = null; // suppress duplicate report from cleanup
         } catch (e) {
           console.error("transfer failed", e);
