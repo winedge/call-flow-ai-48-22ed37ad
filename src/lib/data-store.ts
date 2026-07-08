@@ -334,7 +334,6 @@ export const useDB = create<DBState>()(
         delete dbPatch.id;
         delete dbPatch.org_id;
         delete dbPatch.created_at;
-        delete dbPatch.tts_engine;
         dbWrite(supabase.from("agents").update(dbPatch as never).eq("id", id));
       },
       deleteAgent: (id) => {
