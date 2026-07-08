@@ -354,6 +354,7 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
+  greetingAudio: Promise<{ audio_url: string }> | null;
 };
 
 async function speak(s: Session, text: string) {
@@ -376,7 +377,22 @@ async function speak(s: Session, text: string) {
   };
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
+    // Reuse a preloaded audio promise (used for the greeting) when it
+    // matches the text we're about to speak — cuts first-speak latency.
+    // If prefetch failed, fall back to a fresh synth so the call isn't silent.
+    const preload = s.greetingAudio;
+    s.greetingAudio = null;
+    let audio_url: string;
+    try {
+      audio_url = (await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings))).audio_url;
+    } catch (e) {
+      if (preload) {
+        console.warn("greeting prefetch rejected, falling back to fresh synth");
+        audio_url = (await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings)).audio_url;
+      } else {
+        throw e;
+      }
+    }
     if (cancelled || s.closed) return;
 
     // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —
@@ -550,6 +566,7 @@ Deno.serve((req) => {
     timers: [],
     playbackMark: null,
     finishPlayback: () => {},
+    greetingAudio: null,
   };
 
   const loadAgent = (agentId: string) => fetchAgent(agentId)
@@ -561,6 +578,17 @@ Deno.serve((req) => {
         ttsEngine: a.tts_engine,
         voiceId: a.voice_id,
       });
+      // Prefetch the greeting audio in parallel with the Twilio start
+      // handshake — by the time speak() runs, TTS is already done.
+      if (a.speak_first !== false) {
+        const greeting = a.greeting || "Hello, this is your AI assistant.";
+        session.greetingAudio = synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
+          .catch((e) => {
+            console.error("greeting prefetch failed", e);
+            session.greetingAudio = null;
+            throw e;
+          });
+      }
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
       session.timers.push(

@@ -20,7 +20,7 @@ const MODEL = "google/gemini-3-flash-preview";
 type DataField = { key: string; label: string; type?: string; required?: boolean };
 
 type AgentSummary = {
-  name: string;
+  name?: string;
   greeting?: string;
   system_prompt?: string;
   prompt?: string;
@@ -50,6 +50,7 @@ function buildSystem(a: AgentSummary): string {
   const fields = a.data_fields ?? [];
   const parts = [
     a.system_prompt?.trim(),
+    a.name ? `Your name is ${a.name}. This is YOUR name, not the caller's name. Never address the caller by your own name. Do not use any name for the caller unless the caller has clearly told you their name during this call.` : "",
     a.personality ? `Personality: ${a.personality}` : "",
     a.objective ? `Objective: ${a.objective}` : "",
     a.prompt ? `Task: ${a.prompt}` : "",
@@ -66,12 +67,13 @@ function buildSystem(a: AgentSummary): string {
     canTransfer
       ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
       : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
+    "CRITICAL — Control tokens [END_CALL] and [TRANSFER] are SILENT machine signals. They must appear as the very first characters of your reply, in square brackets. NEVER speak the words 'END CALL', 'END_CALL', 'TRANSFER', or read the brackets out loud. To end the call, prepend [END_CALL] to a natural goodbye sentence — never put those words in the sentence itself.",
     "Never use both [END_CALL] and [TRANSFER] in the same reply.",
-    "Speak like a warm human on a live phone call: use contractions, short acknowledgements, and natural punctuation for pauses.",
+    "Speak like a warm human on a live phone call: use contractions, brief acknowledgements ('mm-hm', 'got it', 'okay'), and natural punctuation for pauses. Vary your sentence length.",
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
-    "When repeating a phone number, never say it as one long number. Confirm it slowly in small groups, with commas between groups.",
+    "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
-    "Keep replies under 35 spoken words. Never break character. Never mention you are AI unless asked directly.",
+    "Keep replies short — under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
 }
@@ -125,13 +127,18 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         let endCall = false;
         let transfer = false;
 
-        // Strip control tokens (case-insensitive, in either order).
-        for (let i = 0; i < 2; i++) {
-          const m = reply.match(/^\s*\[(END_CALL|TRANSFER)\]\s*/i);
-          if (!m) break;
-          if (m[1].toUpperCase() === "END_CALL") endCall = true;
-          else transfer = true;
-          reply = reply.slice(m[0].length);
+        // Strip control tokens aggressively — models sometimes emit them
+        // without brackets, with different casing, or mid-reply. Any form
+        // must be treated as a control signal and never spoken.
+        const tokenRe = /\[?\s*(END[_\s-]?CALL|TRANSFER)\s*\]?/gi;
+        let m: RegExpExecArray | null;
+        while ((m = tokenRe.exec(reply)) !== null) {
+          const which = m[1].toUpperCase().replace(/[_\s-]/g, "");
+          if (which === "ENDCALL") endCall = true;
+          else if (which === "TRANSFER") transfer = true;
+        }
+        if (endCall || transfer) {
+          reply = reply.replace(tokenRe, "").replace(/\s{2,}/g, " ").trim();
         }
         // Transfer wins over end_call if both were emitted.
         if (transfer) endCall = false;

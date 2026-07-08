@@ -76,8 +76,10 @@ function verbalizePhoneLike(match: string): string {
   const hasPlus = match.trim().startsWith("+");
   const digits = match.replace(/\D/g, "");
   if (digits.length < 7 || digits.length > 15) return match;
-  const spoken = chunkPhoneDigits(digits).map(digitWords).join(", ");
-  return hasPlus ? `plus ${spoken}` : spoken;
+  // Ellipses force ElevenLabs to insert real pauses between groups so the
+  // number reads at a slow, confirm-able human pace.
+  const spoken = chunkPhoneDigits(digits).map(digitWords).join("... ");
+  return hasPlus ? `plus... ${spoken}` : spoken;
 }
 
 function prepareSpeechText(text: string): string {
