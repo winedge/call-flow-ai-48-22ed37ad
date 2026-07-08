@@ -192,9 +192,9 @@ async function loadAll(userId: UUID) {
     smtp_host: (settingsRow.data?.smtp_host as string) ?? "",
     smtp_user: (settingsRow.data?.smtp_user as string) ?? "",
     smtp_port: Number(settingsRow.data?.smtp_port ?? 587),
-    has_twilio: false,
-    has_elevenlabs: false,
-    has_openai: false,
+    has_twilio: Boolean(settingsRow.data?.has_twilio ?? false),
+    has_elevenlabs: Boolean(settingsRow.data?.has_elevenlabs ?? false),
+    has_openai: Boolean(settingsRow.data?.has_openai ?? false),
   };
 
   useDB.setState({
