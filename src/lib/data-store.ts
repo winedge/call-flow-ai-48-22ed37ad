@@ -72,6 +72,15 @@ export type Contact = {
   created_at: string;
 };
 
+export type DataFieldType = "text" | "email" | "phone" | "number" | "date" | "boolean";
+
+export type DataField = {
+  key: string;
+  label: string;
+  type: DataFieldType;
+  required: boolean;
+};
+
 export type AIAgent = {
   id: UUID;
   org_id: UUID;
@@ -95,6 +104,7 @@ export type AIAgent = {
   end_call_conditions: string[];
   max_retries: number;
   retry_delay_minutes: number;
+  data_fields: DataField[];
   created_at: string;
 };
 
