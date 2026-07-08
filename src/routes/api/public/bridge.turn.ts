@@ -39,7 +39,7 @@ type Turn = { role: "user" | "assistant"; content: string };
 function describeField(f: DataField): string {
   const req = f.required ? " (required)" : "";
   const hint =
-    f.type === "phone" ? " — collect the full phone number with country/area code, read it back to confirm"
+    f.type === "phone" ? " — collect the full phone number with country/area code, then confirm it slowly in 3-4 digit groups"
     : f.type === "email" ? " — spell it back to confirm"
     : "";
   return `${f.label} [${f.key}]${req}${hint}`;
@@ -67,7 +67,11 @@ function buildSystem(a: AgentSummary): string {
       ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
       : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
     "Never use both [END_CALL] and [TRANSFER] in the same reply.",
-    "Keep replies under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
+    "Speak like a warm human on a live phone call: use contractions, short acknowledgements, and natural punctuation for pauses.",
+    "Ask one question at a time. Do not rapid-fire confirmations or lists.",
+    "When repeating a phone number, never say it as one long number. Confirm it slowly in small groups, with commas between groups.",
+    "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
+    "Keep replies under 35 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
 }
@@ -107,7 +111,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
             model: MODEL,
             messages,
             temperature: body.agent.temperature ?? 0.6,
-            max_tokens: 120,
+            max_tokens: 180,
           }),
         });
         if (!res.ok) {
