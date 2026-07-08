@@ -555,6 +555,7 @@ Deno.serve((req) => {
     timers: [],
     playbackMark: null,
     finishPlayback: () => {},
+    greetingAudio: null,
   };
 
   const loadAgent = (agentId: string) => fetchAgent(agentId)
