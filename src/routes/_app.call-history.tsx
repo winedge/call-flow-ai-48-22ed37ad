@@ -133,7 +133,7 @@ function CallHistory() {
       />
 
       <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-4 mb-4 space-y-3">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
@@ -144,6 +144,15 @@ function CallHistory() {
               <SelectItem value="busy">Busy</SelectItem>
               <SelectItem value="voicemail">Voicemail</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={endReasonFilter} onValueChange={setEndReasonFilter}>
+            <SelectTrigger><SelectValue placeholder="End reason" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All end reasons</SelectItem>
+              {END_REASON_ORDER.map((r) => (
+                <SelectItem key={r} value={r}>{endReasonLabel(r)}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={campaignFilter} onValueChange={setCampaignFilter}>
