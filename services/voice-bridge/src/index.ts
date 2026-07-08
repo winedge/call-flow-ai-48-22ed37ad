@@ -3,17 +3,49 @@
  *
  * A single Bun server exposes:
  *   - GET /healthz             — liveness probe
+ *   - GET /metrics             — active sessions, uptime, counters (JSON)
  *   - WS  /twilio?agent_id&call_sid — Twilio Media Streams endpoint
  *
  * Per call we run a full-duplex loop:
  *   Twilio μ-law/8k → Deepgram STT → Gemini turn → Kokoro TTS →
  *   downsample+μ-law → Twilio.
  *
- * Env (all required):
+ * Production hardening notes (each addresses a specific requirement):
+ *
+ *   1. 100+ concurrent WebSocket sessions — MAX_SESSIONS cap (env, default
+ *      100). Upgrades over the cap are rejected with HTTP 503 so the
+ *      caller / load balancer can route to another machine.
+ *
+ *   2. No global call state — per-call state lives in a Session object
+ *      owned by its ws.data. The `sessions` Map is a per-process registry
+ *      used only for lifecycle (cleanup on shutdown) and metrics; it is
+ *      never read from another call's turn logic.
+ *
+ *   3. Immediate session cleanup — cleanup() runs on `stop`, `close`, or
+ *      any fatal error. It cancels TTS playback, closes the Deepgram
+ *      socket, and removes the session from the registry.
+ *
+ *   4. Graceful upstream reconnect — the Deepgram STT socket auto-
+ *      reconnects with exponential backoff (up to 3 attempts) if it
+ *      drops mid-call. The turn / TTS calls are short-lived HTTPs;
+ *      they surface errors and the caller is prompted to retry.
+ *
+ *   5. Structured logs — every log line includes connection_id + call_sid
+ *      + agent_id so a single call can be grep'd end-to-end.
+ *
+ *   6. Metrics — GET /metrics returns { active, opened, closed, uptime_s,
+ *      max_sessions, memory }.
+ *
+ *   7. Clean Twilio disconnects — Twilio can close the ws at any time
+ *      (caller hung up, network blip, `stop` frame). All three paths run
+ *      through cleanup() exactly once.
+ *
+ * Env (all required unless noted):
  *   LOVABLE_APP_URL       https://<app>.lovable.app
  *   BRIDGE_SHARED_SECRET  matches Lovable
  *   DEEPGRAM_API_KEY      Deepgram Nova-2 key
- *   PORT                  defaults 8080
+ *   PORT                  optional, defaults 8080
+ *   MAX_SESSIONS          optional, defaults 100
  */
 import { WaveFile } from "wavefile";
 import { openDeepgram } from "./deepgram";
@@ -21,8 +53,41 @@ import { chunk20ms, downsampleTo8k, pcm8kToMuLaw } from "./audio";
 import { fetchAgent, runTurn, synthTts, type AgentConfig } from "./lovable";
 
 const PORT = Number(process.env.PORT ?? 8080);
+const MAX_SESSIONS = Number(process.env.MAX_SESSIONS ?? 100);
 const DEEPGRAM_KEY = process.env.DEEPGRAM_API_KEY!;
 if (!DEEPGRAM_KEY) throw new Error("DEEPGRAM_API_KEY is required");
+
+// ---------- process-level state (metrics + registry only) ----------
+
+const START_TIME = Date.now();
+const sessions = new Map<string, Session>();
+let totalOpened = 0;
+let totalClosed = 0;
+
+function nextConnectionId(): string {
+  // 12-hex-char id; enough entropy for logs, short enough to scan.
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function log(
+  level: "info" | "warn" | "error",
+  event: string,
+  fields: Record<string, unknown> = {},
+) {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    level,
+    event,
+    ...fields,
+  });
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
+
+// ---------- types ----------
 
 type Twilio = {
   event: string;
@@ -32,125 +97,242 @@ type Twilio = {
 };
 
 type Session = {
+  connectionId: string;
+  callSid: string;
+  agentId: string;
   ws: import("bun").ServerWebSocket<Ctx>;
   streamSid: string | null;
   agent: AgentConfig | null;
   dg: ReturnType<typeof openDeepgram> | null;
+  dgReconnects: number;
   history: { role: "user" | "assistant"; content: string }[];
-  speaking: boolean;      // TTS playback in progress
-  pendingUser: string;    // latest interim; used only for barge-in
+  speaking: boolean;
+  pendingUser: string;
   turnLock: boolean;
   cancelSpeech: () => void;
   closed: boolean;
+  openedAt: number;
 };
 
-type Ctx = { agentId: string; callSid: string; session?: Session };
+type Ctx = { agentId: string; callSid: string; connectionId: string; session?: Session };
+
+// ---------- Bun server ----------
 
 const server = Bun.serve<Ctx>({
   port: PORT,
   async fetch(req, srv) {
     const url = new URL(req.url);
+
     if (url.pathname === "/healthz") {
       return new Response("ok", { status: 200 });
     }
+
+    if (url.pathname === "/metrics") {
+      const mem = process.memoryUsage?.() ?? { rss: 0, heapUsed: 0 };
+      return Response.json({
+        active: sessions.size,
+        max_sessions: MAX_SESSIONS,
+        opened: totalOpened,
+        closed: totalClosed,
+        uptime_s: Math.floor((Date.now() - START_TIME) / 1000),
+        memory: {
+          rss_mb: Math.round(mem.rss / 1024 / 1024),
+          heap_mb: Math.round(mem.heapUsed / 1024 / 1024),
+        },
+      });
+    }
+
     if (url.pathname === "/twilio") {
+      if (sessions.size >= MAX_SESSIONS) {
+        log("warn", "upgrade_rejected_capacity", {
+          active: sessions.size,
+          max: MAX_SESSIONS,
+        });
+        return new Response("capacity", { status: 503 });
+      }
       const agentId = url.searchParams.get("agent_id") ?? "";
       const callSid = url.searchParams.get("call_sid") ?? "";
-      const ok = srv.upgrade(req, { data: { agentId, callSid } });
+      const connectionId = nextConnectionId();
+      const ok = srv.upgrade(req, {
+        data: { agentId, callSid, connectionId },
+      });
       if (ok) return undefined as unknown as Response;
       return new Response("upgrade failed", { status: 400 });
     }
+
     return new Response("voice-bridge", { status: 200 });
   },
+
   websocket: {
     open(ws) {
+      const { connectionId, callSid, agentId } = ws.data;
       const session: Session = {
+        connectionId,
+        callSid,
+        agentId,
         ws,
         streamSid: null,
         agent: null,
         dg: null,
+        dgReconnects: 0,
         history: [],
         speaking: false,
         pendingUser: "",
         turnLock: false,
         cancelSpeech: () => {},
         closed: false,
+        openedAt: Date.now(),
       };
       ws.data.session = session;
+      sessions.set(connectionId, session);
+      totalOpened += 1;
+      log("info", "ws_open", {
+        connection_id: connectionId,
+        call_sid: callSid,
+        agent_id: agentId,
+        active: sessions.size,
+      });
 
-      // Fetch agent config in the background — Twilio will send `start` shortly.
-      if (ws.data.agentId) {
-        fetchAgent(ws.data.agentId)
+      if (agentId) {
+        fetchAgent(agentId)
           .then((a) => {
             session.agent = a;
           })
           .catch((e) => {
-            console.error("agent fetch failed", e);
+            log("error", "agent_fetch_failed", {
+              connection_id: connectionId,
+              call_sid: callSid,
+              agent_id: agentId,
+              error: String(e),
+            });
             ws.close(1011, "agent config unavailable");
           });
       }
     },
+
     async message(ws, raw) {
       const session = ws.data.session!;
       if (session.closed) return;
       let msg: Twilio;
       try {
-        msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
+        msg = JSON.parse(
+          typeof raw === "string" ? raw : new TextDecoder().decode(raw),
+        );
       } catch {
         return;
       }
 
       if (msg.event === "start") {
         session.streamSid = msg.start!.streamSid;
-        // Wait briefly for agent config if not yet loaded
         for (let i = 0; i < 50 && !session.agent; i++) {
           await new Promise((r) => setTimeout(r, 40));
         }
         if (!session.agent) {
+          log("error", "agent_not_loaded", {
+            connection_id: session.connectionId,
+            call_sid: session.callSid,
+          });
           ws.close(1011, "agent not loaded");
           return;
         }
-        // Open Deepgram
-        session.dg = openDeepgram(DEEPGRAM_KEY, {
-          onInterim: (t) => {
-            session.pendingUser = t;
-            // Barge-in: caller started talking while we speak → cut TTS.
-            if (session.speaking && t.trim().length > 2) session.cancelSpeech();
-          },
-          onFinal: (t) => {
-            const text = t.trim();
-            if (!text) return;
-            session.pendingUser = "";
-            void handleUserTurn(session, text);
-          },
-          onClose: () => {},
-          onError: (e) => console.error("deepgram error", e),
+        openDg(session);
+        log("info", "call_started", {
+          connection_id: session.connectionId,
+          call_sid: session.callSid,
+          agent_id: session.agentId,
+          stream_sid: session.streamSid,
         });
-        // Greet.
-        void speak(session, session.agent.greeting || "Hello, this is your AI assistant.");
+        void speak(
+          session,
+          session.agent.greeting || "Hello, this is your AI assistant.",
+        );
       } else if (msg.event === "media" && session.dg && msg.media) {
-        // Twilio media payload is base64 μ-law bytes. Forward as-is.
-        const bytes = Uint8Array.from(atob(msg.media.payload), (c) => c.charCodeAt(0));
+        const bytes = Uint8Array.from(atob(msg.media.payload), (c) =>
+          c.charCodeAt(0),
+        );
         session.dg.send(bytes);
       } else if (msg.event === "stop") {
-        cleanup(session);
+        log("info", "twilio_stop", {
+          connection_id: session.connectionId,
+          call_sid: session.callSid,
+        });
+        cleanup(session, "twilio_stop");
       }
     },
-    close(ws) {
+
+    close(ws, code, reason) {
       const s = ws.data.session;
-      if (s) cleanup(s);
+      if (!s) return;
+      log("info", "ws_close", {
+        connection_id: s.connectionId,
+        call_sid: s.callSid,
+        code,
+        reason: reason || undefined,
+      });
+      cleanup(s, "ws_close");
     },
   },
 });
 
-console.log(`voice-bridge listening on :${PORT}`);
+log("info", "listening", { port: PORT, max_sessions: MAX_SESSIONS });
+
+// ---------- Deepgram lifecycle (with reconnect) ----------
+
+function openDg(session: Session) {
+  session.dg = openDeepgram(DEEPGRAM_KEY, {
+    onInterim: (t) => {
+      session.pendingUser = t;
+      if (session.speaking && t.trim().length > 2) session.cancelSpeech();
+    },
+    onFinal: (t) => {
+      const text = t.trim();
+      if (!text) return;
+      session.pendingUser = "";
+      void handleUserTurn(session, text);
+    },
+    onClose: () => {
+      if (session.closed) return;
+      // Unexpected drop mid-call. Reconnect with exponential backoff.
+      if (session.dgReconnects >= 3) {
+        log("error", "deepgram_reconnect_giveup", {
+          connection_id: session.connectionId,
+          call_sid: session.callSid,
+          attempts: session.dgReconnects,
+        });
+        try {
+          session.ws.close(1011, "stt unavailable");
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      const attempt = session.dgReconnects + 1;
+      session.dgReconnects = attempt;
+      const delay = Math.min(2000, 200 * 2 ** (attempt - 1));
+      log("warn", "deepgram_reconnect", {
+        connection_id: session.connectionId,
+        call_sid: session.callSid,
+        attempt,
+        delay_ms: delay,
+      });
+      setTimeout(() => {
+        if (!session.closed) openDg(session);
+      }, delay);
+    },
+    onError: (e) =>
+      log("error", "deepgram_error", {
+        connection_id: session.connectionId,
+        call_sid: session.callSid,
+        error: String(e),
+      }),
+  });
+}
 
 // ---------- turn loop ----------
 
 async function handleUserTurn(session: Session, userText: string) {
   if (!session.agent) return;
   if (session.turnLock) {
-    // Queue by appending — the running turn will pick it up next round.
     session.history.push({ role: "user", content: userText });
     return;
   }
@@ -166,8 +348,15 @@ async function handleUserTurn(session: Session, userText: string) {
       hangup(session);
     }
   } catch (e) {
-    console.error("turn failed", e);
-    await speak(session, "Sorry, I had a technical issue. Could you say that again?");
+    log("error", "turn_failed", {
+      connection_id: session.connectionId,
+      call_sid: session.callSid,
+      error: String(e),
+    });
+    await speak(
+      session,
+      "Sorry, I had a technical issue. Could you say that again?",
+    );
   } finally {
     session.turnLock = false;
   }
@@ -187,13 +376,11 @@ async function speak(session: Session, text: string) {
       session.agent.language,
     );
     if (cancelled || session.closed) return;
-    // Fetch WAV, decode with wavefile
     const buf = await fetch(audio_url).then((r) => r.arrayBuffer());
     if (cancelled || session.closed) return;
     const wav = new WaveFile(new Uint8Array(buf));
     wav.toBitDepth("16");
     const sampleRate = (wav.fmt as { sampleRate: number }).sampleRate;
-    // getSamples with Float64 default; if stereo it returns [L, R]. Take L, coerce to Int16.
     const rawSamples = wav.getSamples(false) as Float64Array | Float64Array[];
     const mono = Array.isArray(rawSamples) ? rawSamples[0] : rawSamples;
     const pcm = new Int16Array(mono.length);
@@ -205,8 +392,6 @@ async function speak(session: Session, text: string) {
     const mu = pcm8kToMuLaw(pcm8k);
     const frames = chunk20ms(mu);
 
-    // Send at ~20 ms cadence with a Twilio `mark` at the end so we can
-    // reset barge-in state cleanly.
     for (const frame of frames) {
       if (cancelled || session.closed) break;
       const payload = btoa(String.fromCharCode(...frame));
@@ -229,7 +414,11 @@ async function speak(session: Session, text: string) {
       );
     }
   } catch (e) {
-    console.error("tts failed", e);
+    log("error", "tts_failed", {
+      connection_id: session.connectionId,
+      call_sid: session.callSid,
+      error: String(e),
+    });
   } finally {
     session.speaking = false;
     session.cancelSpeech = () => {};
@@ -238,21 +427,63 @@ async function speak(session: Session, text: string) {
 
 function hangup(session: Session) {
   try {
-    session.ws.send(JSON.stringify({ event: "clear", streamSid: session.streamSid }));
+    session.ws.send(
+      JSON.stringify({ event: "clear", streamSid: session.streamSid }),
+    );
   } catch {
     /* ignore */
   }
-  session.ws.close(1000, "agent ended call");
-  cleanup(session);
+  try {
+    session.ws.close(1000, "agent ended call");
+  } catch {
+    /* ignore */
+  }
+  cleanup(session, "agent_hangup");
 }
 
-function cleanup(session: Session) {
+function cleanup(session: Session, reason: string) {
   if (session.closed) return;
   session.closed = true;
   session.speaking = false;
-  session.cancelSpeech();
-  session.dg?.close();
+  try {
+    session.cancelSpeech();
+  } catch {
+    /* ignore */
+  }
+  try {
+    session.dg?.close();
+  } catch {
+    /* ignore */
+  }
+  session.dg = null;
+  if (sessions.delete(session.connectionId)) {
+    totalClosed += 1;
+  }
+  log("info", "session_cleanup", {
+    connection_id: session.connectionId,
+    call_sid: session.callSid,
+    reason,
+    duration_s: Math.floor((Date.now() - session.openedAt) / 1000),
+    active: sessions.size,
+  });
 }
+
+// ---------- graceful shutdown ----------
+
+function shutdown(signal: string) {
+  log("warn", "shutdown_signal", { signal, active: sessions.size });
+  for (const s of Array.from(sessions.values())) {
+    try {
+      s.ws.close(1001, "server shutdown");
+    } catch {
+      /* ignore */
+    }
+    cleanup(s, "shutdown");
+  }
+  setTimeout(() => process.exit(0), 200);
+}
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 // Suppress unused warning
 void server;

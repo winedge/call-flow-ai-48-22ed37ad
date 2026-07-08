@@ -12,6 +12,7 @@ kill_timeout = 30
 
 [env]
   PORT = "8080"
+  MAX_SESSIONS = "100"
 
 [http_service]
   internal_port = 8080
@@ -21,6 +22,14 @@ kill_timeout = 30
   min_machines_running = 1
   processes = ["app"]
 
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
+
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = "shared-cpu-2x"
+  memory = "1gb"
+
