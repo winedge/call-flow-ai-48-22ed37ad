@@ -298,7 +298,7 @@ function SyncTwilioButton({ orgId }: { orgId: UUID }) {
         number: r.number,
         twilio_sid: r.twilio_sid,
         type: (r.type as PhoneNumber["type"]) ?? "local",
-        capabilities: Array.isArray(r.capabilities) ? (r.capabilities as string[]) : ["voice"],
+        capabilities: (Array.isArray(r.capabilities) ? (r.capabilities as string[]) : ["voice"]).filter((c): c is "voice" | "sms" => c === "voice" || c === "sms"),
         inbound_agent_id: (r.inbound_agent_id as UUID | null) ?? null,
         created_at: r.created_at,
       }));
