@@ -125,6 +125,7 @@ function toBase64(bytes: Uint8Array): string {
 async function synthesizeElevenLabs(
   text: string,
   voiceId: string,
+  originHint: string,
   overrides?: {
     stability?: number;
     similarity_boost?: number;
