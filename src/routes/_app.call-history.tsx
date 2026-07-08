@@ -94,6 +94,7 @@ function CallHistory() {
         campaign: camp?.name ?? "",
         agent: agent?.name ?? "",
         status: c.status,
+        end_reason: c.end_reason ?? "",
         outcome: c.outcome,
         sentiment: c.sentiment ?? "",
         duration_sec: c.duration_sec,
