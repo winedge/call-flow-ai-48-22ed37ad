@@ -320,7 +320,7 @@ function SyncTwilioButton({ orgId }: { orgId: UUID }) {
     </Button>
   );
 }
-void orgId; // reserved for future org scoping
+
 
 function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
   const color = method === "GET" ? "text-emerald-400" : "text-blue-400";
