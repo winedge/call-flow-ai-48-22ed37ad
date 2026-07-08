@@ -56,7 +56,7 @@ function ForgotPasswordPage() {
             >
               <div className="space-y-2">
                 <Label htmlFor="em">Email</Label>
-                <Input id="em" type="email" required />
+                <Input id="em" name="em" type="email" required />
               </div>
               <Button type="submit" className="w-full bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
                 Send reset link
