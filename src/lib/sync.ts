@@ -141,6 +141,7 @@ function toCall(r: Row): Call {
     cost_cents: Number(r.cost_cents ?? 0),
     ai_minutes: Number(r.ai_minutes ?? 0),
     appointment_booked: Boolean(r.appointment_booked),
+    end_reason: (r.end_reason as string | null) ?? null,
   };
 }
 
