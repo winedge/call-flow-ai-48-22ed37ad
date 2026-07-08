@@ -12,6 +12,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { verifyBridge } from "@/lib/voice/bridge-auth";
 import { errorJson, json, preflight } from "@/lib/api/cors";
+import { mixOfficeAmbience } from "@/lib/voice/ambience";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/replicate/v1";
 const MODEL = "jaaari/kokoro-82m";
@@ -124,6 +125,7 @@ function toBase64(bytes: Uint8Array): string {
 async function synthesizeElevenLabs(
   text: string,
   voiceId: string,
+  originHint: string,
   overrides?: {
     stability?: number;
     similarity_boost?: number;
@@ -168,8 +170,9 @@ async function synthesizeElevenLabs(
     const t = await res.text().catch(() => "");
     return { error: `ElevenLabs ${res.status}: ${t.slice(0, 200)}`, status: 502 };
   }
-  const mulaw = new Uint8Array(await res.arrayBuffer());
-  return { audio_url: `data:audio/mulaw;base64,${toBase64(mulaw)}` };
+  const rawMulaw = new Uint8Array(await res.arrayBuffer());
+  const mixed = await mixOfficeAmbience(rawMulaw, originHint);
+  return { audio_url: `data:audio/mulaw;base64,${toBase64(mixed)}` };
 }
 
 async function synthesizeKokoro(
@@ -238,9 +241,10 @@ export const Route = createFileRoute("/api/public/bridge/tts")({
           return errorJson(400, e instanceof Error ? e.message : "bad input");
         }
 
+        const origin = new URL(request.url).origin;
         const result =
           input.engine === "elevenlabs"
-            ? await synthesizeElevenLabs(input.text, input.voice, input.voice_settings)
+            ? await synthesizeElevenLabs(input.text, input.voice, origin, input.voice_settings)
             : await synthesizeKokoro(input.text, input.voice);
 
         if ("error" in result) return errorJson(result.status, result.error);
