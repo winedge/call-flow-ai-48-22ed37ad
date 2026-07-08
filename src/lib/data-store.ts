@@ -293,14 +293,47 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ agents: [...s.agents, agent] }));
+        dbWrite(
+          supabase.from("agents").insert({
+            id: agent.id,
+            user_id: agent.org_id,
+            name: agent.name,
+            voice_id: agent.voice_id,
+            voice_name: agent.voice_name,
+            language: agent.language,
+            greeting: agent.greeting,
+            system_prompt: agent.system_prompt,
+            prompt: agent.prompt,
+            business_knowledge: agent.business_knowledge,
+            personality: agent.personality,
+            temperature: agent.temperature,
+            objective: agent.objective,
+            qualification_questions: agent.qualification_questions,
+            transfer_number: agent.transfer_number,
+            voicemail_handling: agent.voicemail_handling,
+            voicemail_message: agent.voicemail_message,
+            end_call_conditions: agent.end_call_conditions,
+            max_retries: agent.max_retries,
+            retry_delay_minutes: agent.retry_delay_minutes,
+          }),
+        );
         return agent;
       },
-      updateAgent: (id, patch) =>
+      updateAgent: (id, patch) => {
         set((s) => ({
           agents: s.agents.map((a) => (a.id === id ? { ...a, ...patch } : a)),
-        })),
-      deleteAgent: (id) =>
-        set((s) => ({ agents: s.agents.filter((a) => a.id !== id) })),
+        }));
+        const dbPatch: Record<string, unknown> = { ...patch };
+        delete dbPatch.id;
+        delete dbPatch.org_id;
+        delete dbPatch.created_at;
+        delete dbPatch.tts_engine;
+        dbWrite(supabase.from("agents").update(dbPatch).eq("id", id));
+      },
+      deleteAgent: (id) => {
+        set((s) => ({ agents: s.agents.filter((a) => a.id !== id) }));
+        dbWrite(supabase.from("agents").delete().eq("id", id));
+      },
 
       addList: (name, description) => {
         const list: ContactList = {
@@ -311,6 +344,14 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ lists: [...s.lists, list] }));
+        dbWrite(
+          supabase.from("contact_lists").insert({
+            id: list.id,
+            user_id: list.org_id,
+            name: list.name,
+            description: list.description,
+          }),
+        );
         return list;
       },
       addContact: (c) => {
@@ -321,6 +362,21 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ contacts: [...s.contacts, contact] }));
+        dbWrite(
+          supabase.from("contacts").insert({
+            id: contact.id,
+            user_id: contact.org_id,
+            list_id: contact.list_id,
+            name: contact.name,
+            company: contact.company,
+            phone: contact.phone,
+            email: contact.email,
+            custom_vars: contact.custom_vars,
+            tags: contact.tags,
+            notes: contact.notes,
+            status: contact.status,
+          }),
+        );
         return contact;
       },
       addContactsBulk: (cs) => {
@@ -339,11 +395,33 @@ export const useDB = create<DBState>()(
           created_at: now,
         }));
         set((s) => ({ contacts: [...s.contacts, ...made] }));
+        if (made.length > 0) {
+          dbWrite(
+            supabase.from("contacts").insert(
+              made.map((m) => ({
+                id: m.id,
+                user_id: m.org_id,
+                list_id: m.list_id,
+                name: m.name,
+                company: m.company,
+                phone: m.phone,
+                email: m.email,
+                custom_vars: m.custom_vars,
+                tags: m.tags,
+                notes: m.notes,
+                status: m.status,
+              })),
+            ),
+          );
+        }
         return made.length;
       },
       deleteContacts: (ids) => {
         const set2 = new Set(ids);
         set((s) => ({ contacts: s.contacts.filter((c) => !set2.has(c.id)) }));
+        if (ids.length > 0) {
+          dbWrite(supabase.from("contacts").delete().in("id", ids));
+        }
       },
 
       addCampaign: (c) => {
@@ -356,12 +434,30 @@ export const useDB = create<DBState>()(
           status: "draft",
         };
         set((s) => ({ campaigns: [...s.campaigns, campaign] }));
+        dbWrite(
+          supabase.from("campaigns").insert({
+            id: campaign.id,
+            user_id: campaign.org_id,
+            name: campaign.name,
+            agent_id: campaign.agent_id,
+            list_id: campaign.list_id,
+            phone_number_id: campaign.phone_number_id,
+            timezone: campaign.timezone,
+            calling_hours: campaign.calling_hours,
+            calls_per_minute: campaign.calls_per_minute,
+            retry_rules: campaign.retry_rules,
+            voicemail_rules: campaign.voicemail_rules,
+            status: campaign.status,
+          }),
+        );
         return campaign;
       },
-      setCampaignStatus: (id, status) =>
+      setCampaignStatus: (id, status) => {
         set((s) => ({
           campaigns: s.campaigns.map((c) => (c.id === id ? { ...c, status } : c)),
-        })),
+        }));
+        dbWrite(supabase.from("campaigns").update({ status }).eq("id", id));
+      },
       duplicateCampaign: (id) => {
         const orig = get().campaigns.find((c) => c.id === id);
         if (!orig) return;
@@ -373,6 +469,22 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ campaigns: [...s.campaigns, copy] }));
+        dbWrite(
+          supabase.from("campaigns").insert({
+            id: copy.id,
+            user_id: copy.org_id,
+            name: copy.name,
+            agent_id: copy.agent_id,
+            list_id: copy.list_id,
+            phone_number_id: copy.phone_number_id,
+            timezone: copy.timezone,
+            calling_hours: copy.calling_hours,
+            calls_per_minute: copy.calls_per_minute,
+            retry_rules: copy.retry_rules,
+            voicemail_rules: copy.voicemail_rules,
+            status: copy.status,
+          }),
+        );
       },
 
       addPhone: (number, type) => {
@@ -386,31 +498,73 @@ export const useDB = create<DBState>()(
           created_at: new Date().toISOString(),
         };
         set((s) => ({ phones: [...s.phones, phone] }));
+        dbWrite(
+          supabase.from("phone_numbers").insert({
+            id: phone.id,
+            user_id: phone.org_id,
+            number: phone.number,
+            twilio_sid: phone.twilio_sid,
+            type: phone.type,
+            capabilities: phone.capabilities,
+          }),
+        );
         return phone;
       },
-      deletePhone: (id) =>
-        set((s) => ({ phones: s.phones.filter((p) => p.id !== id) })),
+      deletePhone: (id) => {
+        set((s) => ({ phones: s.phones.filter((p) => p.id !== id) }));
+        dbWrite(supabase.from("phone_numbers").delete().eq("id", id));
+      },
 
-      saveSettings: (patch) =>
+      saveSettings: (patch) => {
         set((s) => ({
           settings: s.settings.map((x) =>
             x.org_id === s.currentOrgId ? { ...x, ...patch } : x,
           ),
-        })),
+        }));
+        const uid_ = get().currentUserId;
+        const dbPatch: Record<string, unknown> = { ...patch };
+        delete dbPatch.org_id;
+        delete dbPatch.has_twilio;
+        delete dbPatch.has_elevenlabs;
+        delete dbPatch.has_openai;
+        if (uid_) {
+          dbWrite(
+            supabase.from("org_settings").upsert({ user_id: uid_, ...dbPatch }),
+          );
+        }
+      },
 
       addAutomation: (a) => {
         const auto: Automation = { ...a, id: uid(), org_id: get().currentOrgId };
         set((s) => ({ automations: [...s.automations, auto] }));
+        dbWrite(
+          supabase.from("automations").insert({
+            id: auto.id,
+            user_id: auto.org_id,
+            name: auto.name,
+            trigger: auto.trigger,
+            action: auto.action,
+            config: auto.config,
+            enabled: auto.enabled,
+          }),
+        );
         return auto;
       },
-      toggleAutomation: (id) =>
+      toggleAutomation: (id) => {
+        const cur = get().automations.find((a) => a.id === id);
+        const next = !cur?.enabled;
         set((s) => ({
           automations: s.automations.map((a) =>
-            a.id === id ? { ...a, enabled: !a.enabled } : a,
+            a.id === id ? { ...a, enabled: next } : a,
           ),
-        })),
-      deleteAutomation: (id) =>
-        set((s) => ({ automations: s.automations.filter((a) => a.id !== id) })),
+        }));
+        dbWrite(supabase.from("automations").update({ enabled: next }).eq("id", id));
+      },
+      deleteAutomation: (id) => {
+        set((s) => ({ automations: s.automations.filter((a) => a.id !== id) }));
+        dbWrite(supabase.from("automations").delete().eq("id", id));
+      },
+
     }),
     { name: "bulkcall-db-v2" },
   ),
