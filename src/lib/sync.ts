@@ -50,6 +50,7 @@ function toAgent(r: Row): AIAgent {
     end_call_conditions: (r.end_call_conditions as string[]) ?? [],
     max_retries: Number(r.max_retries ?? 3),
     retry_delay_minutes: Number(r.retry_delay_minutes ?? 60),
+    data_fields: Array.isArray(r.data_fields) ? (r.data_fields as AIAgent["data_fields"]) : [],
     created_at: (r.created_at as string) ?? new Date().toISOString(),
   };
 }
