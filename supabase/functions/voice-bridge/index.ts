@@ -443,7 +443,7 @@ function cleanup(s: Session, reason: string) {
   for (const t of s.timers) clearTimeout(t);
   s.timers = [];
   if (s.callSid) {
-    void reportCallEvent(s.callSid, classifyEndReason(reason));
+    void reportCallEvent(s.callSid, classifyEndReason(reason), s.history);
   }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
