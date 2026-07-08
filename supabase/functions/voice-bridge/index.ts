@@ -377,7 +377,11 @@ async function speak(s: Session, text: string) {
   };
   s.speaking = true;
   try {
-    const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
+    // Reuse a preloaded audio promise (used for the greeting) when it
+    // matches the text we're about to speak — cuts first-speak latency.
+    const preload = s.greetingAudio;
+    s.greetingAudio = null;
+    const { audio_url } = await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings));
     if (cancelled || s.closed) return;
 
     // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —
