@@ -304,6 +304,7 @@ export const useDB = create<DBState>()(
             id: agent.id,
             user_id: agent.org_id,
             name: agent.name,
+            tts_engine: agent.tts_engine,
             voice_id: agent.voice_id,
             voice_name: agent.voice_name,
             language: agent.language,
