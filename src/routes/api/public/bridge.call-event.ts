@@ -96,12 +96,12 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         // and we have a transcript to work from.
         if (cleanTranscript && cleanTranscript.length > 0 && existing.agent_id) {
           const extracted = await extractCallData(
-            supabaseAdmin,
             existing.agent_id as string,
             cleanTranscript,
           );
           if (extracted) patch.extracted_data = extracted;
         }
+
 
         const { error: updErr } = await supabaseAdmin
           .from("calls")
