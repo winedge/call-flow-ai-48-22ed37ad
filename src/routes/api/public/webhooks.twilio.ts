@@ -105,9 +105,9 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
 
         const { data: existing, error: readErr } = await supabaseAdmin
           .from("calls")
-          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to, end_reason")
+          .select("id, user_id, status, campaign_id, contact_id, agent_id, phone_to, end_reason, extracted_data")
           .eq("twilio_call_sid", callSid)
-          .maybeSingle<{ id: string; user_id: string; status: string; campaign_id: string | null; contact_id: string | null; agent_id: string | null; phone_to: string; end_reason: string | null }>();
+          .maybeSingle<{ id: string; user_id: string; status: string; campaign_id: string | null; contact_id: string | null; agent_id: string | null; phone_to: string; end_reason: string | null; extracted_data: Record<string, unknown> | null }>();
         if (readErr) return errorJson(500, `db read: ${readErr.message}`);
 
         if (!existing) {
