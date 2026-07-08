@@ -121,7 +121,7 @@ function parseWav(buf: ArrayBuffer): { sampleRate: number; samples: Int16Array }
 
 // ---------- HMAC signer to the Lovable app ----------
 
-const APP_URL = Deno.env.get("LOVABLE_APP_URL") ?? Deno.env.get("PUBLIC_APP_URL") ?? "";
+const APP_URL = Deno.env.get("APP_URL") ?? Deno.env.get("LOVABLE_APP_URL") ?? Deno.env.get("PUBLIC_APP_URL") ?? "";
 const SHARED_SECRET = Deno.env.get("BRIDGE_SHARED_SECRET") ?? "";
 const DEEPGRAM_KEY = Deno.env.get("DEEPGRAM_API_KEY") ?? "";
 
