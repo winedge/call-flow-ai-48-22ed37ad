@@ -91,8 +91,20 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
           updated_at: endedAt,
         };
         if (endReason) patch.end_reason = endReason;
-        if (existing.status === "in_progress" || existing.status === "ringing") {
+        // Bridge is authoritative for terminal state — Twilio's status
+        // callback may not always land (signature mismatch behind proxy,
+        // network drop). Always flip non-terminal statuses to completed
+        // and compute duration_sec from started_at → ended_at when we
+        // don't already have one.
+        if (existing.status !== "completed" && existing.status !== "failed" && existing.status !== "busy" && existing.status !== "no_answer") {
           patch.status = "completed";
+        }
+        if (!existing.duration_sec || existing.duration_sec === 0) {
+          const startMs = existing.started_at ? new Date(existing.started_at).getTime() : NaN;
+          const endMs = new Date(endedAt).getTime();
+          if (Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs) {
+            patch.duration_sec = Math.round((endMs - startMs) / 1000);
+          }
         }
         const cleanTranscript =
           Array.isArray(body.transcript) && body.transcript.length > 0
