@@ -261,8 +261,9 @@ async function fetchAgent(id: string): Promise<AgentConfig> {
 async function runTurn(
   agent: AgentConfig,
   history: { role: "user" | "assistant"; content: string }[],
+  callSid?: string,
 ): Promise<{ reply: string; end_call: boolean; transfer: boolean }> {
-  const body = JSON.stringify({ agent, history });
+  const body = JSON.stringify({ agent, history, call_sid: callSid });
   const { ts, sig } = await sign(body);
   const res = await fetch(`${APP_URL}/api/public/bridge/turn`, {
     method: "POST",
