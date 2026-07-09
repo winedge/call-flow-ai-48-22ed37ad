@@ -253,11 +253,23 @@ function earlyConversationFallback(a: AgentSummary): string {
   return "Glad to hear that. What would be most helpful to talk through first?";
 }
 
+function callerProvidedAnyInfo(history: Turn[]): boolean {
+  const userDialogue = history.filter((t) => t.role === "user").map((t) => t.content).join("\n");
+  if (/\b(?:my name is|this is|i(?:'m| am)|call me)\s+[A-Z][A-Za-z'.\- ]{1,40}/i.test(userDialogue)) return true;
+  if (/\b\d[\d\s\-().]{6,}\b/.test(userDialogue)) return true;
+  if (/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/.test(userDialogue)) return true;
+  return false;
+}
+
 function preventPrematureContactCollection(reply: string, a: AgentSummary, history: Turn[]): string {
   const fields = a.data_fields ?? [];
   const contactAsk = asksForPersonalContactDetail(reply) || asksForContactField(reply, fields);
   if (!contactAsk) return reply;
+  // Only guard the very first user turn. After that, trust the model —
+  // the caller is engaged and the conversation is moving forward.
+  if (userTurnCount(history) > 1) return reply;
   if (callerShowsBookingIntent(history)) return reply;
+  if (callerProvidedAnyInfo(history)) return reply;
   console.info("bridge prevented premature contact collection", {
     agentName: a.name ?? null,
     userTurns: userTurnCount(history),
