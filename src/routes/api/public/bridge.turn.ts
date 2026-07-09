@@ -437,7 +437,7 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     "Never use both [END_CALL] and [TRANSFER] in the same reply.",
     "Speak like a warm, calm human on a live phone call: use contractions, brief acknowledgements ('mm-hm', 'got it', 'okay'), and natural punctuation for pauses. Vary your sentence length. Keep tone professional and grounded — do NOT sound overly excited, bubbly, or salesy, especially in the opening line. No exclamation marks. No 'so excited', 'amazing', 'awesome' filler.",
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
-    "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
+    "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string. State a phone number EXACTLY ONCE per turn — do NOT say the digits, then repeat them in the same reply (no 'that's <digits>', no 'to confirm, <digits>' after already saying it). If the caller confirms, acknowledge with words only (e.g. 'perfect, got it'), never re-state the digits.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
     "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
     "Words like 'too', 'also', 'as well', 'either' from the caller are filler agreement, NEVER a name reveal or an identity claim. Do NOT interpret them as the caller sharing a name, and do NOT respond with any 'coincidence' or 'same name' remark. After the greeting, do NOT re-introduce yourself or restate your own name — never say 'my name is …', 'I'm … too', 'we have the same name', or similar. Your name was given once in the greeting and that is enough.",
@@ -523,7 +523,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
             model: MODEL,
             messages,
             temperature: body.agent.temperature ?? 0.4,
-            max_tokens: 180,
+            max_tokens: 100,
           }),
         });
         if (!res.ok) {
