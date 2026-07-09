@@ -60,11 +60,13 @@ function LiveCalls() {
     if (!orgId) return;
     setRefreshing(true);
     try {
+      const cutoff = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
       const { data, error } = await supabase
         .from("calls")
         .select("*")
         .eq("user_id", orgId)
         .is("ended_at", null)
+        .gte("started_at", cutoff)
         .order("started_at", { ascending: false })
         .limit(50);
       if (error) throw error;
