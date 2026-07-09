@@ -11,14 +11,12 @@ export function StatusPill({
   children?: ReactNode;
 }) {
   const map = {
-    running:
-      "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20",
-    paused: "bg-amber-500/10 text-amber-400 ring-amber-500/20",
-    completed:
-      "bg-neutral-200 text-neutral-600 ring-black/5",
-    stopped: "bg-red-500/10 text-red-400 ring-red-500/20",
-    draft: "bg-blue-500/10 text-blue-400 ring-blue-500/20",
-    failed: "bg-red-500/10 text-red-400 ring-red-500/20",
+    running: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+    paused: "bg-amber-50 text-amber-700 ring-amber-600/20",
+    completed: "bg-neutral-100 text-neutral-600 ring-black/5",
+    stopped: "bg-red-50 text-red-700 ring-red-600/20",
+    draft: "bg-blue-50 text-blue-700 ring-blue-600/20",
+    failed: "bg-red-50 text-red-700 ring-red-600/20",
   } as const;
   return (
     <span
@@ -112,7 +110,7 @@ export function StatTile({
   return (
     <div
       className={cn(
-        "p-4 bg-white ring-1 ring-black/5 rounded-lg",
+        "p-4 bg-white ring-1 ring-black/5 rounded-lg shadow-sm",
         accent && "ring-brand-primary/30 bg-brand-primary/5",
       )}
     >
@@ -126,7 +124,7 @@ export function StatTile({
         <p
           className={cn(
             "mt-2 text-[10px]",
-            delta?.startsWith("+") ? "text-emerald-400" : delta?.startsWith("-") ? "text-red-400" : "text-neutral-500",
+            delta?.startsWith("+") ? "text-emerald-600" : delta?.startsWith("-") ? "text-red-600" : "text-neutral-500",
           )}
         >
           {delta ?? hint}
