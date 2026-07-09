@@ -21,12 +21,22 @@ export const Route = createFileRoute("/_app/live-calls")({
 // intermediate status callback managed to update to "in_progress".
 const TERMINAL_STATUSES = new Set(["completed", "failed", "busy", "no_answer", "canceled"]);
 
+// Ignore rows older than this — a "live" call that started 12 hours ago
+// with no ended_at is a stuck row (Twilio never delivered its terminal
+// status callback), not a real active call.
+const LIVE_WINDOW_MS = 15 * 60 * 1000;
+
 function LiveCalls() {
   const orgId = useDB((s) => s.currentOrgId);
+  const [now, setNow] = useState(() => Date.now());
   const calls = useDB(
     useShallow((s) =>
       s.calls.filter(
-        (c) => c.org_id === orgId && !c.ended_at && !TERMINAL_STATUSES.has(c.status),
+        (c) =>
+          c.org_id === orgId &&
+          !c.ended_at &&
+          !TERMINAL_STATUSES.has(c.status) &&
+          now - new Date(c.started_at).getTime() < LIVE_WINDOW_MS,
       ),
     ),
   );
@@ -35,7 +45,10 @@ function LiveCalls() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    const t = setInterval(() => {
+      setTick((x) => x + 1);
+      setNow(Date.now());
+    }, 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -47,11 +60,13 @@ function LiveCalls() {
     if (!orgId) return;
     setRefreshing(true);
     try {
+      const cutoff = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
       const { data, error } = await supabase
         .from("calls")
         .select("*")
         .eq("user_id", orgId)
         .is("ended_at", null)
+        .gte("started_at", cutoff)
         .order("started_at", { ascending: false })
         .limit(50);
       if (error) throw error;
