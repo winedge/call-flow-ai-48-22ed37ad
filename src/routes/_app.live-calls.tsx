@@ -61,16 +61,17 @@ function LiveCalls() {
     if (showSpinner) setRefreshing(true);
     try {
       const cutoff = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
+      // Fetch ALL recent rows in the window (not filtered by ended_at) so
+      // rows that have since ended come back with ended_at set and drop
+      // out of the live filter in the store.
       const { data, error } = await supabase
         .from("calls")
         .select("*")
         .eq("user_id", orgId)
-        .is("ended_at", null)
         .gte("started_at", cutoff)
         .order("started_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      // Merge fetched live rows into the store without discarding history.
       useDB.setState((s) => {
         const byId = new Map(s.calls.map((c) => [c.id, c]));
         for (const r of data ?? []) {
@@ -105,7 +106,11 @@ function LiveCalls() {
         }
         return { calls: Array.from(byId.values()).sort((a, b) => (a.started_at < b.started_at ? 1 : -1)) };
       });
-      if (notify) toast.success(`Refreshed — ${(data ?? []).length} active call(s)`);
+      const active = (data ?? []).filter((r) => {
+        const row = r as { ended_at: string | null; status: string };
+        return !row.ended_at && !TERMINAL_STATUSES.has(row.status);
+      }).length;
+      if (notify) toast.success(`Refreshed — ${active} active call(s)`);
     } catch (e) {
       if (notify) toast.error(`Refresh failed: ${(e as Error).message}`);
     } finally {
