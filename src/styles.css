@@ -65,8 +65,8 @@
   --surface-base: oklch(0.995 0.002 90);        /* near white, warm */
   --surface-elevated: oklch(1 0 0);             /* pure white cards */
   --surface-border: oklch(0.9 0.005 270);       /* soft gray line */
-  --brand-primary: oklch(0.58 0.19 25);         /* signal red-orange (dispatch) */
-  --brand-muted: oklch(0.94 0.04 25);           /* wash tint */
+  --brand-primary: oklch(0.15 0 0);             /* black (dispatch) */
+  --brand-muted: oklch(0.94 0.003 270);         /* neutral wash */
 
   --status-running: oklch(0.62 0.17 155);       /* live green */
   --status-paused: oklch(0.72 0.15 75);         /* amber */
