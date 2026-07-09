@@ -55,7 +55,7 @@ function bridgeStreamUrl(rawBridgeUrl: string): URL {
     stream.hostname.endsWith(".functions.supabase.co") &&
     (!stream.pathname || stream.pathname === "/")
   ) {
-    stream.pathname = "/twilio";
+    stream.pathname = "/voice-bridge";
   }
 
 
@@ -134,6 +134,13 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         // tags instead; Twilio delivers them in the WebSocket start frame.
         const stream = bridgeStreamUrl(bridge);
         stream.search = "";
+        // Twilio forbids query strings on <Stream>, but path segments are
+        // allowed. Put metadata in the URL path so the bridge can fetch the
+        // agent and pre-synthesize the greeting before Twilio's start frame.
+        if (stream.hostname.endsWith(".functions.supabase.co") || stream.pathname.includes("voice-bridge")) {
+          const basePath = stream.pathname.replace(/\/+$/, "") || "/voice-bridge";
+          stream.pathname = `${basePath}/${encodeURIComponent(agentId)}/${encodeURIComponent(callSid || "unknown")}`;
+        }
         const wsUrl = escapeXml(stream.toString());
         const agentParam = escapeXml(agentId);
         const callParam = escapeXml(callSid);
