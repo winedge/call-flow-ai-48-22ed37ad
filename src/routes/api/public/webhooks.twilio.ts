@@ -49,10 +49,9 @@ async function verifyTwilio(request: Request, raw: string): Promise<boolean> {
   if (!token) return true;
   const signature = request.headers.get("x-twilio-signature");
   if (!signature) return false;
-  const url = request.url;
   const params = new URLSearchParams(raw);
   const sorted = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
-  const payload = url + sorted.map(([k, v]) => k + v).join("");
+  const paramStr = sorted.map(([k, v]) => k + v).join("");
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(token),
@@ -60,9 +59,22 @@ async function verifyTwilio(request: Request, raw: string): Promise<boolean> {
     false,
     ["sign"],
   );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
-  return expected === signature;
+  // Twilio signs the exact URL it POSTs to. Behind a proxy request.url can
+  // reflect http:// while Twilio used https:// (or vice-versa). Try both.
+  const url = new URL(request.url);
+  const candidates = [request.url];
+  for (const proto of ["https:", "http:"]) {
+    const u = new URL(url.toString());
+    u.protocol = proto;
+    candidates.push(u.toString());
+  }
+  for (const candidate of candidates) {
+    const payload = candidate + paramStr;
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+    const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
+    if (expected === signature) return true;
+  }
+  return false;
 }
 
 function triggerForStatus(status: string): string | null {
