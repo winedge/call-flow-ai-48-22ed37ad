@@ -15,7 +15,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { verifyBridge } from "@/lib/voice/bridge-auth";
 import { errorJson, json, preflight } from "@/lib/api/cors";
 
-const MODEL = "google/gemini-3-flash-preview";
+const MODEL = "google/gemini-3.5-flash";
 
 type DataField = { key: string; label: string; type?: string; required?: boolean };
 
@@ -364,7 +364,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
           body: JSON.stringify({
             model: MODEL,
             messages,
-            temperature: body.agent.temperature ?? 0.6,
+            temperature: body.agent.temperature ?? 0.4,
             max_tokens: 180,
           }),
         });
