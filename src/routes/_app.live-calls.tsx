@@ -21,23 +21,30 @@ export const Route = createFileRoute("/_app/live-calls")({
 // intermediate status callback managed to update to "in_progress".
 const TERMINAL_STATUSES = new Set(["completed", "failed", "busy", "no_answer", "canceled"]);
 
-// Ignore rows older than this — a "live" call that started 12 hours ago
-// with no ended_at is a stuck row (Twilio never delivered its terminal
-// status callback), not a real active call.
+// Overall live window — rows older than this never count as live even if
+// they somehow never got an ended_at.
 const LIVE_WINDOW_MS = 15 * 60 * 1000;
+
+// A row still in "queued" state after this long has almost certainly been
+// abandoned (Twilio's status callback didn't land, or the bridge died
+// before reporting call-end). Drop it from the live view.
+const QUEUED_STUCK_MS = 90 * 1000;
 
 function LiveCalls() {
   const orgId = useDB((s) => s.currentOrgId);
   const [now, setNow] = useState(() => Date.now());
   const calls = useDB(
     useShallow((s) =>
-      s.calls.filter(
-        (c) =>
-          c.org_id === orgId &&
-          !c.ended_at &&
-          !TERMINAL_STATUSES.has(c.status) &&
-          now - new Date(c.started_at).getTime() < LIVE_WINDOW_MS,
-      ),
+      s.calls.filter((c) => {
+        if (c.org_id !== orgId) return false;
+        if (c.ended_at) return false;
+        if (TERMINAL_STATUSES.has(c.status)) return false;
+        const age = now - new Date(c.started_at).getTime();
+        if (age >= LIVE_WINDOW_MS) return false;
+        // Stuck "queued" rows are not live.
+        if (c.status === "queued" && age >= QUEUED_STUCK_MS) return false;
+        return true;
+      }),
     ),
   );
   const agents = useDB((s) => s.agents);
