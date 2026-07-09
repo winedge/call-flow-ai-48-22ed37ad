@@ -274,7 +274,7 @@ function AgentEditor() {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Voice">
-              <div className="flex gap-2">
+              <div className="flex gap-2 min-w-0">
                 {form.tts_engine === "elevenlabs" ? (
                   <Select
                     value={form.voice_id}
@@ -285,7 +285,7 @@ function AgentEditor() {
                     }}
                     disabled={elLoading || !!elError}
                   >
-                    <SelectTrigger className="flex-1">
+                    <SelectTrigger className="flex-1 min-w-0 overflow-hidden">
                       <SelectValue placeholder={elLoading ? "Loading voices…" : elError ? "Error loading voices" : "Select a voice"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -306,7 +306,7 @@ function AgentEditor() {
                       setForm((f) => ({ ...f, voice_id: voice.id, voice_name: voice.name }));
                     }}
                   >
-                    <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="flex-1 min-w-0 overflow-hidden"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {VOICES.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
                     </SelectContent>
@@ -319,6 +319,7 @@ function AgentEditor() {
                   disabled={previewing || !form.voice_id}
                   onClick={previewVoice}
                   title="Play a preview using the greeting (or a sample line)"
+                  className="shrink-0"
                 >
                   {previewing ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
                   <span className="ml-1">Preview</span>
