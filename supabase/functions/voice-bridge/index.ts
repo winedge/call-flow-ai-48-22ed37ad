@@ -188,6 +188,8 @@ type AgentConfig = {
   silence_timeout_seconds?: number;
   tts_engine?: string;
   speak_first?: boolean;
+  objective?: string;
+  data_fields?: { key: string; label: string; type?: string; required?: boolean }[];
   voice_settings?: {
     stability?: number;
     similarity_boost?: number;
@@ -663,6 +665,85 @@ function bootstrapAgent(agentId: string | null, bootstrap: Partial<AgentConfig> 
   };
 }
 
+function latestUserTurn(history: { role: "user" | "assistant"; content: string }[]): string {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "user") return history[i].content;
+  }
+  return "";
+}
+
+function latestAssistantTurn(history: { role: "user" | "assistant"; content: string }[]): string {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "assistant") return history[i].content;
+  }
+  return "";
+}
+
+function callerShowsBookingIntent(history: { role: "user" | "assistant"; content: string }[]): boolean {
+  const userDialogue = history
+    .filter((turn) => turn.role === "user")
+    .map((turn) => turn.content)
+    .join("\n");
+  if (/\b(?:book|schedule|set up|demo|appointment|meeting|calendar|call me back|follow up|send me|sign me up|interested|let'?s do it|that works|sounds good)\b/i.test(userDialogue)) {
+    return true;
+  }
+
+  const user = latestUserTurn(history);
+  const assistant = latestAssistantTurn(history);
+  return /\b(?:yes|yeah|yep|sure|okay|ok|please|sounds good|that works|let'?s do it)\b/i.test(user)
+    && /\b(?:book|schedule|demo|appointment|meeting|calendar|follow up|send you|reach you|contact you)\b/i.test(assistant);
+}
+
+function asksForPersonalContactDetail(reply: string): boolean {
+  const asksBusinessName = /\b(?:business|company|organization|practice)\s+name\b|\bname of (?:your|the) (?:business|company|organization|practice)\b/i.test(reply);
+  const asksName = /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:your full name|your name|full name|name)\b/i.test(reply)
+    || /\b(?:your full name|full name)\b/i.test(reply);
+  const asksContact = /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:phone|mobile|cell|number|email|e-mail|best number|best phone)\b/i.test(reply)
+    || /\b(?:phone number|mobile number|cell number|best number|best phone|email address|e-mail address)\b/i.test(reply)
+    || /\b(?:reach|contact|call|text|send)\s+you\s+(?:at|on|by)\b/i.test(reply)
+    || /\bwhere should i send\b/i.test(reply);
+  return (asksName && !asksBusinessName) || asksContact;
+}
+
+function extractDiscoveryQuestion(systemPrompt: string | undefined): string | null {
+  if (!systemPrompt) return null;
+  const lines = systemPrompt.split(/\r?\n/);
+  let inDiscovery = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (/^#{1,6}\s+/.test(line)) inDiscovery = /discovery|qualif/i.test(line);
+    if (!inDiscovery) continue;
+    const match = line.match(/^-\s*(.+\?)\s*$/);
+    if (match?.[1] && !/\b(?:name|phone|mobile|cell|email|e-mail|number)\b/i.test(match[1])) {
+      return match[1].trim();
+    }
+  }
+  return null;
+}
+
+function earlyConversationFallback(a: AgentConfig): string {
+  const discovery = extractDiscoveryQuestion(a.system_prompt);
+  if (discovery) return `Glad to hear that. ${discovery}`;
+  if (/\b(?:call|calling|sales|demo|appointment|lead|customer|prospect)\b/i.test(`${a.objective ?? ""} ${a.system_prompt ?? ""}`)) {
+    return "Glad to hear that. How are you currently handling customer calls right now?";
+  }
+  return "Glad to hear that. What would be most helpful to talk through first?";
+}
+
+function preventPrematureContactCollection(
+  reply: string,
+  agent: AgentConfig,
+  history: { role: "user" | "assistant"; content: string }[],
+): string {
+  if (!asksForPersonalContactDetail(reply)) return reply;
+  if (callerShowsBookingIntent(history)) return reply;
+  console.log("bridge prevented premature contact collection", {
+    callPhaseUserTurns: history.filter((turn) => turn.role === "user").length,
+    agentId: agent.id,
+  });
+  return earlyConversationFallback(agent);
+}
+
 function primeGreeting(s: Session, a: AgentConfig) {
   if (s.greeted || a.speak_first === false || s.greetingAudio) return;
   if (a.tts_engine !== "elevenlabs" || !ELEVENLABS_KEY) return;
@@ -883,7 +964,8 @@ async function handleUserTurn(s: Session, text: string) {
   s.activeTurnInterrupted = false;
   s.history.push({ role: "user", content: cleanText });
   try {
-    const { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    let { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    reply = preventPrematureContactCollection(reply, s.agent, s.history);
     if (s.activeTurnInterrupted || s.queuedUserText) return;
     if (!reply && !end_call && !transfer) return;
     if (reply) {
