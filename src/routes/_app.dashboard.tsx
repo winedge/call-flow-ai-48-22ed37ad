@@ -316,4 +316,3 @@ function SitrepCell({
 }
 
 // Unused imports to appease TS if referenced elsewhere.
-void PhoneOff;
