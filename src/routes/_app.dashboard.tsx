@@ -1,7 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { PhoneCall, PhoneOff, Voicemail, CalendarCheck, Radio, Users } from "lucide-react";
+import { PhoneCall, Voicemail, CalendarCheck, Radio, Users } from "lucide-react";
 
 import { PageHeader, StatusPill } from "@/components/app/primitives";
 import { useDB } from "@/lib/data-store";
