@@ -553,7 +553,7 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
-  greetingAudio: { text: string; promise: Promise<Uint8Array> } | null;
+  greetingAudio: { text: string; buffered: Uint8Array[]; done: boolean; error: unknown; waiters: Array<() => void> } | null;
   queuedUserText: string;
   activeTurnInterrupted: boolean;
   noiseGate: {
@@ -667,15 +667,42 @@ function primeGreeting(s: Session, a: AgentConfig) {
   if (s.greeted || a.speak_first === false || s.greetingAudio) return;
   if (a.tts_engine !== "elevenlabs" || !ELEVENLABS_KEY) return;
   const greeting = a.greeting || "Hello, this is your AI assistant.";
-  s.greetingAudio = {
+  const state: NonNullable<Session["greetingAudio"]> = {
     text: greeting,
-    promise: synthElevenLabsMulaw(greeting, a.voice_id, a.voice_settings)
-      .catch((e) => {
-        console.error("greeting prefetch failed", e);
-        s.greetingAudio = null;
-        throw e;
-      }),
+    buffered: [],
+    done: false,
+    error: null,
+    waiters: [],
   };
+  s.greetingAudio = state;
+  const notify = () => {
+    const ws = state.waiters.splice(0);
+    for (const w of ws) w();
+  };
+  (async () => {
+    try {
+      const stream = await openElevenLabsMulawStream(greeting, a.voice_id, a.voice_settings);
+      const reader = stream.getReader();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value?.length) {
+            state.buffered.push(value);
+            notify();
+          }
+        }
+      } finally {
+        try { reader.releaseLock(); } catch { /* ignore */ }
+      }
+    } catch (e) {
+      state.error = e;
+      console.error("greeting prefetch failed", e);
+    } finally {
+      state.done = true;
+      notify();
+    }
+  })();
 }
 
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
