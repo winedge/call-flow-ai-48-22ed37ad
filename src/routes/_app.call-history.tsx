@@ -220,7 +220,7 @@ function CallHistory() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
               ) : (
                 filtered.slice(0, 200).map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
@@ -255,6 +255,21 @@ function CallHistory() {
                       </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{c.sentiment ?? "—"}</td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
+                      <td className="px-4 py-3">
+                        {c.recording_url ? (
+                          <a
+                            href={c.recording_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[11px] text-brand-primary hover:underline font-mono"
+                          >
+                            Listen ↗
+                          </a>
+                        ) : (
+                          <span className="text-[11px] text-zinc-600">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-300">{leadScore(c)}</td>
                       <td className="px-4 py-3 text-right font-mono text-zinc-400">${(c.cost_cents / 100).toFixed(2)}</td>
                     </tr>
