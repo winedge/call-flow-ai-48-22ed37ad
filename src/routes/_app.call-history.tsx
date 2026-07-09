@@ -257,15 +257,13 @@ function CallHistory() {
                       <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3">
                         {c.recording_url ? (
-                          <a
-                            href={c.recording_url}
-                            target="_blank"
-                            rel="noreferrer"
+                          <audio
+                            controls
+                            preload="none"
+                            src={c.recording_url}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-[11px] text-brand-primary hover:underline font-mono"
-                          >
-                            Listen ↗
-                          </a>
+                            className="h-8 w-56 max-w-full"
+                          />
                         ) : (
                           <span className="text-[11px] text-zinc-600">—</span>
                         )}
