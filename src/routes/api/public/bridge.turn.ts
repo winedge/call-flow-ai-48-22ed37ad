@@ -364,7 +364,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
           body: JSON.stringify({
             model: MODEL,
             messages,
-            temperature: body.agent.temperature ?? 0.6,
+            temperature: body.agent.temperature ?? 0.4,
             max_tokens: 180,
           }),
         });
