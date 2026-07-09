@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDB } from "@/lib/data-store";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/campaigns/new")({
   head: () => ({ meta: [{ title: "New campaign - BulkCall AI" }] }),
@@ -38,6 +39,7 @@ function NewCampaign() {
   const orgId = useDB((s) => s.currentOrgId);
   const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
   const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
+  const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
   const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addCampaign = useDB((s) => s.addCampaign);
 
@@ -53,6 +55,35 @@ function NewCampaign() {
   const [maxRetries, setMaxRetries] = useState(3);
   const [retryGap, setRetryGap] = useState(60);
   const [vmAction, setVmAction] = useState<"leave" | "skip" | "retry">("leave");
+  const [dbListCount, setDbListCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!listId && lists[0]?.id) setListId(lists[0].id);
+  }, [listId, lists]);
+
+  const selectedListCount = useMemo(
+    () => contacts.filter((c) => c.list_id === listId).length,
+    [contacts, listId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!listId) {
+      setDbListCount(null);
+      return;
+    }
+    setDbListCount(null);
+    supabase
+      .from("contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("list_id", listId)
+      .then(({ count }) => {
+        if (!cancelled) setDbListCount(count ?? selectedListCount);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [listId, selectedListCount]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,6 +141,11 @@ function NewCampaign() {
                   {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {listId && (
+                <p className="text-xs text-neutral-500">
+                  {(dbListCount ?? selectedListCount).toLocaleString()} contacts in this list
+                </p>
+              )}
             </Field>
             <Field label="From number *">
               <Select value={phoneId} onValueChange={setPhoneId}>

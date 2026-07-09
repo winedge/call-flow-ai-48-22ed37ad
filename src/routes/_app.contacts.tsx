@@ -1,6 +1,6 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
 import {
   Upload,
@@ -10,6 +10,7 @@ import {
   Users,
   Tag,
   Download,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,14 +42,46 @@ export const Route = createFileRoute("/_app/contacts")({
 });
 
 const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
+type ContactDraft = Omit<Contact, "id" | "org_id" | "created_at">;
+
+function listNameFromFile(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, "").trim() || "Imported contacts";
+}
+
+function csvRowsToContacts(rows: Record<string, string>[], listId: string | null) {
+  let invalid = 0;
+  const contacts: ContactDraft[] = [];
+  for (const row of rows) {
+    const phone = (row.phone ?? row.Phone ?? "").trim();
+    if (!PHONE_RE.test(phone)) {
+      invalid++;
+      continue;
+    }
+    contacts.push({
+      list_id: listId,
+      name: (row.name ?? row.Name ?? "").trim(),
+      company: (row.company ?? row.Company ?? "").trim(),
+      phone,
+      email: (row.email ?? row.Email ?? "").trim(),
+      custom_vars: {},
+      tags: (row.tags ?? row.Tags ?? "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+      notes: (row.notes ?? row.Notes ?? "").trim(),
+      status: "new",
+    });
+  }
+  return { contacts, invalid };
+}
 
 function ContactsPage() {
   const orgId = useDB((s) => s.currentOrgId);
   const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
-  const addList = useDB((s) => s.addList);
+  const createList = useDB((s) => s.createList);
   const addContact = useDB((s) => s.addContact);
-  const addBulk = useDB((s) => s.addContactsBulk);
+  const importContacts = useDB((s) => s.importContacts);
   const deleteContacts = useDB((s) => s.deleteContacts);
 
   const [filterListId, setFilterListId] = useState<string>("all");
@@ -85,42 +118,6 @@ function ContactsPage() {
     else setSelected(new Set(filtered.map((c) => c.id)));
   }
 
-  function handleCSV(file: File) {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        const rows = res.data;
-        let invalid = 0;
-        const listId = filterListId !== "all" ? filterListId : (lists[0]?.id ?? null);
-        const toInsert: Omit<Contact, "id" | "org_id" | "created_at">[] = [];
-        for (const row of rows) {
-          const phone = (row.phone ?? row.Phone ?? "").trim();
-          if (!PHONE_RE.test(phone)) {
-            invalid++;
-            continue;
-          }
-          toInsert.push({
-            list_id: listId,
-            name: (row.name ?? row.Name ?? "").trim(),
-            company: (row.company ?? row.Company ?? "").trim(),
-            phone,
-            email: (row.email ?? row.Email ?? "").trim(),
-            custom_vars: {},
-            tags: (row.tags ?? row.Tags ?? "").split(",").map((t) => t.trim()).filter(Boolean),
-            notes: (row.notes ?? row.Notes ?? "").trim(),
-            status: "new",
-          });
-        }
-        const added = addBulk(toInsert);
-        toast.success(
-          `Imported ${added} contacts${invalid ? ` (${invalid} invalid skipped)` : ""}${added < toInsert.length ? `, ${toInsert.length - added} duplicates` : ""}`,
-        );
-      },
-      error: () => toast.error("Failed to parse CSV"),
-    });
-  }
-
   function exportCSV() {
     const csv = Papa.unparse(
       filtered.map((c) => ({
@@ -152,10 +149,12 @@ function ContactsPage() {
               ref={fileRef}
               type="file"
               hidden
-              accept=".csv,.xlsx"
+              accept=".csv,text/csv"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) handleCSV(f);
+                if (f) {
+                  window.dispatchEvent(new CustomEvent("contacts:import-file", { detail: f }));
+                }
                 e.currentTarget.value = "";
               }}
             />
@@ -165,7 +164,14 @@ function ContactsPage() {
             <Button variant="outline" size="sm" onClick={exportCSV}>
               <Download className="size-3.5 mr-1" /> Export
             </Button>
-            <NewListDialog onCreate={(n, d) => addList(n, d)} />
+            <ImportCsvDialog
+              lists={lists}
+              currentFilterListId={filterListId}
+              createList={createList}
+              importContacts={importContacts}
+              onImported={(listId) => setFilterListId(listId)}
+            />
+            <NewListDialog onCreate={createList} />
             <NewContactDialog
               lists={lists}
               onAdd={(c) => addContact(c)}
@@ -275,10 +281,138 @@ function ContactsPage() {
   );
 }
 
-function NewListDialog({ onCreate }: { onCreate: (name: string, desc: string) => void }) {
+function ImportCsvDialog({
+  lists,
+  currentFilterListId,
+  createList,
+  importContacts,
+  onImported,
+}: {
+  lists: { id: string; name: string }[];
+  currentFilterListId: string;
+  createList: (name: string, desc: string) => Promise<{ id: string; name: string }>;
+  importContacts: (contacts: ContactDraft[], listId: string) => Promise<{
+    inserted: number;
+    duplicates: number;
+    failed: number;
+    errors: string[];
+  }>;
+  onImported: (listId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [rows, setRows] = useState<ContactDraft[]>([]);
+  const [invalid, setInvalid] = useState(0);
+  const [mode, setMode] = useState<"existing" | "new">("new");
+  const [listId, setListId] = useState("");
+  const [newListName, setNewListName] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const file = (event as CustomEvent<File>).detail;
+      if (!file) return;
+      Papa.parse<Record<string, string>>(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => {
+          const preferredListId = currentFilterListId !== "all" ? currentFilterListId : (lists[0]?.id ?? "");
+          const parsed = csvRowsToContacts(res.data, preferredListId || null);
+          setFileName(file.name);
+          setRows(parsed.contacts);
+          setInvalid(parsed.invalid);
+          setListId(preferredListId);
+          setNewListName(listNameFromFile(file.name));
+          setMode(preferredListId ? "existing" : "new");
+          setOpen(true);
+        },
+        error: () => toast.error("Failed to parse CSV"),
+      });
+    };
+    window.addEventListener("contacts:import-file", listener);
+    return () => window.removeEventListener("contacts:import-file", listener);
+  }, [currentFilterListId, lists]);
+
+  async function runImport() {
+    try {
+      setImporting(true);
+      let targetListId = listId;
+      if (mode === "new") {
+        const name = newListName.trim();
+        if (!name) {
+          toast.error("Name the contact list before importing");
+          return;
+        }
+        const list = await createList(name, "Imported from CSV");
+        targetListId = list.id;
+      } else if (!targetListId) {
+        toast.error("Choose a contact list before importing");
+        return;
+      }
+
+      const result = await importContacts(rows, targetListId);
+      onImported(targetListId);
+      const pieces = [
+        `Imported ${result.inserted}`,
+        result.duplicates ? `${result.duplicates} duplicates` : "",
+        invalid ? `${invalid} invalid` : "",
+        result.failed ? `${result.failed} failed` : "",
+      ].filter(Boolean);
+      if (result.errors.length > 0) toast.error(result.errors[0]);
+      toast.success(pieces.join(" · "));
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Import failed");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Import contacts</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md bg-neutral-100 px-3 py-2 text-sm text-neutral-700">
+            {fileName ? `${fileName}: ${rows.length} valid rows${invalid ? `, ${invalid} invalid rows skipped` : ""}` : "Choose a CSV file."}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" variant={mode === "new" ? "default" : "outline"} onClick={() => setMode("new")}>New list</Button>
+            <Button type="button" variant={mode === "existing" ? "default" : "outline"} onClick={() => setMode("existing")} disabled={lists.length === 0}>Existing list</Button>
+          </div>
+          {mode === "new" ? (
+            <div className="space-y-2">
+              <Label>List name</Label>
+              <Input value={newListName} onChange={(e) => setNewListName(e.target.value)} placeholder="Imported leads" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Contact list</Label>
+              <Select value={listId} onValueChange={setListId}>
+                <SelectTrigger><SelectValue placeholder="Choose list" /></SelectTrigger>
+                <SelectContent>
+                  {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={runImport} disabled={importing || rows.length === 0} className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
+            {importing ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Upload className="size-3.5 mr-1" />}
+            Import
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function NewListDialog({ onCreate }: { onCreate: (name: string, desc: string) => Promise<unknown> }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
+  const [saving, setSaving] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -298,14 +432,23 @@ function NewListDialog({ onCreate }: { onCreate: (name: string, desc: string) =>
         </div>
         <DialogFooter>
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (!name) return;
-              onCreate(name, desc);
-              toast.success("List created");
-              setName(""); setDesc(""); setOpen(false);
+              try {
+                setSaving(true);
+                await onCreate(name, desc);
+                toast.success("List created");
+                setName(""); setDesc(""); setOpen(false);
+              } catch (error) {
+                toast.error(error instanceof Error ? error.message : "Could not create list");
+              } finally {
+                setSaving(false);
+              }
             }}
+            disabled={saving}
             className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110"
           >
+            {saving && <Loader2 className="size-3.5 mr-1 animate-spin" />}
             Create
           </Button>
         </DialogFooter>

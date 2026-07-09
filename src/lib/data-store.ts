@@ -17,6 +17,8 @@ function dbWrite(p: PromiseLike<unknown>) {
   });
 }
 
+const CONTACT_IMPORT_BATCH_SIZE = 500;
+
 
 
 export type UUID = string;
@@ -71,6 +73,43 @@ export type Contact = {
   status: "new" | "called" | "completed" | "dnc";
   created_at: string;
 };
+
+type ContactDraft = Omit<Contact, "id" | "org_id" | "created_at">;
+
+export type ContactImportResult = {
+  listId: UUID;
+  inserted: number;
+  duplicates: number;
+  failed: number;
+  errors: string[];
+};
+
+function toContactFromDb(r: Record<string, unknown>): Contact {
+  return {
+    id: r.id as UUID,
+    org_id: r.user_id as UUID,
+    list_id: (r.list_id as UUID | null) ?? null,
+    name: (r.name as string) ?? "",
+    company: (r.company as string) ?? "",
+    phone: (r.phone as string) ?? "",
+    email: (r.email as string) ?? "",
+    custom_vars: (r.custom_vars as Record<string, string>) ?? {},
+    tags: (r.tags as string[]) ?? [],
+    notes: (r.notes as string) ?? "",
+    status: (r.status as Contact["status"]) ?? "new",
+    created_at: (r.created_at as string) ?? new Date().toISOString(),
+  };
+}
+
+function toListFromDb(r: Record<string, unknown>): ContactList {
+  return {
+    id: r.id as UUID,
+    org_id: r.user_id as UUID,
+    name: (r.name as string) ?? "",
+    description: (r.description as string) ?? "",
+    created_at: (r.created_at as string) ?? new Date().toISOString(),
+  };
+}
 
 export type DataFieldType = "text" | "email" | "phone" | "number" | "date" | "boolean";
 
@@ -253,8 +292,10 @@ type DBState = ReturnType<typeof buildSeed> & {
   updateAgent: (id: UUID, patch: Partial<AIAgent>) => void;
   deleteAgent: (id: UUID) => void;
   addList: (name: string, description: string) => ContactList;
-  addContact: (c: Omit<Contact, "id" | "org_id" | "created_at">) => Contact;
-  addContactsBulk: (cs: Omit<Contact, "id" | "org_id" | "created_at">[]) => number;
+  createList: (name: string, description: string) => Promise<ContactList>;
+  addContact: (c: ContactDraft) => Contact;
+  addContactsBulk: (cs: ContactDraft[]) => number;
+  importContacts: (cs: ContactDraft[], listId: UUID) => Promise<ContactImportResult>;
   deleteContacts: (ids: UUID[]) => void;
   addCampaign: (c: Omit<Campaign, "id" | "org_id" | "created_by" | "created_at" | "status">) => Campaign;
   setCampaignStatus: (id: UUID, status: CampaignStatus) => void;
@@ -384,6 +425,27 @@ export const useDB = create<DBState>()(
         );
         return list;
       },
+      createList: async (name, description) => {
+        const orgId = get().currentOrgId;
+        if (!orgId) throw new Error("Sign in before creating contact lists.");
+        const id = uid();
+        const { data, error } = await supabase
+          .from("contact_lists")
+          .insert({
+            id,
+            user_id: orgId,
+            name,
+            description,
+          })
+          .select("id,user_id,name,description,created_at")
+          .single();
+        if (error) throw new Error(error.message);
+        const list = toListFromDb(data as Record<string, unknown>);
+        set((s) => ({
+          lists: s.lists.some((l) => l.id === list.id) ? s.lists : [...s.lists, list],
+        }));
+        return list;
+      },
       addContact: (c) => {
         const contact: Contact = {
           ...c,
@@ -445,6 +507,88 @@ export const useDB = create<DBState>()(
           );
         }
         return made.length;
+      },
+      importContacts: async (cs, listId) => {
+        const orgId = get().currentOrgId;
+        if (!orgId) throw new Error("Sign in before importing contacts.");
+        if (!listId) throw new Error("Choose a contact list before importing.");
+
+        const { data: existingRows, error: existingError } = await supabase
+          .from("contacts")
+          .select("phone")
+          .eq("user_id", orgId)
+          .eq("list_id", listId);
+        if (existingError) throw new Error(existingError.message);
+
+        const existingPhones = new Set(
+          (existingRows ?? [])
+            .map((r) => (r.phone as string | null)?.trim())
+            .filter(Boolean) as string[],
+        );
+        const seenPhones = new Set(existingPhones);
+        const fresh: ContactDraft[] = [];
+        let duplicates = 0;
+
+        for (const c of cs) {
+          const phone = c.phone.trim();
+          if (seenPhones.has(phone)) {
+            duplicates += 1;
+            continue;
+          }
+          seenPhones.add(phone);
+          fresh.push({ ...c, phone, list_id: listId });
+        }
+
+        const insertedContacts: Contact[] = [];
+        const errors: string[] = [];
+        let failed = 0;
+
+        for (let i = 0; i < fresh.length; i += CONTACT_IMPORT_BATCH_SIZE) {
+          const batch = fresh.slice(i, i + CONTACT_IMPORT_BATCH_SIZE);
+          const { data, error } = await supabase
+            .from("contacts")
+            .insert(
+              batch.map((m) => ({
+                id: uid(),
+                user_id: orgId,
+                list_id: listId,
+                name: m.name,
+                company: m.company,
+                phone: m.phone,
+                email: m.email,
+                custom_vars: m.custom_vars,
+                tags: m.tags,
+                notes: m.notes,
+                status: m.status,
+              })),
+            )
+            .select("id,user_id,list_id,name,company,phone,email,custom_vars,tags,notes,status,created_at");
+
+          if (error) {
+            failed += batch.length;
+            errors.push(error.message);
+            continue;
+          }
+          insertedContacts.push(
+            ...((data ?? []) as Record<string, unknown>[]).map(toContactFromDb),
+          );
+        }
+
+        if (insertedContacts.length > 0) {
+          set((s) => {
+            const existingIds = new Set(s.contacts.map((c) => c.id));
+            const next = insertedContacts.filter((c) => !existingIds.has(c.id));
+            return { contacts: [...s.contacts, ...next] };
+          });
+        }
+
+        return {
+          listId,
+          inserted: insertedContacts.length,
+          duplicates,
+          failed,
+          errors,
+        };
       },
       deleteContacts: (ids) => {
         const set2 = new Set(ids);
