@@ -137,8 +137,10 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         // Twilio forbids query strings on <Stream>, but path segments are
         // allowed. Put metadata in the URL path so the bridge can fetch the
         // agent and pre-synthesize the greeting before Twilio's start frame.
-        const basePath = stream.pathname.replace(/\/+$/, "") || "/voice-bridge";
-        stream.pathname = `${basePath}/${encodeURIComponent(agentId)}/${encodeURIComponent(callSid || "unknown")}`;
+        if (stream.hostname.endsWith(".functions.supabase.co") || stream.pathname.includes("voice-bridge")) {
+          const basePath = stream.pathname.replace(/\/+$/, "") || "/voice-bridge";
+          stream.pathname = `${basePath}/${encodeURIComponent(agentId)}/${encodeURIComponent(callSid || "unknown")}`;
+        }
         const wsUrl = escapeXml(stream.toString());
         const agentParam = escapeXml(agentId);
         const callParam = escapeXml(callSid);
