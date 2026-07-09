@@ -68,6 +68,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
       POST: async ({ request }) => {
         const url = new URL(request.url);
         let agentId = url.searchParams.get("agent_id") ?? "";
+        const bootstrap = url.searchParams.get("b") ?? "";
         const raw = await request.text().catch(() => "");
         const form = new URLSearchParams(raw);
         const callSid = form.get("CallSid") ?? "";
@@ -139,7 +140,7 @@ export const Route = createFileRoute("/api/public/twilio/voice")({
         // agent and pre-synthesize the greeting before Twilio's start frame.
         if (stream.hostname.endsWith(".functions.supabase.co") || stream.pathname.includes("voice-bridge")) {
           const basePath = stream.pathname.replace(/\/+$/, "") || "/voice-bridge";
-          stream.pathname = `${basePath}/${encodeURIComponent(agentId)}/${encodeURIComponent(callSid || "unknown")}`;
+          stream.pathname = `${basePath}/${encodeURIComponent(agentId)}/${encodeURIComponent(callSid || "unknown")}${bootstrap ? `/${encodeURIComponent(bootstrap)}` : ""}`;
         }
         const wsUrl = escapeXml(stream.toString());
         const agentParam = escapeXml(agentId);
