@@ -148,6 +148,7 @@ function parseWav(buf: ArrayBuffer): { sampleRate: number; samples: Int16Array }
 const APP_URL = Deno.env.get("APP_URL") ?? Deno.env.get("LOVABLE_APP_URL") ?? Deno.env.get("PUBLIC_APP_URL") ?? "";
 const SHARED_SECRET = Deno.env.get("BRIDGE_SHARED_SECRET") ?? "";
 const DEEPGRAM_KEY = Deno.env.get("DEEPGRAM_API_KEY") ?? "";
+const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
 
 const enc = new TextEncoder();
 
@@ -194,6 +195,56 @@ type AgentConfig = {
     use_speaker_boost?: boolean;
   };
 };
+
+const DIGIT_WORDS: Record<string, string> = {
+  "0": "zero",
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+};
+
+function digitWords(value: string): string {
+  return [...value].map((d) => DIGIT_WORDS[d] ?? d).join(" ");
+}
+
+function chunkPhoneDigits(digits: string): string[] {
+  if (digits.length <= 4) return [digits];
+  if (digits.length === 10) return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6)];
+  if (digits.length === 11 && digits.startsWith("1")) return [digits.slice(0, 1), digits.slice(1, 4), digits.slice(4, 7), digits.slice(7)];
+  const chunks: string[] = [];
+  let i = 0;
+  if (digits.length > 10) {
+    const countryLen = digits.length === 11 ? 1 : 2;
+    chunks.push(digits.slice(0, countryLen));
+    i = countryLen;
+  }
+  while (i < digits.length) {
+    const remaining = digits.length - i;
+    const size = remaining === 4 ? 4 : Math.min(3, remaining);
+    chunks.push(digits.slice(i, i + size));
+    i += size;
+  }
+  return chunks;
+}
+
+function prepareSpeechText(text: string): string {
+  return text
+    .replace(/(^|[^\w])(\+?\d[\d\s().-]{6,}\d)(?=$|[^\w])/g, (_all, prefix: string, phone: string) => {
+      const hasPlus = phone.trim().startsWith("+");
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 7 || digits.length > 15) return `${prefix}${phone}`;
+      const spoken = chunkPhoneDigits(digits).map(digitWords).join("... ");
+      return `${prefix}${hasPlus ? `plus... ${spoken}` : spoken}`;
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
   const path = `/api/public/bridge/agent?id=${encodeURIComponent(id)}`;
@@ -308,6 +359,105 @@ async function synthTts(
   return await res.json();
 }
 
+async function synthElevenLabsMulaw(
+  text: string,
+  voice: string,
+  voice_settings?: AgentConfig["voice_settings"],
+): Promise<Uint8Array> {
+  if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
+  const settings = {
+    stability: voice_settings?.stability ?? 0.5,
+    similarity_boost: voice_settings?.similarity_boost ?? 0.78,
+    style: voice_settings?.style ?? 0.28,
+    use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
+    speed: 0.94,
+  };
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_KEY,
+        "Content-Type": "application/json",
+        Accept: "audio/basic",
+      },
+      body: JSON.stringify({
+        text: prepareSpeechText(text),
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: settings,
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text().catch(() => "")}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
+async function openElevenLabsMulawStream(
+  text: string,
+  voice: string,
+  voice_settings?: AgentConfig["voice_settings"],
+): Promise<ReadableStream<Uint8Array>> {
+  if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
+  const settings = {
+    stability: voice_settings?.stability ?? 0.5,
+    similarity_boost: voice_settings?.similarity_boost ?? 0.78,
+    style: voice_settings?.style ?? 0.28,
+    use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
+    speed: 0.94,
+  };
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_KEY,
+        "Content-Type": "application/json",
+        Accept: "audio/basic",
+      },
+      body: JSON.stringify({
+        text: prepareSpeechText(text),
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: settings,
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.body) throw new Error("ElevenLabs stream returned no body");
+  return res.body;
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+  if (!a.length) return b;
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+}
+
+function sendMulawFrame(s: Session, frame: Uint8Array) {
+  let bin = "";
+  for (let j = 0; j < frame.length; j++) bin += String.fromCharCode(frame[j]);
+  s.twilio.send(JSON.stringify({
+    event: "media",
+    streamSid: s.streamSid,
+    media: { payload: btoa(bin) },
+  }));
+}
+
+async function awaitBriefly<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // ---------- Deepgram streaming STT ----------
 
 type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
@@ -390,10 +540,12 @@ type Session = {
   callSid: string | null;
   agentId: string | null;
   agent: AgentConfig | null;
+  agentReady: boolean;
   dg: DgHandle | null;
   dgReconnects: number;
   history: { role: "user" | "assistant"; content: string }[];
   speaking: boolean;
+  greeted: boolean;
   turnLock: boolean;
   cancelSpeech: () => void;
   closed: boolean;
@@ -401,7 +553,7 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
-  greetingAudio: { text: string; promise: Promise<{ audio_url: string }> } | null;
+  greetingAudio: { text: string; promise: Promise<Uint8Array> } | null;
   queuedUserText: string;
   activeTurnInterrupted: boolean;
   noiseGate: {
@@ -465,7 +617,21 @@ function gateInboundAudio(s: Session, bytes: Uint8Array): Uint8Array[] {
   return [silenceFrame(bytes.length)];
 }
 
-function initialPathMetadata(pathname: string): { agentId: string | null; callSid: string | null } {
+function decodeBootstrap(raw?: string): Partial<AgentConfig> | null {
+  if (!raw) return null;
+  try {
+    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const bin = atob(padded);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes)) as Partial<AgentConfig>;
+  } catch {
+    return null;
+  }
+}
+
+function initialPathMetadata(pathname: string): { agentId: string | null; callSid: string | null; bootstrap: Partial<AgentConfig> | null } {
   const parts = pathname.split("/").filter(Boolean).map((p) => {
     try {
       return decodeURIComponent(p);
@@ -474,10 +640,42 @@ function initialPathMetadata(pathname: string): { agentId: string | null; callSi
     }
   });
   const idx = parts.findIndex((p) => p === "voice-bridge");
-  if (idx < 0) return { agentId: null, callSid: null };
+  if (idx < 0) return { agentId: null, callSid: null, bootstrap: null };
   const agentId = parts[idx + 1] && parts[idx + 1] !== "healthz" ? parts[idx + 1] : null;
   const callSid = parts[idx + 2] && parts[idx + 2] !== "unknown" ? parts[idx + 2] : null;
-  return { agentId, callSid };
+  const bootstrap = decodeBootstrap(parts[idx + 3]);
+  return { agentId, callSid, bootstrap };
+}
+
+function bootstrapAgent(agentId: string | null, bootstrap: Partial<AgentConfig> | null): AgentConfig | null {
+  if (!agentId || !bootstrap) return null;
+  return {
+    id: agentId,
+    name: bootstrap.name ?? "",
+    voice_id: bootstrap.voice_id || "af_bella",
+    language: bootstrap.language || "en",
+    greeting: bootstrap.greeting || "Hello, this is your AI assistant.",
+    system_prompt: "",
+    temperature: 0.6,
+    tts_engine: bootstrap.tts_engine || "elevenlabs",
+    speak_first: bootstrap.speak_first ?? true,
+    voice_settings: bootstrap.voice_settings,
+  };
+}
+
+function primeGreeting(s: Session, a: AgentConfig) {
+  if (s.greeted || a.speak_first === false || s.greetingAudio) return;
+  if (a.tts_engine !== "elevenlabs" || !ELEVENLABS_KEY) return;
+  const greeting = a.greeting || "Hello, this is your AI assistant.";
+  s.greetingAudio = {
+    text: greeting,
+    promise: synthElevenLabsMulaw(greeting, a.voice_id, a.voice_settings)
+      .catch((e) => {
+        console.error("greeting prefetch failed", e);
+        s.greetingAudio = null;
+        throw e;
+      }),
+  };
 }
 
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
@@ -486,7 +684,7 @@ function looksLikeSpeech(text: string, voiceMs: number): boolean {
     .replace(/[^a-z0-9' ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!normalized || normalized.length < 2 || voiceMs < 160) return false;
+  if (!normalized || normalized.length < 2 || voiceMs < 100) return false;
   if (/^(uh+|um+|hm+|hmm+|ah+|er+|mm+|noise|background|music|cough|laugh)$/.test(normalized)) return false;
 
   const words = normalized.split(" ").filter(Boolean);
@@ -517,54 +715,100 @@ async function speak(s: Session, text: string) {
     finishPlayback();
   };
   s.speaking = true;
+  let sentFrames = 0;
   try {
-    // Reuse a preloaded audio promise (used for the greeting) when it
-    // matches the text we're about to speak — cuts first-speak latency.
-    // If prefetch failed, fall back to a fresh synth so the call isn't silent.
-    const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
-    if (preload) s.greetingAudio = null;
-    let audio_url: string;
-    try {
-      audio_url = (await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings))).audio_url;
-    } catch (e) {
+    if (s.agent.tts_engine === "elevenlabs" && ELEVENLABS_KEY) {
+      const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
+      if (preload) s.greetingAudio = null;
       if (preload) {
-        console.warn("greeting prefetch rejected, falling back to fresh synth");
-        audio_url = (await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings)).audio_url;
+        const mu = await awaitBriefly(preload, 120).catch((e) => {
+          console.warn("greeting prefetch rejected, falling back to stream", e);
+          return null;
+        });
+        if (mu) {
+          for (const frame of chunk20ms(mu)) {
+            if (cancelled || s.closed) break;
+            sendMulawFrame(s, frame);
+            sentFrames++;
+            if (Math.random() < 0.02) await Promise.resolve();
+          }
+        } else {
+          const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
+          const reader = stream.getReader();
+          let carry = new Uint8Array(0);
+          try {
+            while (!cancelled && !s.closed) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (!value?.length) continue;
+              const buf = concatBytes(carry, value);
+              const frameable = Math.floor(buf.length / 160) * 160;
+              for (let i = 0; i < frameable; i += 160) {
+                if (cancelled || s.closed) break;
+                sendMulawFrame(s, buf.subarray(i, i + 160));
+                sentFrames++;
+              }
+              carry = buf.subarray(frameable);
+            }
+          } finally {
+            try { reader.releaseLock(); } catch { /* ignore */ }
+          }
+          if (!cancelled && !s.closed && carry.length) {
+            const last = new Uint8Array(160).fill(0xff);
+            last.set(carry.subarray(0, 160));
+            sendMulawFrame(s, last);
+            sentFrames++;
+          }
+        }
       } else {
-        throw e;
+        const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
+        const reader = stream.getReader();
+        let carry = new Uint8Array(0);
+        try {
+          while (!cancelled && !s.closed) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (!value?.length) continue;
+            const buf = concatBytes(carry, value);
+            const frameable = Math.floor(buf.length / 160) * 160;
+            for (let i = 0; i < frameable; i += 160) {
+              if (cancelled || s.closed) break;
+              sendMulawFrame(s, buf.subarray(i, i + 160));
+              sentFrames++;
+            }
+            carry = buf.subarray(frameable);
+          }
+        } finally {
+          try { reader.releaseLock(); } catch { /* ignore */ }
+        }
+        if (!cancelled && !s.closed && carry.length) {
+          const last = new Uint8Array(160).fill(0xff);
+          last.set(carry.subarray(0, 160));
+          sendMulawFrame(s, last);
+          sentFrames++;
+        }
       }
-    }
-    if (cancelled || s.closed) return;
-
-    // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —
-    // no fetch, no WAV parse, no downsample, no encode. Twilio's wire format.
-    let mu: Uint8Array;
-    if (audio_url.startsWith("data:audio/mulaw;base64,")) {
-      const b64 = audio_url.slice("data:audio/mulaw;base64,".length);
-      const bin = atob(b64);
-      mu = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) mu[i] = bin.charCodeAt(i);
     } else {
-      const buf = await (await fetch(audio_url)).arrayBuffer();
+      const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
       if (cancelled || s.closed) return;
-      const { sampleRate, samples } = parseWav(buf);
-      const pcm8k = downsampleTo8k(samples, sampleRate);
-      mu = pcm8kToMuLaw(pcm8k);
-    }
-
-    const frames = chunk20ms(mu);
-    for (let i = 0; i < frames.length; i++) {
-      if (cancelled || s.closed) break;
-      const frame = frames[i];
-      let bin = "";
-      for (let j = 0; j < frame.length; j++) bin += String.fromCharCode(frame[j]);
-      const payload = btoa(bin);
-      s.twilio.send(JSON.stringify({
-        event: "media",
-        streamSid: s.streamSid,
-        media: { payload },
-      }));
-      if (i % 50 === 49) await Promise.resolve();
+      let mu: Uint8Array;
+      if (audio_url.startsWith("data:audio/mulaw;base64,")) {
+        const b64 = audio_url.slice("data:audio/mulaw;base64,".length);
+        const bin = atob(b64);
+        mu = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) mu[i] = bin.charCodeAt(i);
+      } else {
+        const buf = await (await fetch(audio_url)).arrayBuffer();
+        if (cancelled || s.closed) return;
+        const { sampleRate, samples } = parseWav(buf);
+        const pcm8k = downsampleTo8k(samples, sampleRate);
+        mu = pcm8kToMuLaw(pcm8k);
+      }
+      for (const frame of chunk20ms(mu)) {
+        if (cancelled || s.closed) break;
+        sendMulawFrame(s, frame);
+        sentFrames++;
+      }
     }
     if (!cancelled && !s.closed) {
       s.twilio.send(JSON.stringify({
@@ -572,7 +816,7 @@ async function speak(s: Session, text: string) {
         streamSid: s.streamSid,
         mark: { name: markName },
       }));
-      const fallback = setTimeout(finishPlayback, Math.max(500, frames.length * 20 + 750));
+      const fallback = setTimeout(finishPlayback, Math.max(500, sentFrames * 20 + 750));
       await playbackDone.finally(() => clearTimeout(fallback));
     }
   } catch (e) {
@@ -590,9 +834,9 @@ async function speak(s: Session, text: string) {
 async function handleUserTurn(s: Session, text: string) {
   const cleanText = text.replace(/\s+/g, " ").trim();
   if (!cleanText) return;
-  if (!s.agent || s.turnLock) {
+  if (!s.agentReady || !s.agent || s.turnLock) {
     s.queuedUserText = s.queuedUserText ? `${s.queuedUserText} ${cleanText}` : cleanText;
-    if (s.agent) s.activeTurnInterrupted = true;
+    if (s.agentReady && s.agent) s.activeTurnInterrupted = true;
     return;
   }
   s.turnLock = true;
@@ -709,11 +953,13 @@ Deno.serve((req) => {
     streamSid: null,
     callSid: url.searchParams.get("call_sid") || pathMetadata.callSid,
     agentId: initialAgentId || pathMetadata.agentId,
-    agent: null,
+    agent: bootstrapAgent(initialAgentId || pathMetadata.agentId, pathMetadata.bootstrap),
+    agentReady: false,
     dg: null,
     dgReconnects: 0,
     history: [],
     speaking: false,
+    greeted: false,
     turnLock: false,
     cancelSpeech: () => {},
     closed: false,
@@ -738,6 +984,7 @@ Deno.serve((req) => {
   const loadAgent = (agentId: string) => fetchAgent(agentId)
     .then((a) => {
       session.agent = a;
+      session.agentReady = true;
       console.log("bridge agent loaded", {
         callSid: session.callSid,
         agentId: a.id,
@@ -746,18 +993,7 @@ Deno.serve((req) => {
       });
       // Prefetch the greeting audio in parallel with the Twilio start
       // handshake — by the time speak() runs, TTS is already done.
-      if (a.speak_first !== false) {
-        const greeting = a.greeting || "Hello, this is your AI assistant.";
-        session.greetingAudio = {
-          text: greeting,
-          promise: synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
-          .catch((e) => {
-            console.error("greeting prefetch failed", e);
-            session.greetingAudio = null;
-            throw e;
-          }),
-        };
-      }
+      primeGreeting(session, a);
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
       session.timers.push(
@@ -790,6 +1026,7 @@ Deno.serve((req) => {
   // Backward compatibility for manual tests / old URLs. Real Twilio calls use
   // <Parameter> values delivered in the start frame because <Stream url> does
   // not support query strings.
+  if (session.agent) primeGreeting(session, session.agent);
   if (session.agentId) void loadAgent(session.agentId);
 
   socket.onmessage = async (ev) => {
@@ -847,7 +1084,7 @@ Deno.serve((req) => {
           session.noiseGate.voiceMsSinceCommit = 0;
           pending = "";
           latestInterim = "";
-          if (!text || Date.now() - lastCommitAt < 250) return;
+          if (!text || Date.now() - lastCommitAt < 180) return;
           if (!looksLikeSpeech(text, voiceMs)) {
             console.log("bridge ignored non-speech transcript", { text, voiceMs });
             return;
@@ -875,13 +1112,13 @@ Deno.serve((req) => {
             // Soft barge-in guard: only cancel once we've heard meaningful
             // words backed by gated caller audio, not stray background noise.
             if (session.speaking && looksLikeSpeech(latestInterim, voiceMs)) session.cancelSpeech();
-            scheduleCommit(850, true);
+            scheduleCommit(520, true);
           },
           onFinal: (t, speechFinal) => {
             pending = (pending ? pending + " " : "") + t.trim();
             latestInterim = "";
             if (speechFinal) commit();
-            else scheduleCommit(420);
+            else scheduleCommit(260);
           },
           onUtteranceEnd: () => {
             // Deepgram's silence watchdog fired — flush anything buffered.
@@ -917,6 +1154,7 @@ Deno.serve((req) => {
       if (session.agent.speak_first !== false) {
         const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
         session.history.push({ role: "assistant", content: greeting });
+        session.greeted = true;
         void speak(session, greeting);
       } else {
         // Listening already started above.
