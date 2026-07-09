@@ -366,14 +366,14 @@ async function synthElevenLabsMulaw(
 ): Promise<Uint8Array> {
   if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
   const settings = {
-    stability: voice_settings?.stability ?? 0.56,
+    stability: voice_settings?.stability ?? 0.5,
     similarity_boost: voice_settings?.similarity_boost ?? 0.78,
-    style: voice_settings?.style ?? 0.22,
+    style: voice_settings?.style ?? 0.28,
     use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
-    speed: 0.96,
+    speed: 0.94,
   };
   const res = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=4`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
     {
       method: "POST",
       headers: {
@@ -383,13 +383,65 @@ async function synthElevenLabsMulaw(
       },
       body: JSON.stringify({
         text: prepareSpeechText(text),
-        model_id: "eleven_flash_v2_5",
+        model_id: "eleven_turbo_v2_5",
         voice_settings: settings,
       }),
     },
   );
   if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text().catch(() => "")}`);
   return new Uint8Array(await res.arrayBuffer());
+}
+
+async function openElevenLabsMulawStream(
+  text: string,
+  voice: string,
+  voice_settings?: AgentConfig["voice_settings"],
+): Promise<ReadableStream<Uint8Array>> {
+  if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
+  const settings = {
+    stability: voice_settings?.stability ?? 0.5,
+    similarity_boost: voice_settings?.similarity_boost ?? 0.78,
+    style: voice_settings?.style ?? 0.28,
+    use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
+    speed: 0.94,
+  };
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_KEY,
+        "Content-Type": "application/json",
+        Accept: "audio/basic",
+      },
+      body: JSON.stringify({
+        text: prepareSpeechText(text),
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: settings,
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!res.body) throw new Error("ElevenLabs stream returned no body");
+  return res.body;
+}
+
+function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
+  if (!a.length) return b;
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+}
+
+function sendMulawFrame(s: Session, frame: Uint8Array) {
+  let bin = "";
+  for (let j = 0; j < frame.length; j++) bin += String.fromCharCode(frame[j]);
+  s.twilio.send(JSON.stringify({
+    event: "media",
+    streamSid: s.streamSid,
+    media: { payload: btoa(bin) },
+  }));
 }
 
 // ---------- Deepgram streaming STT ----------
