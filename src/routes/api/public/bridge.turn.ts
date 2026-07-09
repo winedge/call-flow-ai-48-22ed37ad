@@ -142,6 +142,103 @@ function stripAgentNameAsCaller(reply: string, agentName: string | undefined, hi
   return stripIdentityTokenFromNamePosition(out, name);
 }
 
+function latestUserTurn(history: Turn[]): string {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "user") return history[i].content;
+  }
+  return "";
+}
+
+function latestAssistantTurn(history: Turn[]): string {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "assistant") return history[i].content;
+  }
+  return "";
+}
+
+function userAskedQuestion(history: Turn[]): boolean {
+  const text = latestUserTurn(history).trim();
+  return /\?|\b(?:what|why|how|when|where|who|which|can you|could you|would you|do you|are you|is it|tell me)\b/i.test(text);
+}
+
+function stripUnpromptedSelfAnswer(reply: string, history: Turn[]): string {
+  if (userAskedQuestion(history)) return reply;
+  const cleaned = reply
+    .replace(/\b(?:i(?:'m| am) doing (?:well|good|fine)|i(?:'m| am) (?:well|good|fine)),?\s*(?:thank you|thanks)(?: for asking)?[.!?]?\s*/gi, "")
+    .replace(/\b(?:thank you|thanks) for asking[.!?]?\s*/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return cleaned || reply;
+}
+
+function callerShowsBookingIntent(history: Turn[]): boolean {
+  const dialogue = history.map((turn) => turn.content).join("\n");
+  if (/\b(?:book|schedule|set up|demo|appointment|meeting|calendar|call me back|follow up|send me|sign me up|interested|let'?s do it|that works)\b/i.test(dialogue)) {
+    return true;
+  }
+
+  const user = latestUserTurn(history);
+  const assistant = latestAssistantTurn(history);
+  return /\b(?:yes|yeah|yep|sure|okay|ok|please|sounds good|that works|let'?s do it)\b/i.test(user)
+    && /\b(?:book|schedule|demo|appointment|meeting|calendar|follow up|send you|reach you|contact you)\b/i.test(assistant);
+}
+
+function asksForContactField(reply: string, fields: DataField[]): boolean {
+  if (!fields.length) return false;
+  const lower = reply.toLowerCase();
+
+  const asksForName = /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,80}\b(?:your full name|your name|full name|who (?:am i|is this)|who (?:am i|are we) speaking with|what should i call you)\b/i.test(reply)
+    || /\b(?:your full name|full name)\b/i.test(reply)
+    || /\b(?:name)\b[^.!?]{0,40}\b(?:reach you|contact you|book|appointment|demo)\b/i.test(reply);
+  const asksForBusinessName = /\b(?:business|company|organization|practice)\s+name\b|\bname of (?:your|the) (?:business|company|organization|practice)\b/i.test(reply);
+  const asksForPhone = /\b(?:phone|mobile|cell|contact)\s+(?:number|info|information)\b|\bbest\s+(?:number|phone)\b|\bnumber\s+to\s+(?:reach|contact|call)\s+you\b|\breach you at\b|\bcall you at\b/i.test(reply);
+  const asksForEmail = /\b(?:email|e-mail)\b|\bwhere should i send\b/i.test(reply);
+
+  const fieldLabels = fields
+    .filter((field) => {
+      const label = `${field.key} ${field.label} ${field.type ?? ""}`.toLowerCase();
+      return /\b(name|phone|mobile|cell|email|e-mail|contact)\b/.test(label);
+    })
+    .some((field) => {
+      const label = escapeRegex(field.label.toLowerCase()).replace(/\s+/g, "\\s+");
+      return new RegExp(`\\b${label}\\b`).test(lower);
+    });
+
+  return ((asksForName && !asksForBusinessName) || asksForPhone || asksForEmail || fieldLabels);
+}
+
+function extractDiscoveryQuestion(systemPrompt: string | undefined): string | null {
+  if (!systemPrompt) return null;
+  const lines = systemPrompt.split(/\r?\n/);
+  let inDiscovery = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (/^#{1,6}\s+/.test(line)) inDiscovery = /discovery|qualif/i.test(line);
+    if (!inDiscovery) continue;
+    const match = line.match(/^-\s*(.+\?)\s*$/);
+    if (match?.[1] && !/\b(?:name|phone|mobile|cell|email|e-mail|number)\b/i.test(match[1])) {
+      return match[1].trim();
+    }
+  }
+  return null;
+}
+
+function earlyConversationFallback(a: AgentSummary): string {
+  const discovery = extractDiscoveryQuestion(a.system_prompt);
+  if (discovery) return `Glad to hear that. ${discovery}`;
+  if (/\b(?:call|calling|sales|demo|appointment|lead|customer|prospect)\b/i.test(`${a.objective ?? ""} ${a.system_prompt ?? ""}`)) {
+    return "Glad to hear that. How are you currently handling customer calls right now?";
+  }
+  return "Glad to hear that. What would be most helpful to talk through first?";
+}
+
+function preventPrematureContactCollection(reply: string, a: AgentSummary, history: Turn[]): string {
+  const fields = a.data_fields ?? [];
+  if (!asksForContactField(reply, fields)) return reply;
+  if (callerShowsBookingIntent(history)) return reply;
+  return earlyConversationFallback(a);
+}
+
 function describeField(f: DataField): string {
   const req = f.required ? " (required)" : "";
   const hint =
@@ -162,7 +259,7 @@ function buildSystem(a: AgentSummary): string {
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
     fields.length
-      ? `Information you MUST collect from the caller during this call (ask for these exact items, one at a time, and confirm each):\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
+      ? `Information to collect ONLY when it becomes contextually appropriate, such as after the caller asks to book, agrees to a demo/appointment, requests follow-up, or volunteers contact details. These fields are NOT the opening script and do NOT override the system prompt's discovery flow. Never ask for name, phone, email, or other contact details in the first exchange just because they are listed here. When collection is appropriate, ask one item at a time and confirm it:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
       : "",
     a.qualification_questions?.length
       ? `Qualification questions:\n- ${a.qualification_questions.join("\n- ")}`
@@ -256,6 +353,8 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
           reply = reply.replace(tokenRe, "").replace(/\s{2,}/g, " ").trim();
         }
         reply = stripAgentNameAsCaller(reply, body.agent.name, body.history ?? []);
+        reply = stripUnpromptedSelfAnswer(reply, body.history ?? []);
+        reply = preventPrematureContactCollection(reply, body.agent, body.history ?? []);
         // Transfer wins over end_call if both were emitted.
         if (transfer) endCall = false;
 
