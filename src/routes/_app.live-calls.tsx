@@ -56,9 +56,9 @@ function LiveCalls() {
   const currentSpeaker = (i: number): "ai" | "human" =>
     Math.floor((tick + i * 2) / 4) % 2 === 0 ? "ai" : "human";
 
-  async function refresh() {
+  async function refresh({ notify = false, showSpinner = false } = {}) {
     if (!orgId) return;
-    setRefreshing(true);
+    if (showSpinner) setRefreshing(true);
     try {
       const cutoff = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
       const { data, error } = await supabase
@@ -105,11 +105,11 @@ function LiveCalls() {
         }
         return { calls: Array.from(byId.values()).sort((a, b) => (a.started_at < b.started_at ? 1 : -1)) };
       });
-      toast.success(`Refreshed — ${(data ?? []).length} active call(s)`);
+      if (notify) toast.success(`Refreshed — ${(data ?? []).length} active call(s)`);
     } catch (e) {
-      toast.error(`Refresh failed: ${(e as Error).message}`);
+      if (notify) toast.error(`Refresh failed: ${(e as Error).message}`);
     } finally {
-      setRefreshing(false);
+      if (showSpinner) setRefreshing(false);
     }
   }
 
@@ -128,7 +128,7 @@ function LiveCalls() {
         description="Real-time dispatch monitor. Listen, transfer, or terminate any active call."
         actions={
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => void refresh()} disabled={refreshing}>
+            <Button size="sm" variant="outline" onClick={() => void refresh({ notify: true, showSpinner: true })} disabled={refreshing}>
               <RefreshCw className={`size-3.5 mr-1 ${refreshing ? "animate-spin" : ""}`} /> Refresh
             </Button>
             <span className="text-xs font-mono px-3 py-1 bg-brand-primary/10 text-brand-primary rounded-full ring-1 ring-brand-primary/30">
