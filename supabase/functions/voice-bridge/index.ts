@@ -648,6 +648,21 @@ function bootstrapAgent(agentId: string | null, bootstrap: Partial<AgentConfig> 
   };
 }
 
+function primeGreeting(s: Session, a: AgentConfig) {
+  if (a.speak_first === false || s.greetingAudio) return;
+  if (a.tts_engine !== "elevenlabs" || !ELEVENLABS_KEY) return;
+  const greeting = a.greeting || "Hello, this is your AI assistant.";
+  s.greetingAudio = {
+    text: greeting,
+    promise: synthElevenLabsMulaw(greeting, a.voice_id, a.voice_settings)
+      .catch((e) => {
+        console.error("greeting prefetch failed", e);
+        s.greetingAudio = null;
+        throw e;
+      }),
+  };
+}
+
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
   const normalized = text
     .toLowerCase()
@@ -933,18 +948,7 @@ Deno.serve((req) => {
       });
       // Prefetch the greeting audio in parallel with the Twilio start
       // handshake — by the time speak() runs, TTS is already done.
-      if (a.speak_first !== false) {
-        const greeting = a.greeting || "Hello, this is your AI assistant.";
-        session.greetingAudio = {
-          text: greeting,
-          promise: synthTts(greeting, a.voice_id, a.language, a.tts_engine, a.voice_settings)
-          .catch((e) => {
-            console.error("greeting prefetch failed", e);
-            session.greetingAudio = null;
-            throw e;
-          }),
-        };
-      }
+      primeGreeting(session, a);
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
       session.timers.push(
