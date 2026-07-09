@@ -977,7 +977,7 @@ async function handleUserTurn(s: Session, text: string) {
   s.activeTurnInterrupted = false;
   s.history.push({ role: "user", content: cleanText });
   try {
-    let { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    let { reply, end_call, transfer } = await runTurn(s.agent, s.history, s.callSid);
     reply = preventPrematureContactCollection(reply, s.agent, s.history);
     if (s.activeTurnInterrupted || s.queuedUserText) return;
     if (!reply && !end_call && !transfer) return;
