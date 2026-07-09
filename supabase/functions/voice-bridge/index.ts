@@ -526,6 +526,7 @@ type Session = {
   callSid: string | null;
   agentId: string | null;
   agent: AgentConfig | null;
+  agentReady: boolean;
   dg: DgHandle | null;
   dgReconnects: number;
   history: { role: "user" | "assistant"; content: string }[];
@@ -606,7 +607,10 @@ function decodeBootstrap(raw?: string): Partial<AgentConfig> | null {
   try {
     const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
-    return JSON.parse(decodeURIComponent(escape(atob(padded)))) as Partial<AgentConfig>;
+    const bin = atob(padded);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes)) as Partial<AgentConfig>;
   } catch {
     return null;
   }
@@ -626,6 +630,22 @@ function initialPathMetadata(pathname: string): { agentId: string | null; callSi
   const callSid = parts[idx + 2] && parts[idx + 2] !== "unknown" ? parts[idx + 2] : null;
   const bootstrap = decodeBootstrap(parts[idx + 3]);
   return { agentId, callSid, bootstrap };
+}
+
+function bootstrapAgent(agentId: string | null, bootstrap: Partial<AgentConfig> | null): AgentConfig | null {
+  if (!agentId || !bootstrap) return null;
+  return {
+    id: agentId,
+    name: bootstrap.name ?? "",
+    voice_id: bootstrap.voice_id || "af_bella",
+    language: bootstrap.language || "en",
+    greeting: bootstrap.greeting || "Hello, this is your AI assistant.",
+    system_prompt: "",
+    temperature: 0.6,
+    tts_engine: bootstrap.tts_engine || "elevenlabs",
+    speak_first: bootstrap.speak_first ?? true,
+    voice_settings: bootstrap.voice_settings,
+  };
 }
 
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
@@ -755,9 +775,9 @@ async function speak(s: Session, text: string) {
 async function handleUserTurn(s: Session, text: string) {
   const cleanText = text.replace(/\s+/g, " ").trim();
   if (!cleanText) return;
-  if (!s.agent || s.turnLock) {
+  if (!s.agentReady || !s.agent || s.turnLock) {
     s.queuedUserText = s.queuedUserText ? `${s.queuedUserText} ${cleanText}` : cleanText;
-    if (s.agent) s.activeTurnInterrupted = true;
+    if (s.agentReady && s.agent) s.activeTurnInterrupted = true;
     return;
   }
   s.turnLock = true;
@@ -874,7 +894,8 @@ Deno.serve((req) => {
     streamSid: null,
     callSid: url.searchParams.get("call_sid") || pathMetadata.callSid,
     agentId: initialAgentId || pathMetadata.agentId,
-    agent: null,
+    agent: bootstrapAgent(initialAgentId || pathMetadata.agentId, pathMetadata.bootstrap),
+    agentReady: false,
     dg: null,
     dgReconnects: 0,
     history: [],
@@ -903,6 +924,7 @@ Deno.serve((req) => {
   const loadAgent = (agentId: string) => fetchAgent(agentId)
     .then((a) => {
       session.agent = a;
+      session.agentReady = true;
       console.log("bridge agent loaded", {
         callSid: session.callSid,
         agentId: a.id,
