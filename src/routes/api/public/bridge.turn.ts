@@ -59,26 +59,56 @@ function callerExplicitlyGaveName(history: Turn[], agentName: string): boolean {
     .some((turn) => explicitNamePatterns.some((pattern) => pattern.test(turn.content)));
 }
 
-function stripAgentNameAsCaller(reply: string, agentName: string | undefined, history: Turn[]): string {
-  const name = normalizeName(agentName);
-  if (!name || callerExplicitlyGaveName(history, name)) return reply;
-
+// Deterministic pre-TTS post-processor: strip any assistant identity token
+// from a customer-name (vocative) position in the reply. Runs unconditionally
+// on every generated reply before it is handed to the TTS layer, so the
+// caller never hears their name replaced by the agent's own name.
+//
+// "Customer-name position" = any vocative use of a token: comma-adjacent
+// address ("..., Sarah, ..."), sentence-initial or sentence-final direct
+// address ("Sarah, got it." / "Got it, Sarah."), or a name tacked onto a
+// short acknowledgement ("thanks Sarah", "great Sarah!"). We remove those
+// occurrences regardless of surrounding text. Non-vocative mentions
+// (e.g. "This is Sarah from Acme") are left intact.
+function stripIdentityTokenFromNamePosition(reply: string, token: string): string {
+  const name = normalizeName(token);
+  if (!name) return reply;
   const escaped = escapeRegex(name);
-  let cleaned = reply;
 
-  // Remove direct-address uses of the assistant's own name, e.g.
-  // "Great, Sarah", "Sarah, got it", or "How are you, Sarah?".
-  cleaned = cleaned
-    .replace(new RegExp(`(^|[.!?]\\s+)${escaped}\\s*,\\s*`, "gi"), "$1")
-    .replace(new RegExp(`,\\s*${escaped}(?=\\s*[.!?]|$)`, "gi"), "")
-    .replace(new RegExp(`\\b(thanks|thank you|great|okay|ok|got it|sure|perfect|alright|sounds good|glad to hear that|good to hear|nice to hear|happy to hear),?\\s+${escaped}\\b`, "gi"), (_match, phrase: string) => {
-      return phrase;
-    })
+  // Acknowledgement/greeting words that commonly precede a vocative name.
+  const ackWords =
+    "hi|hello|hey|thanks|thank you|great|okay|ok|got it|sure|perfect|alright|" +
+    "understood|noted|awesome|nice|good|excellent|wonderful|absolutely|" +
+    "of course|no problem|welcome|glad to hear that|good to hear|nice to hear|" +
+    "happy to hear|sounds good|will do";
+
+  let cleaned = reply
+    // "<ack>[,] <Name>[!.?]"  → "<ack><punct>"
+    .replace(
+      new RegExp(`\\b(${ackWords}),?\\s+${escaped}\\b(\\s*[!.?,])?`, "gi"),
+      (_m, phrase: string, punct: string | undefined) => `${phrase}${punct ?? ""}`,
+    )
+    // Sentence-initial "Name, ..."  → "..."
+    .replace(new RegExp(`(^|[.!?]\\s+)${escaped}\\s*[,!?-]+\\s*`, "gi"), "$1")
+    // Mid/end vocative ", Name" before punctuation or end of string.
+    .replace(new RegExp(`\\s*,\\s*${escaped}(?=\\s*[.!?,]|$)`, "gi"), "")
+    // Standalone trailing "... Name!" / "... Name?" / "... Name."
+    .replace(new RegExp(`\\s+${escaped}\\s*([!?])`, "g"), "$1")
+    // Clean up doubled spaces / stranded punctuation created by removals.
     .replace(/\s+([,.!?])/g, "$1")
+    .replace(/([,;:])\1+/g, "$1")
     .replace(/\s{2,}/g, " ")
     .trim();
 
   return cleaned || reply;
+}
+
+function stripAgentNameAsCaller(reply: string, agentName: string | undefined, history: Turn[]): string {
+  const name = normalizeName(agentName);
+  if (!name) return reply;
+  // If the caller explicitly gave the same name as their own, leave it alone.
+  if (callerExplicitlyGaveName(history, name)) return reply;
+  return stripIdentityTokenFromNamePosition(reply, name);
 }
 
 function describeField(f: DataField): string {
