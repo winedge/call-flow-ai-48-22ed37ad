@@ -194,10 +194,14 @@ function callerShowsBookingIntent(history: Turn[]): boolean {
 }
 
 function asksForPersonalContactDetail(reply: string): boolean {
-  return /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:your full name|your name|full name|name|phone|mobile|cell|number|email|e-mail|best number|best phone)\b/i.test(reply)
-    || /\b(?:your full name|full name|phone number|mobile number|cell number|best number|best phone|email address|e-mail address)\b/i.test(reply)
+  const asksBusinessName = /\b(?:business|company|organization|practice)\s+name\b|\bname of (?:your|the) (?:business|company|organization|practice)\b/i.test(reply);
+  const asksName = /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:your full name|your name|full name|name)\b/i.test(reply)
+    || /\b(?:your full name|full name)\b/i.test(reply);
+  const asksContact = /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:phone|mobile|cell|number|email|e-mail|best number|best phone)\b/i.test(reply)
+    || /\b(?:phone number|mobile number|cell number|best number|best phone|email address|e-mail address)\b/i.test(reply)
     || /\b(?:reach|contact|call|text|send)\s+you\s+(?:at|on|by)\b/i.test(reply)
     || /\bwhere should i send\b/i.test(reply);
+  return (asksName && !asksBusinessName) || asksContact;
 }
 
 function asksForContactField(reply: string, fields: DataField[]): boolean {
