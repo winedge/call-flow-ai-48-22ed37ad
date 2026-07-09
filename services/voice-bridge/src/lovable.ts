@@ -75,8 +75,9 @@ export function fetchAgent(id: string): Promise<AgentConfig> {
 export function runTurn(
   agent: AgentConfig,
   history: { role: "user" | "assistant"; content: string }[],
+  callSid?: string,
 ): Promise<{ reply: string; end_call: boolean }> {
-  return post("/api/public/bridge/turn", { agent, history });
+  return post("/api/public/bridge/turn", { agent, history, call_sid: callSid });
 }
 
 export function synthTts(
