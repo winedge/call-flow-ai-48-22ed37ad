@@ -1,11 +1,11 @@
 /**
- * Twilio Status Callback — persists call state to public.calls.
+ * Twilio Status Callback - persists call state to public.calls.
  *
  * Twilio POSTs here at each lifecycle transition (initiated → ringing →
  * answered → completed / no-answer / busy / failed). We match the row by
  * twilio_call_sid (set at initiateCall) and update status, duration,
  * recording_url, ended_at. If no row exists (e.g. an inbound call not
- * originated by our app) we skip — user_id is required and we can't
+ * originated by our app) we skip - user_id is required and we can't
  * safely attribute it.
  *
  * After a terminal transition we also fire enabled automations belonging
@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/public/webhooks/twilio")({
         if (readErr) return errorJson(500, `db read: ${readErr.message}`);
 
         if (!existing) {
-          // Inbound or foreign call — nothing to persist without a user_id.
+          // Inbound or foreign call - nothing to persist without a user_id.
           return json({ ok: true, matched: false });
         }
 

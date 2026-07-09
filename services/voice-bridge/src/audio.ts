@@ -5,7 +5,7 @@
  * base64 in `{event:"media", media:{payload}}`.
  *
  * Kokoro (Replicate) returns 24 kHz mono 16-bit PCM WAV. We downsample by
- * decimation with a light box filter — good enough for a phone call and
+ * decimation with a light box filter - good enough for a phone call and
  * avoids DSP dependencies.
  */
 

@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Radio } from "lucide-react";
 
 export const Route = createFileRoute("/_app/live-calls")({
-  head: () => ({ meta: [{ title: "Live calls — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Live calls - BulkCall AI" }] }),
   component: LiveCalls,
 });
 
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_app/live-calls")({
 // intermediate status callback managed to update to "in_progress".
 const TERMINAL_STATUSES = new Set(["completed", "failed", "busy", "no_answer", "canceled"]);
 
-// Overall live window — rows older than this never count as live even if
+// Overall live window - rows older than this never count as live even if
 // they somehow never got an ended_at.
 const LIVE_WINDOW_MS = 15 * 60 * 1000;
 
@@ -117,7 +117,7 @@ function LiveCalls() {
         const row = r as { ended_at: string | null; status: string };
         return !row.ended_at && !TERMINAL_STATUSES.has(row.status);
       }).length;
-      if (notify) toast.success(`Refreshed — ${active} active call(s)`);
+      if (notify) toast.success(`Refreshed - ${active} active call(s)`);
     } catch (e) {
       if (notify) toast.error(`Refresh failed: ${(e as Error).message}`);
     } finally {
@@ -171,7 +171,7 @@ function LiveCalls() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <p className="font-mono text-neutral-900">{c.phone_to}</p>
-                    <p className="text-[11px] text-neutral-500">via {agent?.name ?? "—"}</p>
+                    <p className="text-[11px] text-neutral-500">via {agent?.name ?? "-"}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-brand-primary text-lg">{mm}:{ss}</p>
@@ -226,7 +226,7 @@ function SpeakerBar({ label, active, color }: { label: string; active: boolean; 
           return (
             <div
               key={i}
-              className={`flex-1 rounded-sm transition-all ${active ? (color === "brand" ? "bg-brand-primary" : "bg-zinc-400") : "bg-zinc-700"}`}
+              className={`flex-1 rounded-sm transition-all ${active ? (color === "brand" ? "bg-brand-primary" : "bg-zinc-400") : "bg-neutral-300"}`}
               style={{ height: `${h}%` }}
             />
           );

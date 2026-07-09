@@ -28,11 +28,11 @@ import { listElevenLabsVoices, previewElevenLabsVoice, type ElevenLabsVoice } fr
 import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
-  head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Edit agent - BulkCall AI" }] }),
   component: AgentEditor,
 });
 
-// Kokoro speaker presets — Apache-2.0, commercially licensed.
+// Kokoro speaker presets - Apache-2.0, commercially licensed.
 const VOICES = KOKORO_VOICES.map((v) => ({ id: v.id, name: v.label, language: v.language }));
 
 type KokoroLang = keyof typeof KOKORO_LANGUAGES;
@@ -342,7 +342,7 @@ function AgentEditor() {
             </p>
           ) : (
             <p className="text-[10px] text-neutral-500 font-mono pt-1">
-              Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed.
+              Powered by Kokoro-82M via Replicate - Apache-2.0, commercially licensed.
             </p>
           )}
         </Card>
@@ -635,7 +635,7 @@ function DataFieldsEditor({
     <div className="space-y-3">
       {value.length === 0 && (
         <p className="text-[11px] text-neutral-500 italic">
-          No fields yet. Add one — e.g. "Full name", "Email", "Preferred callback time".
+          No fields yet. Add one - e.g. "Full name", "Email", "Preferred callback time".
         </p>
       )}
       {value.map((f, i) => (

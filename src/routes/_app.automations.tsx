@@ -27,7 +27,7 @@ import {
 import { useDB, type Automation } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/automations")({
-  head: () => ({ meta: [{ title: "Automations — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Automations - BulkCall AI" }] }),
   component: Automations,
 });
 

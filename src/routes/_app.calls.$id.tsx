@@ -12,7 +12,7 @@ import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel } from "@/lib/voice/call-end-reasons";
 
 export const Route = createFileRoute("/_app/calls/$id")({
-  head: () => ({ meta: [{ title: "Call — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Call - BulkCall AI" }] }),
   component: CallDetail,
 });
 
@@ -69,11 +69,11 @@ function CallDetail() {
     if (call.transcript.length === 0) return toast.info("No transcript to download");
     const text = [
       `Call ${call.id}`,
-      `Contact: ${contact?.name ?? "Unknown"} — ${call.phone_to}`,
+      `Contact: ${contact?.name ?? "Unknown"} - ${call.phone_to}`,
       `Started: ${new Date(call.started_at).toLocaleString()}`,
       `Duration: ${formatDuration(call.duration_sec)}`,
-      `Agent: ${agent?.name ?? "—"}`,
-      `Campaign: ${campaign?.name ?? "—"}`,
+      `Agent: ${agent?.name ?? "-"}`,
+      `Campaign: ${campaign?.name ?? "-"}`,
       "",
       "TRANSCRIPT",
       ...call.transcript.map((t) => `${t.speaker.toUpperCase()}: ${t.text}`),
@@ -92,7 +92,7 @@ function CallDetail() {
       const raw = call.extracted_data?.[f.key];
       let display: string;
       if (raw === null || raw === undefined || raw === "") {
-        display = "—";
+        display = "-";
       } else if (typeof raw === "boolean") {
         display = raw ? "Yes" : "No";
       } else {
@@ -143,14 +143,14 @@ function CallDetail() {
         <StatTile label="Status" value={call.status} />
         <StatTile label="End reason" value={endReasonLabel(call.end_reason)} />
         <StatTile label="Duration" value={formatDuration(call.duration_sec)} />
-        <StatTile label="Sentiment" value={call.sentiment ?? "—"} />
+        <StatTile label="Sentiment" value={call.sentiment ?? "-"} />
         <StatTile label="Lead score" value={score} accent={score >= 70} />
         <StatTile label="AI minutes" value={call.ai_minutes.toFixed(2)} />
         <StatTile label="Cost" value={`$${(call.cost_cents / 100).toFixed(2)}`} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left column — transcript + recording */}
+        {/* Left column - transcript + recording */}
         <div className="lg:col-span-2 space-y-6">
           {/* Recording */}
           <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
@@ -211,7 +211,7 @@ function CallDetail() {
           </div>
         </div>
 
-        {/* Right column — extracted info, notes, tags */}
+        {/* Right column - extracted info, notes, tags */}
         <div className="space-y-6">
           {/* Contact */}
           <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">

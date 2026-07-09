@@ -5,8 +5,8 @@
  * HEX(HMAC-SHA256(BRIDGE_SHARED_SECRET, `${ts}.${body}`))`.
  *
  * Env:
- *   LOVABLE_APP_URL       — https://<app>.lovable.app
- *   BRIDGE_SHARED_SECRET  — same value the Lovable app has
+ *   LOVABLE_APP_URL       - https://<app>.lovable.app
+ *   BRIDGE_SHARED_SECRET  - same value the Lovable app has
  */
 import { createHmac } from "node:crypto";
 

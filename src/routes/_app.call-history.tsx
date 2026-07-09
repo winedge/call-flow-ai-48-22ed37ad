@@ -23,7 +23,7 @@ const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = 
 };
 
 export const Route = createFileRoute("/_app/call-history")({
-  head: () => ({ meta: [{ title: "Call history — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Call history - BulkCall AI" }] }),
   component: CallHistory,
 });
 
@@ -238,8 +238,8 @@ function CallHistory() {
                         {contact?.company && <p className="text-[10px] text-neutral-500">{contact.company}</p>}
                       </td>
                       <td className="px-4 py-3 font-mono text-neutral-800">{c.phone_to}</td>
-                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[160px]">{camp?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[120px]">{agent?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[160px]">{camp?.name ?? "-"}</td>
+                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[120px]">{agent?.name ?? "-"}</td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] uppercase tracking-wider font-mono ${
                           c.status === "completed" ? "text-emerald-400" :
@@ -253,7 +253,7 @@ function CallHistory() {
                           {endReasonLabel(c.end_reason)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "—"}</td>
+                      <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "-"}</td>
                       <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3">
                         {c.recording_url ? (
@@ -265,7 +265,7 @@ function CallHistory() {
                             className="h-8 w-56 max-w-full"
                           />
                         ) : (
-                          <span className="text-[11px] text-neutral-400">—</span>
+                          <span className="text-[11px] text-neutral-400">-</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right font-mono text-neutral-800">{leadScore(c)}</td>
@@ -279,7 +279,7 @@ function CallHistory() {
         </div>
         {filtered.length > 200 && (
           <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
-            Showing latest 200 of {filtered.length.toLocaleString()} — refine filters or export to CSV to see the rest.
+            Showing latest 200 of {filtered.length.toLocaleString()} - refine filters or export to CSV to see the rest.
           </div>
         )}
       </div>

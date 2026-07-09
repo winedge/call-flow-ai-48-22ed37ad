@@ -30,9 +30,9 @@ export function Topbar() {
               <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400">
                 Workspace
               </span>
-              <span className="size-1 bg-zinc-700 rounded-full shrink-0" />
+              <span className="size-1 bg-neutral-300 rounded-full shrink-0" />
               <span className="text-neutral-900 font-medium truncate">
-                {org?.name ?? "—"}
+                {org?.name ?? "-"}
               </span>
               <ChevronDown className="size-3.5 text-neutral-500 shrink-0" />
             </button>

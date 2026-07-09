@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/agents/")({
-  head: () => ({ meta: [{ title: "AI Agents — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "AI Agents - BulkCall AI" }] }),
   component: AgentsList,
 });
 

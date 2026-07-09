@@ -1,5 +1,5 @@
 /**
- * Mobile app shell — native-feeling top bar + bottom tab nav.
+ * Mobile app shell - native-feeling top bar + bottom tab nav.
  *
  * Shown only under `md`. Above `md` the desktop Sidebar + Topbar take over.
  */
@@ -85,7 +85,7 @@ export function MobileTopBar() {
         <img src={logoAsset.url} alt="BulkCall AI" className="h-5 w-auto object-contain shrink-0" />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-[9px] font-mono uppercase tracking-wider text-neutral-500">
-            {org?.name ?? "—"}
+            {org?.name ?? "-"}
           </p>
         </div>
       </Link>
@@ -126,7 +126,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
             <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain shrink-0" />
             <div className="min-w-0 text-left">
               <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-                {org?.name ?? "—"}
+                {org?.name ?? "-"}
               </p>
             </div>
           </div>
@@ -305,7 +305,7 @@ export function MobileBottomNav() {
           side="bottom"
           className="bg-surface-base border-surface-border/60 rounded-t-2xl p-0 max-h-[80vh]"
         >
-          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-zinc-700" />
+          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-neutral-300" />
           <div className="flex items-center justify-between px-5 pt-3 pb-2">
             <h3 className="text-sm font-medium text-neutral-900">More</h3>
             <button

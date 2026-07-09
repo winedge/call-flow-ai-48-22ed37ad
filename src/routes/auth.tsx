@@ -13,7 +13,7 @@ import { lovable } from "@/integrations/lovable";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — BulkCall AI" },
+      { title: "Sign in - BulkCall AI" },
       { name: "description", content: "Sign in to BulkCall AI to manage your AI calling campaigns." },
     ],
   }),
@@ -61,7 +61,7 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created — you're signed in");
+    toast.success("Account created - you're signed in");
     navigate({ to: "/dashboard" });
   }
 

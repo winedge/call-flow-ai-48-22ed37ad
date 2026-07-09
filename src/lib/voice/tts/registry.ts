@@ -1,7 +1,7 @@
 /**
  * TTS engine registry. Resolves an engine key stored on an agent to its
  * voices, languages, and synthesize function. New engines (ElevenLabs,
- * Cartesia, …) drop in as new modules + one entry here — no UI changes.
+ * Cartesia, …) drop in as new modules + one entry here - no UI changes.
  */
 import type { TtsEngine } from "@/lib/voice/types";
 import {
@@ -17,11 +17,11 @@ export const DEFAULT_TTS_ENGINE: TtsEngineKey = "kokoro";
 const KOKORO: TtsEngine = {
   id: "kokoro",
   label: "Kokoro-82M",
-  license: "Apache-2.0 — commercially licensed",
+  license: "Apache-2.0 - commercially licensed",
   voices: KOKORO_VOICES,
   languages: KOKORO_LANGUAGES,
   synthesize: async (input) => {
-    // Called via useServerFn on the client — this direct binding is used
+    // Called via useServerFn on the client - this direct binding is used
     // only from server contexts. The route uses useServerFn(synthesizeSpeechKokoro).
     const res = await synthesizeSpeechKokoro({
       data: {

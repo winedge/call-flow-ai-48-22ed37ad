@@ -25,7 +25,7 @@ import { Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Settings - BulkCall AI" }] }),
   component: SettingsPage,
 });
 
@@ -105,7 +105,7 @@ function SettingsPage() {
         <TabsContent value="integrations" className="space-y-6">
           <KeyCard
             title="Twilio"
-            description="Outbound / inbound calling, AMD, recording, ConversationRelay. Keys are stored securely as backend secrets — ask in chat to add them."
+            description="Outbound / inbound calling, AMD, recording, ConversationRelay. Keys are stored securely as backend secrets - ask in chat to add them."
             connected={settings?.has_twilio ?? false}
             fields={[
               { label: "Account SID", placeholder: "ACxxxxxxxxxxxxxx" },
@@ -157,7 +157,7 @@ function SettingsPage() {
                       >
                         <SelectTrigger className="w-56"><SelectValue placeholder="Not routed" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">— None —</SelectItem>
+                          <SelectItem value="none">- None -</SelectItem>
                           {agents.map((a) => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
@@ -240,7 +240,7 @@ function SettingsPage() {
                 <p className="text-sm font-medium text-neutral-900">Starter · Free</p>
                 <p className="text-[11px] text-neutral-500">Pay-as-you-go for calls · connect a payment method to enable higher volume</p>
               </div>
-              <Button variant="outline" onClick={() => toast.info("Billing setup coming soon — ask in chat to enable Stripe.")}>Manage plan</Button>
+              <Button variant="outline" onClick={() => toast.info("Billing setup coming soon - ask in chat to enable Stripe.")}>Manage plan</Button>
             </div>
           </Card>
           <Card title="Usage this month">
@@ -251,7 +251,7 @@ function SettingsPage() {
               <MiniStat label="Spend" value={`$${usage.spend.toFixed(2)}`} />
             </div>
             {usage.calls === 0 && (
-              <p className="text-[11px] text-neutral-500 mt-3 italic">No calls yet this month — launch a campaign to see usage here.</p>
+              <p className="text-[11px] text-neutral-500 mt-3 italic">No calls yet this month - launch a campaign to see usage here.</p>
             )}
           </Card>
         </TabsContent>

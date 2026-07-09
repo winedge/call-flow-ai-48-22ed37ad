@@ -43,7 +43,7 @@ export type TtsEngine = {
 export type SttEngine = {
   id: string;
   label: string;
-  /** Streaming transcription — implementations differ; Phase B fills this in. */
+  /** Streaming transcription - implementations differ; Phase B fills this in. */
   transcribeStream: (audio: ReadableStream<Uint8Array>) => AsyncIterable<string>;
 };
 

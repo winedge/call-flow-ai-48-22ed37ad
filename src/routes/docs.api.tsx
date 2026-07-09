@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export const Route = createFileRoute("/docs/api")({
   head: () => ({
     meta: [
-      { title: "BulkCall AI — REST API Reference" },
+      { title: "BulkCall AI - REST API Reference" },
       {
         name: "description",
         content:

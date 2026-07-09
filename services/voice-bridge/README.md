@@ -7,8 +7,8 @@ Gateway), and the Lovable app's Kokoro TTS endpoint.
 ## Why it lives outside the Lovable app
 
 Cloudflare Workers (the Lovable runtime) can't hold a persistent WebSocket
-open for a multi-minute phone call. This service does — one long-lived
-socket per active call — and stays otherwise stateless so you can scale it
+open for a multi-minute phone call. This service does - one long-lived
+socket per active call - and stays otherwise stateless so you can scale it
 horizontally.
 
 ## Architecture
@@ -83,7 +83,7 @@ BRIDGE_URL=wss://<your-voice-bridge>.fly.dev
 ## Deploy on Railway / Render / a VM
 
 Any host that runs a Docker container and keeps the process alive works.
-`auto_stop_machines = false` matters — you don't want the runtime shutting
+`auto_stop_machines = false` matters - you don't want the runtime shutting
 down mid-call. Provision at least one always-on instance.
 
 ## Scaling, capacity & observability
@@ -93,7 +93,7 @@ down mid-call. Provision at least one always-on instance.
   rejected with `503` so Fly's load balancer picks another machine.
 - **Sizing.** One `shared-cpu-2x / 1 GB` machine comfortably holds 100
   concurrent calls (audio is μ-law 8 kHz, ~8 kB/s each way; the hot loop
-  is downsample + μ-law encode of Kokoro WAVs). Scale horizontally —
+  is downsample + μ-law encode of Kokoro WAVs). Scale horizontally -
   every session is fully owned by the machine that accepted its upgrade,
   so there's no cross-machine state to share.
 - **Health & metrics.**
@@ -102,7 +102,7 @@ down mid-call. Provision at least one always-on instance.
     uptime_s, memory: { rss_mb, heap_mb } }`. Scrape from Grafana Agent,
     Fly Metrics, or a plain cron.
 - **Structured logs.** Every log line is JSON with `connection_id`,
-  `call_sid`, `agent_id` — grep one call end-to-end with
+  `call_sid`, `agent_id` - grep one call end-to-end with
   `fly logs | grep <call_sid>`.
 - **Reconnect.** Deepgram STT auto-reconnects with exponential backoff
   (up to 3 attempts) if the upstream socket drops. LLM turn and TTS

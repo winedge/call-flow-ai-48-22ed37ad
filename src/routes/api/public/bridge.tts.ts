@@ -2,7 +2,7 @@
  * Bridge → Lovable: synthesize one utterance.
  *
  * Body: { text, voice, language, engine? }
- * Returns: { audio_url } — either a Replicate HTTP URL (Kokoro) or a
+ * Returns: { audio_url } - either a Replicate HTTP URL (Kokoro) or a
  * `data:audio/wav;base64,...` URL (ElevenLabs). Bridge handles both via
  * fetch(audio_url).arrayBuffer(), then parses WAV.
  *
@@ -146,7 +146,7 @@ async function synthesizeElevenLabs(
   };
   const preparedText = prepareSpeechText(text);
 
-  // Request μ-law 8kHz directly — matches Twilio's wire format so the bridge
+  // Request μ-law 8kHz directly - matches Twilio's wire format so the bridge
   // forwards bytes with zero resample/encode work.
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=ulaw_8000`,

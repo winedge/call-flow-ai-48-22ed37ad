@@ -2,9 +2,9 @@
  * Voice-bridge entry point.
  *
  * A single Bun server exposes:
- *   - GET /healthz             — liveness probe
- *   - GET /metrics             — active sessions, uptime, counters (JSON)
- *   - WS  /twilio?agent_id&call_sid — Twilio Media Streams endpoint
+ *   - GET /healthz             - liveness probe
+ *   - GET /metrics             - active sessions, uptime, counters (JSON)
+ *   - WS  /twilio?agent_id&call_sid - Twilio Media Streams endpoint
  *
  * Per call we run a full-duplex loop:
  *   Twilio μ-law/8k → Deepgram STT → Gemini turn → Kokoro TTS →
@@ -12,31 +12,31 @@
  *
  * Production hardening notes (each addresses a specific requirement):
  *
- *   1. 100+ concurrent WebSocket sessions — MAX_SESSIONS cap (env, default
+ *   1. 100+ concurrent WebSocket sessions - MAX_SESSIONS cap (env, default
  *      100). Upgrades over the cap are rejected with HTTP 503 so the
  *      caller / load balancer can route to another machine.
  *
- *   2. No global call state — per-call state lives in a Session object
+ *   2. No global call state - per-call state lives in a Session object
  *      owned by its ws.data. The `sessions` Map is a per-process registry
  *      used only for lifecycle (cleanup on shutdown) and metrics; it is
  *      never read from another call's turn logic.
  *
- *   3. Immediate session cleanup — cleanup() runs on `stop`, `close`, or
+ *   3. Immediate session cleanup - cleanup() runs on `stop`, `close`, or
  *      any fatal error. It cancels TTS playback, closes the Deepgram
  *      socket, and removes the session from the registry.
  *
- *   4. Graceful upstream reconnect — the Deepgram STT socket auto-
+ *   4. Graceful upstream reconnect - the Deepgram STT socket auto-
  *      reconnects with exponential backoff (up to 3 attempts) if it
  *      drops mid-call. The turn / TTS calls are short-lived HTTPs;
  *      they surface errors and the caller is prompted to retry.
  *
- *   5. Structured logs — every log line includes connection_id + call_sid
+ *   5. Structured logs - every log line includes connection_id + call_sid
  *      + agent_id so a single call can be grep'd end-to-end.
  *
- *   6. Metrics — GET /metrics returns { active, opened, closed, uptime_s,
+ *   6. Metrics - GET /metrics returns { active, opened, closed, uptime_s,
  *      max_sessions, memory }.
  *
- *   7. Clean Twilio disconnects — Twilio can close the ws at any time
+ *   7. Clean Twilio disconnects - Twilio can close the ws at any time
  *      (caller hung up, network blip, `stop` frame). All three paths run
  *      through cleanup() exactly once.
  *

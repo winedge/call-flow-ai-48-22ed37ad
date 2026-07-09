@@ -20,7 +20,7 @@ function AppLayout() {
   useSupabaseSync();
   return (
     <div className="flex min-h-screen bg-surface-base text-neutral-900">
-      {/* Desktop sidebar — hidden on mobile */}
+      {/* Desktop sidebar - hidden on mobile */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>

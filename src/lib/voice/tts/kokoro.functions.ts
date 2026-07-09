@@ -1,5 +1,5 @@
 /**
- * Kokoro-82M TTS via Replicate (Apache-2.0 — commercially usable).
+ * Kokoro-82M TTS via Replicate (Apache-2.0 - commercially usable).
  *
  * Server-only: all Replicate traffic goes through the Lovable connector
  * gateway so the API key never touches the browser.
@@ -88,7 +88,7 @@ export const synthesizeSpeechKokoro = createServerFn({ method: "POST" })
         );
       }
       if (createRes.status === 429) {
-        throw new Error("Replicate rate limit hit — try again in a few seconds.");
+        throw new Error("Replicate rate limit hit - try again in a few seconds.");
       }
       throw new Error(`Replicate error ${createRes.status}: ${body.slice(0, 200)}`);
     }
@@ -124,5 +124,5 @@ export const synthesizeSpeechKokoro = createServerFn({ method: "POST" })
       }
     }
 
-    throw new Error("Voice preview timed out after 60s. Try again — cold starts can be slow.");
+    throw new Error("Voice preview timed out after 60s. Try again - cold starts can be slow.");
   });

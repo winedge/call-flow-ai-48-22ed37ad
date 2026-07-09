@@ -54,7 +54,7 @@ export function Sidebar() {
           <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain" />
           <div className="min-w-0">
             <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
-              {org?.name ?? "—"}
+              {org?.name ?? "-"}
             </p>
           </div>
         </Link>

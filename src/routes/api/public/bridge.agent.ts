@@ -2,7 +2,7 @@
  * Bridge → Lovable: fetch a redacted agent config by id.
  *
  * Reads from the real Supabase `agents` table (service role) so the bridge
- * gets the same config the UI edits — transfer_number, end_call_conditions,
+ * gets the same config the UI edits - transfer_number, end_call_conditions,
  * voicemail_handling, voicemail_message, etc. Falls back to the in-memory
  * demo store when Supabase is unavailable or the id isn't there.
  *

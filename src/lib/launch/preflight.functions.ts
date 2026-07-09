@@ -109,7 +109,7 @@ async function checkBridge(): Promise<CheckResult> {
       id: "bridge",
       status: "fail",
       label: "Voice bridge",
-      detail: "BRIDGE_SHARED_SECRET is not set — the bridge would reject calls.",
+      detail: "BRIDGE_SHARED_SECRET is not set - the bridge would reject calls.",
     };
   }
   // Convert wss://host[/path] → https://host[/path] for a lightweight health probe.
@@ -157,7 +157,7 @@ async function checkCredits(): Promise<CheckResult> {
       status: "fail",
       label: "AI gateway",
       detail:
-        "LOVABLE_API_KEY missing — the agent can't reason during calls. Provision it in Admin → Secrets.",
+        "LOVABLE_API_KEY missing - the agent can't reason during calls. Provision it in Admin → Secrets.",
     };
   }
   try {
@@ -186,7 +186,7 @@ async function checkCredits(): Promise<CheckResult> {
         id: "credits",
         status: "warn",
         label: "AI gateway",
-        detail: "Rate-limited right now — launch may retry a few times.",
+        detail: "Rate-limited right now - launch may retry a few times.",
       };
     }
     if (!res.ok) {

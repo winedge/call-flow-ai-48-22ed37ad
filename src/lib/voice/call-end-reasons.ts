@@ -79,7 +79,7 @@ export const END_REASON_ORDER: EndReason[] = [
 
 
 export function endReasonLabel(v: string | null | undefined): string {
-  if (!v) return "—";
+  if (!v) return "-";
   return END_REASON_LABEL[v as EndReason] ?? v;
 }
 

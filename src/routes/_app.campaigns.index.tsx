@@ -14,7 +14,7 @@ import {
 import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/campaigns/")({
-  head: () => ({ meta: [{ title: "Campaigns — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaigns - BulkCall AI" }] }),
   component: CampaignsList,
 });
 
@@ -75,7 +75,7 @@ function CampaignsList() {
                   const booked = cCalls.filter((x) => x.appointment_booked).length;
                   const conv = cCalls.length
                     ? ((booked / cCalls.length) * 100).toFixed(1) + "%"
-                    : "—";
+                    : "-";
                   const agent = agents.find((a) => a.id === c.agent_id);
                   return (
                     <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
@@ -94,7 +94,7 @@ function CampaignsList() {
                       <td className="px-6 py-4">
                         <StatusPill status={c.status} />
                       </td>
-                      <td className="px-6 py-4 text-neutral-600">{agent?.name ?? "—"}</td>
+                      <td className="px-6 py-4 text-neutral-600">{agent?.name ?? "-"}</td>
                       <td className="px-6 py-4 font-mono text-neutral-800">{cCalls.length}</td>
                       <td className="px-6 py-4 font-mono text-neutral-800">{connected}</td>
                       <td className="px-6 py-4 font-mono text-brand-primary">{conv}</td>

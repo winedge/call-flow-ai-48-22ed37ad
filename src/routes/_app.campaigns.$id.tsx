@@ -23,7 +23,7 @@ const END_REASON_FILL: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaign - BulkCall AI" }] }),
   component: CampaignDetail,
 });
 
@@ -124,8 +124,8 @@ function CampaignDetail() {
       ["Campaign", cmp.name],
       ["Status", cmp.status],
       ["Created", new Date(cmp.created_at).toLocaleString()],
-      ["First call", metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "—"],
-      ["Last call", metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "—"],
+      ["First call", metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "-"],
+      ["Last call", metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "-"],
       ["Total contacts", metrics.totalContacts],
       ["Calls placed", metrics.placed],
       ["Calls answered", metrics.answered],
@@ -299,8 +299,8 @@ function CampaignDetail() {
             <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
               <h3 className="text-sm font-medium text-neutral-900 mb-4">Overview</h3>
               <dl className="grid grid-cols-2 gap-3 text-xs">
-                <ReportRow label="Started" value={metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "—"} />
-                <ReportRow label="Last activity" value={metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "—"} />
+                <ReportRow label="Started" value={metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "-"} />
+                <ReportRow label="Last activity" value={metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "-"} />
                 <ReportRow label="Total contacts" value={metrics.totalContacts.toLocaleString()} />
                 <ReportRow label="Calls placed" value={metrics.placed.toLocaleString()} />
                 <ReportRow label="Answer rate" value={`${metrics.answerRate.toFixed(1)}%`} />
@@ -353,7 +353,7 @@ function CampaignDetail() {
               <h3 className="text-sm font-medium text-neutral-900 mb-4">Why calls ended</h3>
               {endReasonData.length === 0 ? (
                 <div className="h-56 grid place-items-center text-xs text-neutral-500">
-                  No end reasons recorded yet — they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
+                  No end reasons recorded yet - they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
@@ -426,8 +426,8 @@ function CampaignDetail() {
                         </td>
                         <td className="px-4 py-3 text-neutral-600">{c.status}</td>
                         <td className="px-4 py-3 text-neutral-600 text-xs">{endReasonLabel(c.end_reason)}</td>
-                        <td className="px-4 py-3 text-neutral-600">{c.outcome || "—"}</td>
-                        <td className="px-4 py-3 text-neutral-600">{c.sentiment ?? "—"}</td>
+                        <td className="px-4 py-3 text-neutral-600">{c.outcome || "-"}</td>
+                        <td className="px-4 py-3 text-neutral-600">{c.sentiment ?? "-"}</td>
                         <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                         <td className="px-4 py-3 text-right font-mono text-neutral-800">{leadScore(c)}</td>
                       </tr>
@@ -442,9 +442,9 @@ function CampaignDetail() {
         {/* ============ CONFIG ============ */}
         <TabsContent value="config" className="space-y-4">
           <div className="grid lg:grid-cols-3 gap-6">
-            <InfoCard title="Agent" body={agent?.name ?? "—"} sub={agent?.voice_name} />
-            <InfoCard title="Contact list" body={list?.name ?? "—"} sub={list?.description} />
-            <InfoCard title="From number" body={phone?.number ?? "—"} sub={phone?.type ?? ""} />
+            <InfoCard title="Agent" body={agent?.name ?? "-"} sub={agent?.voice_name} />
+            <InfoCard title="Contact list" body={list?.name ?? "-"} sub={list?.description} />
+            <InfoCard title="From number" body={phone?.number ?? "-"} sub={phone?.type ?? ""} />
             <InfoCard title="Timezone" body={cmp.timezone} sub={`${cmp.calling_hours.start}–${cmp.calling_hours.end}`} />
             <InfoCard title="Pace" body={`${cmp.calls_per_minute} calls/min`} />
             <InfoCard title="Retries" body={`${cmp.retry_rules.max_attempts}× · ${cmp.retry_rules.gap_minutes}m gap`} />

@@ -1,12 +1,12 @@
 /**
- * Twilio Recording Status Callback — stamps recording_url on the calls row.
+ * Twilio Recording Status Callback - stamps recording_url on the calls row.
  *
  * Twilio POSTs here when a recording finishes. Body includes:
  *   CallSid, RecordingSid, RecordingUrl, RecordingDuration, RecordingStatus.
  *
  * We match by twilio_call_sid and store the .mp3 URL. Twilio's RecordingUrl
  * is a media URL that requires HTTP Basic auth with the Account SID + Auth
- * Token — but the browser can play the public `.mp3` extension without auth
+ * Token - but the browser can play the public `.mp3` extension without auth
  * for accounts with public recordings, and our audio element accepts the
  * signed media URL directly. We append `.mp3` so the <audio> tag streams it
  * as MP3 instead of the default XML metadata endpoint.

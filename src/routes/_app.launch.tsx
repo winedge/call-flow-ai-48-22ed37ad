@@ -59,7 +59,7 @@ import {
 export const Route = createFileRoute("/_app/launch")({
   head: () => ({
     meta: [
-      { title: "Launch a campaign — BulkCall AI" },
+      { title: "Launch a campaign - BulkCall AI" },
       {
         name: "description",
         content:
@@ -72,12 +72,12 @@ export const Route = createFileRoute("/_app/launch")({
 
 const PHONE_RE = /^\+?[1-9]\d{6,14}$/;
 const VOICES: { id: string; name: string }[] = [
-  { id: "af_bella", name: "Bella — American Female, warm" },
-  { id: "af_sarah", name: "Sarah — American Female, clear" },
-  { id: "am_michael", name: "Michael — American Male, deep" },
-  { id: "am_adam", name: "Adam — American Male, neutral" },
-  { id: "bf_emma", name: "Emma — British Female" },
-  { id: "bm_george", name: "George — British Male" },
+  { id: "af_bella", name: "Bella - American Female, warm" },
+  { id: "af_sarah", name: "Sarah - American Female, clear" },
+  { id: "am_michael", name: "Michael - American Male, deep" },
+  { id: "am_adam", name: "Adam - American Male, neutral" },
+  { id: "bf_emma", name: "Emma - British Female" },
+  { id: "bm_george", name: "George - British Male" },
 ];
 
 const PRESETS: { id: string; label: string; icon: React.ElementType; brief: string; audience: string; goal: string }[] = [
@@ -238,7 +238,7 @@ function LaunchWizard() {
         id: "twilio",
         status: "fail",
         label: "Contacts",
-        detail: "No contacts loaded — upload a CSV or add numbers manually.",
+        detail: "No contacts loaded - upload a CSV or add numbers manually.",
       };
     }
     const seen = new Set<string>();
@@ -254,7 +254,7 @@ function LaunchWizard() {
         id: "twilio",
         status: "fail",
         label: "Contact validity",
-        detail: `${invalid} invalid phone number${invalid === 1 ? "" : "s"} — remove or fix them.`,
+        detail: `${invalid} invalid phone number${invalid === 1 ? "" : "s"} - remove or fix them.`,
       };
     }
     return {
@@ -296,14 +296,14 @@ function LaunchWizard() {
 
   async function handleGenerate() {
     if (brief.trim().length < 8) {
-      toast.error("Give me a bit more detail — 1–2 sentences is plenty.");
+      toast.error("Give me a bit more detail - 1–2 sentences is plenty.");
       return;
     }
     setGenerating(true);
     try {
       const g = await generateAgentFromBrief({ data: { brief, audience, goal } });
       setGen(g);
-      setListName(g.suggested_campaign_name + " — Contacts");
+      setListName(g.suggested_campaign_name + " - Contacts");
       setCampaignName(g.suggested_campaign_name);
       setStep(2);
     } catch (e) {
@@ -428,7 +428,7 @@ function LaunchWizard() {
         retry_delay_minutes: 60,
         data_fields: [],
       });
-      const list = addList(listName || `${campaignName} — Contacts`, `Auto-created for ${campaignName}`);
+      const list = addList(listName || `${campaignName} - Contacts`, `Auto-created for ${campaignName}`);
       const rows = contacts.map((c) => ({ ...c, list_id: list.id }));
       addContactsBulk(rows);
       const camp = addCampaign({
@@ -444,7 +444,7 @@ function LaunchWizard() {
       });
       if (startImmediately) setCampaignStatus(camp.id, "running");
       sessionStorage.removeItem(DRAFT_KEY);
-      toast.success(startImmediately ? "Campaign launched — dialing now" : "Campaign saved as draft");
+      toast.success(startImmediately ? "Campaign launched - dialing now" : "Campaign saved as draft");
       router.navigate({ to: "/campaigns/$id", params: { id: camp.id } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to launch");
@@ -530,7 +530,7 @@ function LaunchWizard() {
           {step === 2 && gen && (
             <StepCard
               title="Review your AI agent"
-              hint="These are drafts. Edit anything — the system prompt is what the AI follows on every turn."
+              hint="These are drafts. Edit anything - the system prompt is what the AI follows on every turn."
             >
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Agent name">
@@ -662,7 +662,7 @@ function LaunchWizard() {
                     const invalid = !PHONE_RE.test(c.phone);
                     return (
                       <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                        <span className="text-neutral-900 truncate flex-1">{c.name || "—"}</span>
+                        <span className="text-neutral-900 truncate flex-1">{c.name || "-"}</span>
                         <span className={cn("font-mono", invalid ? "text-red-400" : "text-neutral-500")}>{c.phone}</span>
                         <button
                           onClick={() => setContacts((p) => p.filter((_, j) => j !== i))}
@@ -749,12 +749,12 @@ function LaunchWizard() {
           {step === 4 && gen && (
             <StepCard
               title="Ready to launch"
-              hint="One last look. Weekday 9am–6pm calling hours and 3 retries are set by default — tweak later from the campaign page."
+              hint="One last look. Weekday 9am–6pm calling hours and 3 retries are set by default - tweak later from the campaign page."
             >
               <Field label="Campaign name">
                 <Input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} />
               </Field>
-              <Field label={`Pacing — up to ${cpm} calls per minute`}>
+              <Field label={`Pacing - up to ${cpm} calls per minute`}>
                 <input type="range" min={1} max={60} value={cpm} onChange={(e) => setCpm(Number(e.target.value))} className="w-full accent-brand-primary" />
               </Field>
 
@@ -960,7 +960,7 @@ function SummaryRail({
         <div className="text-sm font-medium text-neutral-900">Campaign summary</div>
       </div>
       <dl className="space-y-3 text-xs">
-        <SummaryRow label="Name" value={campaignName || (brief ? "—" : "Not set yet")} placeholder={step < 2} />
+        <SummaryRow label="Name" value={campaignName || (brief ? "-" : "Not set yet")} placeholder={step < 2} />
         <SummaryRow label="Agent" value={gen?.name} placeholder={!gen} />
         <SummaryRow label="Voice" value={gen?.voice_name} placeholder={!gen} />
         <SummaryRow label="Objective" value={gen?.objective} placeholder={!gen} multiline />
@@ -993,7 +993,7 @@ function SummaryRow({
         multiline ? "text-xs" : "text-xs truncate",
         placeholder && "text-neutral-400 italic",
       )}>
-        {value || (placeholder ? "—" : "—")}
+        {value || (placeholder ? "-" : "-")}
       </dd>
     </div>
   );

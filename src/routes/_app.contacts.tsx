@@ -36,7 +36,7 @@ import {
 import { useDB, type Contact } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/contacts")({
-  head: () => ({ meta: [{ title: "Contacts — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Contacts - BulkCall AI" }] }),
   component: ContactsPage,
 });
 
