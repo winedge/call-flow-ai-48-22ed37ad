@@ -226,7 +226,7 @@ function SpeakerBar({ label, active, color }: { label: string; active: boolean; 
           return (
             <div
               key={i}
-              className={`flex-1 rounded-sm transition-all ${active ? (color === "brand" ? "bg-brand-primary" : "bg-zinc-400") : "bg-neutral-300"}`}
+              className={`flex-1 rounded-sm transition-all ${active ? (color === "brand" ? "bg-brand-primary" : "bg-neutral-500") : "bg-neutral-300"}`}
               style={{ height: `${h}%` }}
             />
           );

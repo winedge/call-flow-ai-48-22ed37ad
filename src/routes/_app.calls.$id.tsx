@@ -232,7 +232,7 @@ function CallDetail() {
               <span className={`text-2xl font-mono ${scoreColor}`}>{score}</span>
             </div>
             <div className="h-1.5 bg-neutral-200 rounded-full overflow-hidden mb-3">
-              <div className={`h-full ${score >= 70 ? "bg-emerald-500" : score >= 40 ? "bg-amber-500" : "bg-zinc-600"}`} style={{ width: `${score}%` }} />
+              <div className={`h-full ${score >= 70 ? "bg-emerald-500" : score >= 40 ? "bg-amber-500" : "bg-neutral-400"}`} style={{ width: `${score}%` }} />
             </div>
             <p className="text-[11px] text-neutral-500 leading-relaxed">
               Derived from sentiment, duration, appointment status, and call outcome.
