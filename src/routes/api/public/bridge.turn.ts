@@ -519,9 +519,10 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         if (endCall || transfer) {
           reply = reply.replace(tokenRe, "").replace(/\s{2,}/g, " ").trim();
         }
-        reply = stripAgentNameAsCaller(reply, body.agent.name, body.history ?? []);
-        reply = stripUnpromptedSelfAnswer(reply, body.history ?? []);
-        reply = preventPrematureContactCollection(reply, body.agent, body.history ?? []);
+        reply = stripAgentNameAsCaller(reply, body.agent.name, history);
+        reply = stripUnpromptedSelfAnswer(reply, history);
+        reply = stripFieldReAsks(reply, collected);
+        reply = preventPrematureContactCollection(reply, body.agent, history);
         // Transfer wins over end_call if both were emitted.
         if (transfer) endCall = false;
 
