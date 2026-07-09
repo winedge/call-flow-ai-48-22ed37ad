@@ -87,6 +87,7 @@ export async function dialOutbound(args: DialArgs): Promise<DialResult> {
 
   const statusUrl = `${publicUrl}/api/public/webhooks/twilio`;
   const recordingUrl = `${publicUrl}/api/public/webhooks/twilio-recording`;
+  const amdUrl = `${publicUrl}/api/public/twilio/amd?agent_id=${encodeURIComponent(args.agentId)}`;
   const body = new URLSearchParams({
     To: args.to,
     From: args.from,
@@ -100,6 +101,14 @@ export async function dialOutbound(args: DialArgs): Promise<DialResult> {
     RecordingStatusCallback: recordingUrl,
     RecordingStatusCallbackMethod: "POST",
     RecordingStatusCallbackEvent: "completed",
+    MachineDetection: "DetectMessageEnd",
+    AsyncAmd: "true",
+    AsyncAmdStatusCallback: amdUrl,
+    AsyncAmdStatusCallbackMethod: "POST",
+    MachineDetectionTimeout: "30",
+    MachineDetectionSpeechThreshold: "2400",
+    MachineDetectionSpeechEndThreshold: "1200",
+    MachineDetectionSilenceTimeout: "5000",
   });
 
   const basic = btoa(`${sid}:${token}`);
