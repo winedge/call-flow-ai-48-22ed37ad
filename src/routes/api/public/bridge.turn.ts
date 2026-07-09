@@ -73,6 +73,7 @@ function buildSystem(a: AgentSummary): string {
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
     "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
+    "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
     "Keep replies short — under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
