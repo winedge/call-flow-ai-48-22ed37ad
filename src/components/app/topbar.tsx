@@ -26,19 +26,19 @@ export function Topbar() {
       <div className="flex items-center gap-4 min-w-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors min-w-0">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-600">
+            <button className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors min-w-0">
+              <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400">
                 Workspace
               </span>
               <span className="size-1 bg-zinc-700 rounded-full shrink-0" />
-              <span className="text-zinc-100 font-medium truncate">
+              <span className="text-neutral-900 font-medium truncate">
                 {org?.name ?? "—"}
               </span>
-              <ChevronDown className="size-3.5 text-zinc-500 shrink-0" />
+              <ChevronDown className="size-3.5 text-neutral-500 shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-64">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">
               Switch workspace
             </DropdownMenuLabel>
             {orgs.map((o) => (
@@ -71,12 +71,12 @@ export function Topbar() {
 
       <div className="flex items-center gap-4">
         <div className="hidden sm:block text-right">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">
+          <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
             Status
           </p>
           <div className="flex items-center gap-1.5 justify-end">
             <span className="size-1.5 bg-brand-primary rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-zinc-300">
+            <span className="text-xs font-medium text-neutral-800">
               Node-04 Active
             </span>
           </div>
@@ -90,7 +90,7 @@ export function Topbar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="size-8 rounded-full bg-zinc-800 ring-1 ring-white/10 grid place-items-center text-xs font-medium text-zinc-300 hover:ring-brand-primary/50 transition-all">
+            <button className="size-8 rounded-full bg-neutral-200 ring-1 ring-black/10 grid place-items-center text-xs font-medium text-neutral-800 hover:ring-brand-primary/50 transition-all">
               {user?.full_name
                 .split(" ")
                 .map((p) => p[0])
@@ -102,7 +102,7 @@ export function Topbar() {
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span className="text-sm">{user?.full_name}</span>
-                <span className="text-[11px] text-zinc-500 font-normal">
+                <span className="text-[11px] text-neutral-500 font-normal">
                   {user?.email}
                 </span>
               </div>

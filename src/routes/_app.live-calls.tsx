@@ -167,15 +167,15 @@ function LiveCalls() {
             const ss = String(dur % 60).padStart(2, "0");
             const speaker = currentSpeaker(i);
             return (
-              <div key={c.id} className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
+              <div key={c.id} className="bg-white ring-1 ring-black/5 rounded-xl p-5">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <p className="font-mono text-zinc-100">{c.phone_to}</p>
-                    <p className="text-[11px] text-zinc-500">via {agent?.name ?? "—"}</p>
+                    <p className="font-mono text-neutral-900">{c.phone_to}</p>
+                    <p className="text-[11px] text-neutral-500">via {agent?.name ?? "—"}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-brand-primary text-lg">{mm}:{ss}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">elapsed</p>
+                    <p className="text-[10px] uppercase tracking-wider text-neutral-500">elapsed</p>
                   </div>
                 </div>
 
@@ -184,13 +184,13 @@ function LiveCalls() {
                   <SpeakerBar label="Customer" active={speaker === "human"} color="zinc" />
                 </div>
 
-                <div className="bg-zinc-950/40 ring-1 ring-white/5 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto space-y-2">
+                <div className="bg-neutral-100 ring-1 ring-black/5 rounded-lg p-3 mb-4 max-h-40 overflow-y-auto space-y-2">
                   {c.transcript.map((t, idx) => (
                     <div key={idx} className="text-xs font-mono">
-                      <span className={t.speaker === "ai" ? "text-brand-primary" : "text-zinc-400"}>
+                      <span className={t.speaker === "ai" ? "text-brand-primary" : "text-neutral-600"}>
                         {t.speaker === "ai" ? "AI" : "USR"} ›
                       </span>{" "}
-                      <span className="text-zinc-200">{t.text}</span>
+                      <span className="text-neutral-900">{t.text}</span>
                     </div>
                   ))}
                 </div>
@@ -216,10 +216,10 @@ function SpeakerBar({ label, active, color }: { label: string; active: boolean; 
   return (
     <div className={`p-3 rounded-md ring-1 transition-all ${
       active
-        ? color === "brand" ? "bg-brand-primary/10 ring-brand-primary/40" : "bg-zinc-800/60 ring-white/20"
-        : "bg-zinc-900/40 ring-white/5"
+        ? color === "brand" ? "bg-brand-primary/10 ring-brand-primary/40" : "bg-neutral-200 ring-white/20"
+        : "bg-white ring-black/5"
     }`}>
-      <p className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-neutral-500">{label}</p>
       <div className="flex gap-0.5 mt-1.5 h-3 items-end">
         {Array.from({ length: 18 }).map((_, i) => {
           const h = active ? 30 + Math.random() * 70 : 12;

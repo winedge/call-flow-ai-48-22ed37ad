@@ -64,15 +64,15 @@ function Automations() {
           {list.map((a) => {
             const Icon = ICONS[a.action];
             return (
-              <div key={a.id} className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-4 flex items-center gap-4">
+              <div key={a.id} className="bg-white ring-1 ring-black/5 rounded-xl p-4 flex items-center gap-4">
                 <div className="size-10 rounded-md bg-brand-primary/10 ring-1 ring-brand-primary/30 grid place-items-center shrink-0">
                   <Icon className="size-4 text-brand-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-100">{a.name}</p>
-                  <p className="text-[11px] text-zinc-500 font-mono mt-0.5">
-                    When <span className="text-zinc-400">{a.trigger.replace(/_/g, " ")}</span> · do{" "}
-                    <span className="text-zinc-400">{a.action.replace(/_/g, " ")}</span>
+                  <p className="text-sm font-medium text-neutral-900">{a.name}</p>
+                  <p className="text-[11px] text-neutral-500 font-mono mt-0.5">
+                    When <span className="text-neutral-600">{a.trigger.replace(/_/g, " ")}</span> · do{" "}
+                    <span className="text-neutral-600">{a.action.replace(/_/g, " ")}</span>
                   </p>
                 </div>
                 <Switch checked={a.enabled} onCheckedChange={() => toggle(a.id)} />

@@ -52,19 +52,19 @@ function ResetPasswordPage() {
           <div className="size-9 bg-brand-primary rounded-md grid place-items-center">
             <Phone className="size-4 text-primary-foreground" strokeWidth={2.5} />
           </div>
-          <span className="font-medium tracking-tight text-zinc-100 text-lg">
+          <span className="font-medium tracking-tight text-neutral-900 text-lg">
             BulkCall AI
           </span>
         </div>
 
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
-          <h1 className="text-lg font-semibold text-zinc-100">Set a new password</h1>
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
+          <h1 className="text-lg font-semibold text-neutral-900">Set a new password</h1>
           {done ? (
             <p className="text-sm text-brand-primary mt-3">
               Password updated. Redirecting…
             </p>
           ) : !ready ? (
-            <p className="text-sm text-zinc-500 mt-3">
+            <p className="text-sm text-neutral-500 mt-3">
               Open the reset link from your email to continue. <Link to="/auth" className="underline">Back to sign in</Link>.
             </p>
           ) : (

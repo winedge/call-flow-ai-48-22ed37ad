@@ -19,7 +19,7 @@ const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = 
   amber: "text-amber-400",
   blue: "text-sky-400",
   red: "text-red-400",
-  gray: "text-zinc-500",
+  gray: "text-neutral-500",
 };
 
 export const Route = createFileRoute("/_app/call-history")({
@@ -132,7 +132,7 @@ function CallHistory() {
         }
       />
 
-      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-4 mb-4 space-y-3">
+      <div className="bg-white ring-1 ring-black/5 rounded-xl p-4 mb-4 space-y-3">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
@@ -193,17 +193,17 @@ function CallHistory() {
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="From" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="To" />
           <div className="relative">
-            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, phone, company, outcome…" className="pl-9" />
           </div>
         </div>
       </div>
 
-      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
+      <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[1000px]">
             <thead>
-              <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
+              <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                 <th className="px-4 py-3 text-left font-medium">When</th>
                 <th className="px-4 py-3 text-left font-medium">Contact</th>
                 <th className="px-4 py-3 text-left font-medium">Number</th>
@@ -220,32 +220,32 @@ function CallHistory() {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-xs text-zinc-500">No calls match your filters.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-xs text-neutral-500">No calls match your filters.</td></tr>
               ) : (
                 filtered.slice(0, 200).map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
                   const camp = campaigns.find((x) => x.id === c.campaign_id);
                   const contact = contacts.find((x) => x.id === c.contact_id);
                   return (
-                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/30">
-                      <td className="px-4 py-3 text-zinc-400 font-mono text-xs whitespace-nowrap">
+                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
+                      <td className="px-4 py-3 text-neutral-600 font-mono text-xs whitespace-nowrap">
                         {new Date(c.started_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
                       </td>
-                      <td className="px-4 py-3 text-zinc-200">
+                      <td className="px-4 py-3 text-neutral-900">
                         <Link to="/calls/$id" params={{ id: c.id }} className="hover:text-brand-primary">
-                          {contact?.name || <span className="text-zinc-500 italic">Unknown</span>}
+                          {contact?.name || <span className="text-neutral-500 italic">Unknown</span>}
                         </Link>
-                        {contact?.company && <p className="text-[10px] text-zinc-500">{contact.company}</p>}
+                        {contact?.company && <p className="text-[10px] text-neutral-500">{contact.company}</p>}
                       </td>
-                      <td className="px-4 py-3 font-mono text-zinc-300">{c.phone_to}</td>
-                      <td className="px-4 py-3 text-zinc-400 truncate max-w-[160px]">{camp?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-zinc-400 truncate max-w-[120px]">{agent?.name ?? "—"}</td>
+                      <td className="px-4 py-3 font-mono text-neutral-800">{c.phone_to}</td>
+                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[160px]">{camp?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-neutral-600 truncate max-w-[120px]">{agent?.name ?? "—"}</td>
                       <td className="px-4 py-3">
                         <span className={`text-[10px] uppercase tracking-wider font-mono ${
                           c.status === "completed" ? "text-emerald-400" :
                           c.status === "failed" ? "text-red-400" :
                           c.status === "voicemail" ? "text-amber-400" :
-                          c.status === "in_progress" ? "text-brand-primary" : "text-zinc-500"
+                          c.status === "in_progress" ? "text-brand-primary" : "text-neutral-500"
                         }`}>{c.status}</span>
                       </td>
                       <td className="px-4 py-3">
@@ -253,8 +253,8 @@ function CallHistory() {
                           {endReasonLabel(c.end_reason)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">{c.sentiment ?? "—"}</td>
-                      <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
+                      <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3">
                         {c.recording_url ? (
                           <audio
@@ -265,11 +265,11 @@ function CallHistory() {
                             className="h-8 w-56 max-w-full"
                           />
                         ) : (
-                          <span className="text-[11px] text-zinc-600">—</span>
+                          <span className="text-[11px] text-neutral-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-zinc-300">{leadScore(c)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-zinc-400">${(c.cost_cents / 100).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-neutral-800">{leadScore(c)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-neutral-600">${(c.cost_cents / 100).toFixed(2)}</td>
                     </tr>
                   );
                 })
@@ -278,7 +278,7 @@ function CallHistory() {
           </table>
         </div>
         {filtered.length > 200 && (
-          <div className="px-4 py-3 text-xs text-zinc-500 border-t border-surface-border/40">
+          <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
             Showing latest 200 of {filtered.length.toLocaleString()} — refine filters or export to CSV to see the rest.
           </div>
         )}

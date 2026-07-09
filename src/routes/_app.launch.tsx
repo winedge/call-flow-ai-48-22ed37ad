@@ -478,14 +478,14 @@ function LaunchWizard() {
               hint="Two or three sentences is enough. Or start from a preset and tweak it."
             >
               <div>
-                <Label className="text-zinc-300 mb-2 block">Start from a preset (optional)</Label>
+                <Label className="text-neutral-800 mb-2 block">Start from a preset (optional)</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {PRESETS.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => applyPreset(p)}
-                      className="flex items-center gap-2 rounded-md border border-surface-border/60 bg-surface-panel/60 px-3 py-2 text-left text-xs text-zinc-200 hover:bg-surface-panel hover:border-brand-primary/50 transition-colors"
+                      className="flex items-center gap-2 rounded-md border border-surface-border/60 bg-surface-panel/60 px-3 py-2 text-left text-xs text-neutral-900 hover:bg-surface-panel hover:border-brand-primary/50 transition-colors"
                     >
                       <p.icon className="size-4 text-brand-primary shrink-0" />
                       <span className="truncate">{p.label}</span>
@@ -510,7 +510,7 @@ function LaunchWizard() {
                   <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g. an inspection booked on the calendar" />
                 </Field>
               </div>
-              <div className="flex items-center gap-2 mt-2 text-xs text-zinc-500">
+              <div className="flex items-center gap-2 mt-2 text-xs text-neutral-500">
                 <Wand2 className="size-3.5" />
                 Uses Lovable AI to draft the system prompt, greeting, personality, and qualification questions. You'll review before it goes live.
               </div>
@@ -619,8 +619,8 @@ function LaunchWizard() {
                 )}
               >
                 <Upload className="size-5 mx-auto text-brand-primary mb-2" />
-                <div className="text-sm text-zinc-200">Drop a CSV here or click to browse</div>
-                <div className="text-xs text-zinc-500 mt-1">
+                <div className="text-sm text-neutral-900">Drop a CSV here or click to browse</div>
+                <div className="text-xs text-neutral-500 mt-1">
                   Accepted headers: <span className="font-mono">phone</span> (required), <span className="font-mono">name</span>, <span className="font-mono">email</span>, <span className="font-mono">company</span>
                 </div>
                 <button
@@ -662,11 +662,11 @@ function LaunchWizard() {
                     const invalid = !PHONE_RE.test(c.phone);
                     return (
                       <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                        <span className="text-zinc-200 truncate flex-1">{c.name || "—"}</span>
-                        <span className={cn("font-mono", invalid ? "text-red-400" : "text-zinc-500")}>{c.phone}</span>
+                        <span className="text-neutral-900 truncate flex-1">{c.name || "—"}</span>
+                        <span className={cn("font-mono", invalid ? "text-red-400" : "text-neutral-500")}>{c.phone}</span>
                         <button
                           onClick={() => setContacts((p) => p.filter((_, j) => j !== i))}
-                          className="ml-2 text-zinc-600 hover:text-red-400"
+                          className="ml-2 text-neutral-400 hover:text-red-400"
                           aria-label="Remove"
                         >
                           <X className="size-3.5" />
@@ -675,7 +675,7 @@ function LaunchWizard() {
                     );
                   })}
                   {contacts.length > 100 && (
-                    <div className="px-3 py-2 text-xs text-zinc-500">+{contacts.length - 100} more…</div>
+                    <div className="px-3 py-2 text-xs text-neutral-500">+{contacts.length - 100} more…</div>
                   )}
                 </div>
               )}
@@ -683,7 +683,7 @@ function LaunchWizard() {
               {/* Twilio numbers */}
               <div className="pt-4 border-t border-surface-border/40">
                 <div className="flex items-center justify-between mb-2">
-                  <Label className="text-zinc-300">Caller ID (Twilio number the AI dials from)</Label>
+                  <Label className="text-neutral-800">Caller ID (Twilio number the AI dials from)</Label>
                   <Button variant="ghost" size="sm" onClick={refreshTwilio} disabled={loadingTwilio}>
                     <RefreshCw className={cn("size-3.5 mr-1.5", loadingTwilio && "animate-spin")} /> Refresh
                   </Button>
@@ -706,11 +706,11 @@ function LaunchWizard() {
                             <span className="font-mono">{p.number}</span>
                             {meta ? (
                               <>
-                                <span className="text-zinc-500"> · {meta.friendly_name}</span>
+                                <span className="text-neutral-500"> · {meta.friendly_name}</span>
                                 {!meta.voice && <span className="text-red-400"> · no voice</span>}
                               </>
                             ) : (
-                              <span className="text-zinc-600"> · {p.type}</span>
+                              <span className="text-neutral-400"> · {p.type}</span>
                             )}
                           </SelectItem>
                         );
@@ -718,11 +718,11 @@ function LaunchWizard() {
                     </SelectContent>
                   </Select>
                 ) : loadingTwilio ? (
-                  <div className="text-xs text-zinc-500 flex items-center gap-2">
+                  <div className="text-xs text-neutral-500 flex items-center gap-2">
                     <Loader2 className="size-3.5 animate-spin" /> Loading numbers from Twilio…
                   </div>
                 ) : (
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-neutral-500">
                     No numbers yet. Add one below or connect your Twilio account.
                   </div>
                 )}
@@ -762,7 +762,7 @@ function LaunchWizard() {
 
               <div className="flex items-center gap-2 mt-4">
                 <input id="start-now" type="checkbox" checked={startImmediately} onChange={(e) => setStartImmediately(e.target.checked)} className="size-4 accent-brand-primary" />
-                <label htmlFor="start-now" className="text-sm text-zinc-300">
+                <label htmlFor="start-now" className="text-sm text-neutral-800">
                   Start dialing immediately after launch
                 </label>
               </div>
@@ -824,12 +824,12 @@ function Stepper({ current }: { current: Step }) {
                   ? "bg-brand-primary/20 border-brand-primary text-brand-primary"
                   : active
                     ? "bg-brand-primary text-primary-foreground border-brand-primary"
-                    : "bg-surface-panel/60 border-surface-border text-zinc-500",
+                    : "bg-surface-panel/60 border-surface-border text-neutral-500",
               )}
             >
               {done ? <Check className="size-3.5" /> : n}
             </div>
-            <span className={cn("text-xs font-medium", active ? "text-zinc-100" : "text-zinc-500")}>
+            <span className={cn("text-xs font-medium", active ? "text-neutral-900" : "text-neutral-500")}>
               {label}
             </span>
             {i < items.length - 1 && <div className="w-6 h-px bg-surface-border/60 mx-1" />}
@@ -844,8 +844,8 @@ function StepCard({ title, hint, children }: { title: string; hint: string; chil
   return (
     <div className="rounded-lg border border-surface-border/60 bg-surface-panel/40 p-6 space-y-5">
       <div>
-        <h2 className="text-lg font-medium text-zinc-100">{title}</h2>
-        <p className="text-sm text-zinc-500 mt-1">{hint}</p>
+        <h2 className="text-lg font-medium text-neutral-900">{title}</h2>
+        <p className="text-sm text-neutral-500 mt-1">{hint}</p>
       </div>
       {children}
     </div>
@@ -855,7 +855,7 @@ function StepCard({ title, hint, children }: { title: string; hint: string; chil
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-zinc-300">{label}</Label>
+      <Label className="text-neutral-800">{label}</Label>
       {children}
     </div>
   );
@@ -873,12 +873,12 @@ function ListField({ label, items, onChange, placeholder }: { label: string; ite
   const [draft, setDraft] = useState("");
   return (
     <div className="space-y-1.5">
-      <Label className="text-zinc-300">{label}</Label>
+      <Label className="text-neutral-800">{label}</Label>
       <div className="space-y-1.5">
         {items.map((it, i) => (
           <div key={i} className="flex items-center gap-2">
             <Input value={it} onChange={(e) => { const next = [...items]; next[i] = e.target.value; onChange(next); }} />
-            <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-zinc-500 hover:text-red-400" aria-label="Remove">
+            <button onClick={() => onChange(items.filter((_, j) => j !== i))} className="text-neutral-500 hover:text-red-400" aria-label="Remove">
               <X className="size-4" />
             </button>
           </div>
@@ -910,7 +910,7 @@ function ImportReport({ info }: { info: { loaded: number; invalid: number; dupli
     <div className="rounded-md border border-surface-border/60 bg-surface-base/60 px-4 py-3">
       <div className="flex items-center gap-2 mb-1.5">
         <FileText className="size-4 text-brand-primary" />
-        <span className="text-sm text-zinc-200">Last import</span>
+        <span className="text-sm text-neutral-900">Last import</span>
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/30">
@@ -928,8 +928,8 @@ function ImportReport({ info }: { info: { loaded: number; invalid: number; dupli
         )}
       </div>
       {info.headers.length > 0 && (
-        <div className="mt-2 text-[11px] text-zinc-500">
-          Detected columns: <span className="font-mono text-zinc-400">{info.headers.join(", ")}</span>
+        <div className="mt-2 text-[11px] text-neutral-500">
+          Detected columns: <span className="font-mono text-neutral-600">{info.headers.join(", ")}</span>
         </div>
       )}
     </div>
@@ -957,7 +957,7 @@ function SummaryRail({
     <aside className="sticky top-4 rounded-lg border border-surface-border/60 bg-surface-panel/40 p-5 hidden lg:block">
       <div className="flex items-center gap-2 mb-3">
         <Rocket className="size-4 text-brand-primary" />
-        <div className="text-sm font-medium text-zinc-100">Campaign summary</div>
+        <div className="text-sm font-medium text-neutral-900">Campaign summary</div>
       </div>
       <dl className="space-y-3 text-xs">
         <SummaryRow label="Name" value={campaignName || (brief ? "—" : "Not set yet")} placeholder={step < 2} />
@@ -986,12 +986,12 @@ function SummaryRow({
 }) {
   return (
     <div>
-      <dt className="text-zinc-500 text-[11px] uppercase tracking-wide">{label}</dt>
+      <dt className="text-neutral-500 text-[11px] uppercase tracking-wide">{label}</dt>
       <dd className={cn(
-        "text-zinc-200 mt-0.5",
+        "text-neutral-900 mt-0.5",
         mono && "font-mono",
         multiline ? "text-xs" : "text-xs truncate",
-        placeholder && "text-zinc-600 italic",
+        placeholder && "text-neutral-400 italic",
       )}>
         {value || (placeholder ? "—" : "—")}
       </dd>
@@ -1008,8 +1008,8 @@ function Checklist({ items, hasRun, checking, onRun }: { items: CheckResult[]; h
         <div className="flex items-center gap-2">
           <ShieldCheck className="size-4 text-brand-primary" />
           <div>
-            <div className="text-sm font-medium text-zinc-100">Launch preflight</div>
-            <div className="text-xs text-zinc-500">
+            <div className="text-sm font-medium text-neutral-900">Launch preflight</div>
+            <div className="text-xs text-neutral-500">
               {hasRun
                 ? failing
                   ? `${failing} issue${failing === 1 ? "" : "s"} to fix${warning ? `, ${warning} warning${warning === 1 ? "" : "s"}` : ""}`
@@ -1031,13 +1031,13 @@ function Checklist({ items, hasRun, checking, onRun }: { items: CheckResult[]; h
           <li key={i} className="flex items-start gap-3 px-4 py-2.5 text-sm">
             <StatusIcon status={c.status} />
             <div className="min-w-0 flex-1">
-              <div className="text-zinc-200 truncate">{c.label}</div>
-              <div className="text-xs text-zinc-500">{c.detail}</div>
+              <div className="text-neutral-900 truncate">{c.label}</div>
+              <div className="text-xs text-neutral-500">{c.detail}</div>
             </div>
           </li>
         ))}
         {!hasRun && (
-          <li className="px-4 py-2.5 text-xs text-zinc-500 italic">
+          <li className="px-4 py-2.5 text-xs text-neutral-500 italic">
             Twilio, bridge, and AI-gateway checks run against your live secrets.
           </li>
         )}

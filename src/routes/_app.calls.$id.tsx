@@ -48,7 +48,7 @@ function CallDetail() {
   if (!call) throw notFound();
 
   const score = leadScore(call);
-  const scoreColor = score >= 70 ? "text-emerald-400" : score >= 40 ? "text-amber-400" : "text-zinc-500";
+  const scoreColor = score >= 70 ? "text-emerald-400" : score >= 40 ? "text-amber-400" : "text-neutral-500";
 
   const updateLocal = (patch: Partial<LocalNotes>) => {
     const next = { ...local, ...patch };
@@ -153,14 +153,14 @@ function CallDetail() {
         {/* Left column — transcript + recording */}
         <div className="lg:col-span-2 space-y-6">
           {/* Recording */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-            <h2 className="text-sm font-medium text-zinc-200 mb-3 flex items-center gap-2">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+            <h2 className="text-sm font-medium text-neutral-900 mb-3 flex items-center gap-2">
               <Play className="size-3.5 text-brand-primary" /> Recording
             </h2>
             {call.recording_url ? (
               <div className="space-y-3">
                 <audio controls src={call.recording_url} className="w-full" />
-                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+                <div className="flex items-center justify-between text-[11px] text-neutral-500 font-mono">
                   <span>{new Date(call.started_at).toLocaleString()} · {formatDuration(call.duration_sec)}</span>
                   <a href={call.recording_url} download={`recording-${call.id.slice(0, 8)}.mp3`} className="text-brand-primary hover:underline flex items-center gap-1">
                     <Download className="size-3" /> Download
@@ -168,7 +168,7 @@ function CallDetail() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 italic">
+              <p className="text-xs text-neutral-500 italic">
                 No recording available. Enable call recording in your campaign settings to capture audio.
               </p>
             )}
@@ -176,16 +176,16 @@ function CallDetail() {
 
           {/* Summary */}
           {call.summary && (
-            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-              <h2 className="text-sm font-medium text-zinc-200 mb-3">AI Summary</h2>
-              <p className="text-sm text-zinc-300 leading-relaxed">{call.summary}</p>
+            <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+              <h2 className="text-sm font-medium text-neutral-900 mb-3">AI Summary</h2>
+              <p className="text-sm text-neutral-800 leading-relaxed">{call.summary}</p>
             </div>
           )}
 
           {/* Transcript */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-zinc-200">Transcript</h2>
+              <h2 className="text-sm font-medium text-neutral-900">Transcript</h2>
               {call.transcript.length > 0 && (
                 <Button size="sm" variant="ghost" onClick={downloadTranscript}>
                   <Download className="size-3.5 mr-1" /> .txt
@@ -193,17 +193,17 @@ function CallDetail() {
               )}
             </div>
             {call.transcript.length === 0 ? (
-              <p className="text-xs text-zinc-500 italic">No transcript captured for this call.</p>
+              <p className="text-xs text-neutral-500 italic">No transcript captured for this call.</p>
             ) : (
-              <div className="bg-zinc-950/40 rounded-lg p-4 ring-1 ring-white/5 space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="bg-neutral-100 rounded-lg p-4 ring-1 ring-black/5 space-y-3 max-h-[600px] overflow-y-auto">
                 {call.transcript.map((t, i) => (
                   <div key={i} className="flex gap-3">
                     <span className={`text-[10px] font-mono uppercase tracking-wider shrink-0 w-10 pt-0.5 ${
-                      t.speaker === "ai" ? "text-brand-primary" : "text-zinc-500"
+                      t.speaker === "ai" ? "text-brand-primary" : "text-neutral-500"
                     }`}>
                       {t.speaker === "ai" ? "AI" : "User"}
                     </span>
-                    <p className="text-sm text-zinc-200 leading-relaxed">{t.text}</p>
+                    <p className="text-sm text-neutral-900 leading-relaxed">{t.text}</p>
                   </div>
                 ))}
               </div>
@@ -214,8 +214,8 @@ function CallDetail() {
         {/* Right column — extracted info, notes, tags */}
         <div className="space-y-6">
           {/* Contact */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-            <h2 className="text-sm font-medium text-zinc-200 mb-3">Contact</h2>
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+            <h2 className="text-sm font-medium text-neutral-900 mb-3">Contact</h2>
             <div className="space-y-2 text-xs">
               <InfoLine icon={User} label="Name" value={contact?.name || "Unknown"} />
               <InfoLine icon={PhoneIcon} label="Phone" value={call.phone_to} mono />
@@ -226,52 +226,52 @@ function CallDetail() {
           </div>
 
           {/* Lead score card */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-medium text-zinc-200">Lead score</h2>
+              <h2 className="text-sm font-medium text-neutral-900">Lead score</h2>
               <span className={`text-2xl font-mono ${scoreColor}`}>{score}</span>
             </div>
-            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
+            <div className="h-1.5 bg-neutral-200 rounded-full overflow-hidden mb-3">
               <div className={`h-full ${score >= 70 ? "bg-emerald-500" : score >= 40 ? "bg-amber-500" : "bg-zinc-600"}`} style={{ width: `${score}%` }} />
             </div>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
+            <p className="text-[11px] text-neutral-500 leading-relaxed">
               Derived from sentiment, duration, appointment status, and call outcome.
             </p>
           </div>
 
           {/* Extracted info */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-            <h2 className="text-sm font-medium text-zinc-200 mb-3 flex items-center gap-2">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+            <h2 className="text-sm font-medium text-neutral-900 mb-3 flex items-center gap-2">
               <Star className="size-3.5 text-amber-400" /> Extracted information
             </h2>
             <dl className="space-y-2 text-xs">
               {extractedByLabel.length === 0 && (
-                <p className="text-[11px] text-zinc-500 italic">No fields captured.</p>
+                <p className="text-[11px] text-neutral-500 italic">No fields captured.</p>
               )}
               {extractedByLabel.map(({ label, value }) => (
                 <div key={label} className="flex justify-between gap-3">
-                  <dt className="text-zinc-500 uppercase tracking-wider text-[10px] font-mono">{label}</dt>
-                  <dd className="text-zinc-200 text-right break-words min-w-0">{value}</dd>
+                  <dt className="text-neutral-500 uppercase tracking-wider text-[10px] font-mono">{label}</dt>
+                  <dd className="text-neutral-900 text-right break-words min-w-0">{value}</dd>
                 </div>
               ))}
               {call.outcome && (
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500 uppercase tracking-wider text-[10px] font-mono">Outcome</dt>
-                  <dd className="text-zinc-200 text-right">{call.outcome}</dd>
+                  <dt className="text-neutral-500 uppercase tracking-wider text-[10px] font-mono">Outcome</dt>
+                  <dd className="text-neutral-900 text-right">{call.outcome}</dd>
                 </div>
               )}
             </dl>
           </div>
 
           {/* Tags */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-            <h2 className="text-sm font-medium text-zinc-200 mb-3 flex items-center gap-2">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+            <h2 className="text-sm font-medium text-neutral-900 mb-3 flex items-center gap-2">
               <Tag className="size-3.5" /> Tags
             </h2>
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {local.tags.length === 0 && <span className="text-[11px] text-zinc-500 italic">No tags yet</span>}
+              {local.tags.length === 0 && <span className="text-[11px] text-neutral-500 italic">No tags yet</span>}
               {local.tags.map((t) => (
-                <button key={t} onClick={() => removeTag(t)} className="px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] text-zinc-300 hover:bg-red-500/20 hover:text-red-300">
+                <button key={t} onClick={() => removeTag(t)} className="px-2 py-0.5 rounded-full bg-neutral-200 text-[10px] text-neutral-800 hover:bg-red-500/20 hover:text-red-300">
                   {t} ×
                 </button>
               ))}
@@ -289,18 +289,18 @@ function CallDetail() {
           </div>
 
           {/* Notes & next action */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-            <h2 className="text-sm font-medium text-zinc-200 mb-3 flex items-center gap-2">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+            <h2 className="text-sm font-medium text-neutral-900 mb-3 flex items-center gap-2">
               <StickyNote className="size-3.5" /> Notes & next action
             </h2>
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1 block">Next recommended action</label>
+            <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono mb-1 block">Next recommended action</label>
             <Input
               value={local.next_action}
               onChange={(e) => updateLocal({ next_action: e.target.value })}
               placeholder="e.g. Send follow-up email"
               className="mb-3 text-xs"
             />
-            <label className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1 block">Notes</label>
+            <label className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono mb-1 block">Notes</label>
             <Textarea
               value={local.notes}
               onChange={(e) => updateLocal({ notes: e.target.value })}
@@ -308,7 +308,7 @@ function CallDetail() {
               rows={5}
               className="text-xs"
             />
-            <p className="text-[10px] text-zinc-500 mt-2">Saved locally on this device.</p>
+            <p className="text-[10px] text-neutral-500 mt-2">Saved locally on this device.</p>
           </div>
         </div>
       </div>
@@ -325,10 +325,10 @@ function CallDetail() {
 function InfoLine({ icon: Icon, label, value, mono }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="size-3.5 text-zinc-500 mt-0.5 shrink-0" />
+      <Icon className="size-3.5 text-neutral-500 mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono">{label}</p>
-        <p className={`text-zinc-200 truncate ${mono ? "font-mono" : ""}`}>{value}</p>
+        <p className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">{label}</p>
+        <p className={`text-neutral-900 truncate ${mono ? "font-mono" : ""}`}>{value}</p>
       </div>
     </div>
   );

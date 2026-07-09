@@ -151,7 +151,7 @@ function NewCampaign() {
                   className={`px-3 py-1.5 rounded-md text-xs font-mono ring-1 transition-colors ${
                     days.includes(i)
                       ? "bg-brand-primary/10 ring-brand-primary/40 text-brand-primary"
-                      : "bg-zinc-900/60 ring-white/5 text-zinc-500 hover:text-zinc-300"
+                      : "bg-neutral-50 ring-black/5 text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
                   {d}
@@ -203,8 +203,8 @@ function NewCampaign() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-medium text-zinc-200 border-b border-surface-border/40 pb-3">{title}</h2>
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 space-y-4">
+      <h2 className="text-sm font-medium text-neutral-900 border-b border-surface-border/40 pb-3">{title}</h2>
       {children}
     </div>
   );
@@ -213,7 +213,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">{label}</Label>
+      <Label className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">{label}</Label>
       {children}
     </div>
   );

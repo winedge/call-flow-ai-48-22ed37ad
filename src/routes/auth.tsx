@@ -79,7 +79,7 @@ function AuthPage() {
           <img src={logoAsset.url} alt="BulkCall AI" className="h-8 w-auto object-contain" />
         </Link>
 
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 backdrop-blur-sm">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 backdrop-blur-sm">
           <Tabs defaultValue="signin">
             <TabsList className="grid grid-cols-2 w-full mb-6">
               <TabsTrigger value="signin">Sign in</TabsTrigger>

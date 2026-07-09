@@ -101,15 +101,15 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-        <div className="lg:col-span-8 bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
+        <div className="lg:col-span-8 bg-white ring-1 ring-black/5 rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-sm font-medium text-zinc-200">Call Throughput</h2>
-              <p className="text-[11px] text-zinc-500 mt-0.5">Last 24 hours</p>
+              <h2 className="text-sm font-medium text-neutral-900">Call Throughput</h2>
+              <p className="text-[11px] text-neutral-500 mt-0.5">Last 24 hours</p>
             </div>
             <div className="flex gap-2 text-[10px] font-mono">
-              <span className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded">24H</span>
-              <span className="px-2 py-1 text-zinc-500">7D</span>
+              <span className="px-2 py-1 bg-neutral-200 text-neutral-800 rounded">24H</span>
+              <span className="px-2 py-1 text-neutral-500">7D</span>
             </div>
           </div>
           <div className="h-64 -mx-2">
@@ -153,16 +153,16 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-zinc-900/40 ring-1 ring-white/5 rounded-xl flex flex-col">
+        <div className="lg:col-span-4 bg-white ring-1 ring-black/5 rounded-xl flex flex-col">
           <div className="p-4 border-b border-surface-border/60 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-200">Live Dispatch</h2>
+            <h2 className="text-sm font-medium text-neutral-900">Live Dispatch</h2>
             <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full font-mono">
               {liveCalls.length} Active
             </span>
           </div>
           <div className="p-4 space-y-3 max-h-[280px] overflow-y-auto">
             {liveCalls.length === 0 && (
-              <p className="text-xs text-zinc-500 text-center py-8">
+              <p className="text-xs text-neutral-500 text-center py-8">
                 No live calls right now.
               </p>
             )}
@@ -177,12 +177,12 @@ function Dashboard() {
               return (
                 <div
                   key={c.id}
-                  className="p-3 bg-zinc-800/30 rounded-lg ring-1 ring-white/5 space-y-2"
+                  className="p-3 bg-neutral-100 rounded-lg ring-1 ring-black/5 space-y-2"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-xs font-medium text-zinc-100">{c.phone_to}</p>
-                      <p className="text-[10px] text-zinc-500">
+                      <p className="text-xs font-medium text-neutral-900">{c.phone_to}</p>
+                      <p className="text-[10px] text-neutral-500">
                         Agent: {agent?.name ?? "—"}
                       </p>
                     </div>
@@ -191,7 +191,7 @@ function Dashboard() {
                     </span>
                   </div>
                   {last && (
-                    <div className="text-[11px] text-zinc-400 bg-zinc-950/40 p-2 rounded italic font-mono">
+                    <div className="text-[11px] text-neutral-600 bg-neutral-100 p-2 rounded italic font-mono">
                       "{last.text}"
                     </div>
                   )}
@@ -203,42 +203,42 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-1 font-mono">
             Appointments booked
           </p>
-          <p className="text-2xl font-mono font-medium text-zinc-100">{booked}</p>
-          <p className="text-[10px] text-zinc-500 mt-2">Across today's completed calls</p>
+          <p className="text-2xl font-mono font-medium text-neutral-900">{booked}</p>
+          <p className="text-[10px] text-neutral-500 mt-2">Across today's completed calls</p>
         </div>
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-1 font-mono">
             Failed calls
           </p>
           <p className="text-2xl font-mono font-medium text-red-400">{failed.length}</p>
-          <p className="text-[10px] text-zinc-500 mt-2">Retry logic engaged</p>
+          <p className="text-[10px] text-neutral-500 mt-2">Retry logic engaged</p>
         </div>
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-1 font-mono">
             Avg duration
           </p>
-          <p className="text-2xl font-mono font-medium text-zinc-100">
+          <p className="text-2xl font-mono font-medium text-neutral-900">
             {completed.length
               ? Math.round(completed.reduce((s, c) => s + c.duration_sec, 0) / completed.length)
               : 0}
-            <span className="text-xs text-zinc-500 ml-1">s</span>
+            <span className="text-xs text-neutral-500 ml-1">s</span>
           </p>
-          <p className="text-[10px] text-zinc-500 mt-2">For completed calls today</p>
+          <p className="text-[10px] text-neutral-500 mt-2">For completed calls today</p>
         </div>
       </div>
 
-      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
+      <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
         <div className="p-5 border-b border-surface-border/60 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-zinc-200">Recent Campaigns</h2>
+          <h2 className="text-sm font-medium text-neutral-900">Recent Campaigns</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[640px]">
             <thead>
-              <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
+              <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                 <th className="px-6 py-3 font-medium">Campaign</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium">Calls</th>
@@ -255,13 +255,13 @@ function Dashboard() {
                   : "—";
                 const agent = agents.find((a) => a.id === c.agent_id);
                 return (
-                  <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
-                    <td className="px-6 py-4 font-medium text-zinc-200">{c.name}</td>
+                  <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
+                    <td className="px-6 py-4 font-medium text-neutral-900">{c.name}</td>
                     <td className="px-6 py-4">
                       <StatusPill status={c.status} />
                     </td>
-                    <td className="px-6 py-4 font-mono text-zinc-300">{cCalls.length}</td>
-                    <td className="px-6 py-4 text-zinc-400">{agent?.name ?? "—"}</td>
+                    <td className="px-6 py-4 font-mono text-neutral-800">{cCalls.length}</td>
+                    <td className="px-6 py-4 text-neutral-600">{agent?.name ?? "—"}</td>
                     <td className="px-6 py-4 text-right font-mono text-brand-primary">{cConv}</td>
                   </tr>
                 );
