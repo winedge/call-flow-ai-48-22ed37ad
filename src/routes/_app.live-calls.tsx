@@ -45,7 +45,10 @@ function LiveCalls() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    const t = setInterval(() => {
+      setTick((x) => x + 1);
+      setNow(Date.now());
+    }, 1000);
     return () => clearInterval(t);
   }, []);
 
