@@ -50,7 +50,7 @@ function buildSystem(a: AgentSummary): string {
   const fields = a.data_fields ?? [];
   const parts = [
     a.system_prompt?.trim(),
-    a.name ? `Your name is ${a.name}. This is YOUR name, not the caller's name. Never address the caller by your own name. Do not use any name for the caller unless the caller has clearly told you their name during this call.` : "",
+    a.name ? `Your name is ${a.name}. This is YOUR name (the assistant's), NOT the caller's. NEVER address the caller as "${a.name}" or use "${a.name}" as if it were their name. The caller has NOT told you their name. Do NOT guess, assume, or invent a name for the caller. Address them neutrally ("you", "there") until they explicitly say their name in this conversation. If unsure, do not use any name at all.` : "You do not know the caller's name. Never invent or assume one. Address them neutrally until they say their name.",
     a.personality ? `Personality: ${a.personality}` : "",
     a.objective ? `Objective: ${a.objective}` : "",
     a.prompt ? `Task: ${a.prompt}` : "",
