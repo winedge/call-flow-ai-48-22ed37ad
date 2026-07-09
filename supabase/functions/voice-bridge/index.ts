@@ -366,9 +366,9 @@ async function synthElevenLabsMulaw(
 ): Promise<Uint8Array> {
   if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
   const settings = {
-    stability: voice_settings?.stability ?? 0.5,
+    stability: voice_settings?.stability ?? 0.65,
     similarity_boost: voice_settings?.similarity_boost ?? 0.78,
-    style: voice_settings?.style ?? 0.28,
+    style: voice_settings?.style ?? 0.0,
     use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
     speed: 0.94,
   };
@@ -399,9 +399,9 @@ async function openElevenLabsMulawStream(
 ): Promise<ReadableStream<Uint8Array>> {
   if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
   const settings = {
-    stability: voice_settings?.stability ?? 0.5,
+    stability: voice_settings?.stability ?? 0.65,
     similarity_boost: voice_settings?.similarity_boost ?? 0.78,
-    style: voice_settings?.style ?? 0.28,
+    style: voice_settings?.style ?? 0.0,
     use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
     speed: 0.94,
   };
