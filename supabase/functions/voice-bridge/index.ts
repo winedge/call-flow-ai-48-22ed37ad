@@ -313,10 +313,12 @@ async function synthTts(
 type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
 
 function openDeepgram(cb: {
+  onOpen: () => void;
   onInterim: (t: string) => void;
   onFinal: (t: string, speechFinal: boolean) => void;
   onUtteranceEnd: () => void;
   onSpeechStart: () => void;
+  onClose: (ev: CloseEvent) => void;
   onError: (e: unknown) => void;
 }): DgHandle {
   const url = new URL("wss://api.deepgram.com/v1/listen");
@@ -334,7 +336,9 @@ function openDeepgram(cb: {
   // VAD events give us a hard UtteranceEnd signal — used to flush any
   // buffered finals when Deepgram doesn't emit speech_final in time.
   url.searchParams.set("vad_events", "true");
-  url.searchParams.set("utterance_end_ms", "700");
+  // Deepgram currently rejects values under 1000ms with HTTP 400. Keep this
+  // at the supported minimum and rely on endpointing + local timers for speed.
+  url.searchParams.set("utterance_end_ms", "1000");
 
   const ws = new WebSocket(url.toString(), ["token", DEEPGRAM_KEY]);
   let closed = false;
@@ -356,7 +360,11 @@ function openDeepgram(cb: {
       cb.onError(e);
     }
   });
-  ws.addEventListener("close", () => (closed = true));
+  ws.addEventListener("open", () => cb.onOpen());
+  ws.addEventListener("close", (ev) => {
+    closed = true;
+    cb.onClose(ev);
+  });
   ws.addEventListener("error", (e) => cb.onError(e));
 
   return {
@@ -383,6 +391,7 @@ type Session = {
   agentId: string | null;
   agent: AgentConfig | null;
   dg: DgHandle | null;
+  dgReconnects: number;
   history: { role: "user" | "assistant"; content: string }[];
   speaking: boolean;
   turnLock: boolean;
@@ -454,6 +463,21 @@ function gateInboundAudio(s: Session, bytes: Uint8Array): Uint8Array[] {
     g.noiseFloor = g.noiseFloor * 0.98 + rms * 0.02;
   }
   return [silenceFrame(bytes.length)];
+}
+
+function initialPathMetadata(pathname: string): { agentId: string | null; callSid: string | null } {
+  const parts = pathname.split("/").filter(Boolean).map((p) => {
+    try {
+      return decodeURIComponent(p);
+    } catch {
+      return p;
+    }
+  });
+  const idx = parts.findIndex((p) => p === "voice-bridge");
+  if (idx < 0) return { agentId: null, callSid: null };
+  const agentId = parts[idx + 1] && parts[idx + 1] !== "healthz" ? parts[idx + 1] : null;
+  const callSid = parts[idx + 2] && parts[idx + 2] !== "unknown" ? parts[idx + 2] : null;
+  return { agentId, callSid };
 }
 
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
@@ -567,10 +591,8 @@ async function handleUserTurn(s: Session, text: string) {
   const cleanText = text.replace(/\s+/g, " ").trim();
   if (!cleanText) return;
   if (!s.agent || s.turnLock) {
-    if (s.agent) {
-      s.queuedUserText = s.queuedUserText ? `${s.queuedUserText} ${cleanText}` : cleanText;
-      s.activeTurnInterrupted = true;
-    }
+    s.queuedUserText = s.queuedUserText ? `${s.queuedUserText} ${cleanText}` : cleanText;
+    if (s.agent) s.activeTurnInterrupted = true;
     return;
   }
   s.turnLock = true;
@@ -672,10 +694,11 @@ Deno.serve((req) => {
   }
 
   const initialAgentId = url.searchParams.get("agent_id") ?? "";
+  const pathMetadata = initialPathMetadata(url.pathname);
 
   console.log("bridge websocket upgrade", {
     callSid: url.searchParams.get("call_sid"),
-    agentId: initialAgentId || null,
+    agentId: initialAgentId || pathMetadata.agentId || null,
     path: url.pathname,
   });
 
@@ -684,10 +707,11 @@ Deno.serve((req) => {
   const session: Session = {
     twilio: socket,
     streamSid: null,
-    callSid: url.searchParams.get("call_sid"),
-    agentId: initialAgentId || null,
+    callSid: url.searchParams.get("call_sid") || pathMetadata.callSid,
+    agentId: initialAgentId || pathMetadata.agentId,
     agent: null,
     dg: null,
+    dgReconnects: 0,
     history: [],
     speaking: false,
     turnLock: false,
@@ -752,6 +776,11 @@ Deno.serve((req) => {
         session.timers.push(setTimeout(tick, 5000));
       };
       session.timers.push(setTimeout(tick, 5000));
+      const queued = session.queuedUserText.trim();
+      if (queued && !session.turnLock && !session.closed) {
+        session.queuedUserText = "";
+        void handleUserTurn(session, queued);
+      }
     })
     .catch((e) => {
       console.error("agent fetch failed", e);
@@ -797,13 +826,6 @@ Deno.serve((req) => {
         agentId: session.agentId,
       });
       session.lastUserAudioAt = Date.now();
-      for (let i = 0; i < 50 && !session.agent; i++) {
-        await new Promise((r) => setTimeout(r, 40));
-      }
-      if (!session.agent) {
-        cleanup(session, "agent not loaded");
-        return;
-      }
       const startListening = () => {
         if (session.dg || session.closed) return;
         // Aggregate final fragments across an utterance so we call the LLM
@@ -838,6 +860,10 @@ Deno.serve((req) => {
           commitTimer = setTimeout(() => commit(allowInterim), ms);
         };
         session.dg = openDeepgram({
+          onOpen: () => {
+            session.dgReconnects = 0;
+            console.log("deepgram open", { callSid: session.callSid });
+          },
           onSpeechStart: () => {
             // Barge-in only when our local audio gate recently saw real
             // caller voice; this prevents room noise from cutting off TTS.
@@ -862,10 +888,32 @@ Deno.serve((req) => {
             if (pending) commit();
             else if (latestInterim) commit(true);
           },
+          onClose: (ev) => {
+            clearCommitTimer();
+            if (session.closed) return;
+            session.dg = null;
+            const attempt = session.dgReconnects + 1;
+            session.dgReconnects = attempt;
+            console.warn("deepgram closed", { callSid: session.callSid, code: ev.code, reason: ev.reason, attempt });
+            if (attempt > 3) {
+              cleanup(session, "speech recognition unavailable");
+              return;
+            }
+            session.timers.push(setTimeout(startListening, Math.min(1200, 150 * attempt)));
+          },
           onError: (e) => console.error("deepgram", e),
         });
       };
+      // Start recognition immediately. If the caller answers while the agent
+      // config is still loading, their speech is queued instead of dropped.
       startListening();
+      for (let i = 0; i < 50 && !session.agent; i++) {
+        await new Promise((r) => setTimeout(r, 40));
+      }
+      if (!session.agent) {
+        cleanup(session, "agent not loaded");
+        return;
+      }
       if (session.agent.speak_first !== false) {
         const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
         session.history.push({ role: "assistant", content: greeting });
