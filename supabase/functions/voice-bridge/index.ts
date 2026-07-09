@@ -148,6 +148,7 @@ function parseWav(buf: ArrayBuffer): { sampleRate: number; samples: Int16Array }
 const APP_URL = Deno.env.get("APP_URL") ?? Deno.env.get("LOVABLE_APP_URL") ?? Deno.env.get("PUBLIC_APP_URL") ?? "";
 const SHARED_SECRET = Deno.env.get("BRIDGE_SHARED_SECRET") ?? "";
 const DEEPGRAM_KEY = Deno.env.get("DEEPGRAM_API_KEY") ?? "";
+const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY") ?? "";
 
 const enc = new TextEncoder();
 
@@ -194,6 +195,56 @@ type AgentConfig = {
     use_speaker_boost?: boolean;
   };
 };
+
+const DIGIT_WORDS: Record<string, string> = {
+  "0": "zero",
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+};
+
+function digitWords(value: string): string {
+  return [...value].map((d) => DIGIT_WORDS[d] ?? d).join(" ");
+}
+
+function chunkPhoneDigits(digits: string): string[] {
+  if (digits.length <= 4) return [digits];
+  if (digits.length === 10) return [digits.slice(0, 3), digits.slice(3, 6), digits.slice(6)];
+  if (digits.length === 11 && digits.startsWith("1")) return [digits.slice(0, 1), digits.slice(1, 4), digits.slice(4, 7), digits.slice(7)];
+  const chunks: string[] = [];
+  let i = 0;
+  if (digits.length > 10) {
+    const countryLen = digits.length === 11 ? 1 : 2;
+    chunks.push(digits.slice(0, countryLen));
+    i = countryLen;
+  }
+  while (i < digits.length) {
+    const remaining = digits.length - i;
+    const size = remaining === 4 ? 4 : Math.min(3, remaining);
+    chunks.push(digits.slice(i, i + size));
+    i += size;
+  }
+  return chunks;
+}
+
+function prepareSpeechText(text: string): string {
+  return text
+    .replace(/(^|[^\w])(\+?\d[\d\s().-]{6,}\d)(?=$|[^\w])/g, (_all, prefix: string, phone: string) => {
+      const hasPlus = phone.trim().startsWith("+");
+      const digits = phone.replace(/\D/g, "");
+      if (digits.length < 7 || digits.length > 15) return `${prefix}${phone}`;
+      const spoken = chunkPhoneDigits(digits).map(digitWords).join("... ");
+      return `${prefix}${hasPlus ? `plus... ${spoken}` : spoken}`;
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 async function fetchAgent(id: string): Promise<AgentConfig> {
   const path = `/api/public/bridge/agent?id=${encodeURIComponent(id)}`;
