@@ -622,7 +622,7 @@ function looksLikeSpeech(text: string, voiceMs: number): boolean {
     .replace(/[^a-z0-9' ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!normalized || normalized.length < 2 || voiceMs < 160) return false;
+  if (!normalized || normalized.length < 2 || voiceMs < 100) return false;
   if (/^(uh+|um+|hm+|hmm+|ah+|er+|mm+|noise|background|music|cough|laugh)$/.test(normalized)) return false;
 
   const words = normalized.split(" ").filter(Boolean);
@@ -995,7 +995,7 @@ Deno.serve((req) => {
           session.noiseGate.voiceMsSinceCommit = 0;
           pending = "";
           latestInterim = "";
-          if (!text || Date.now() - lastCommitAt < 250) return;
+          if (!text || Date.now() - lastCommitAt < 180) return;
           if (!looksLikeSpeech(text, voiceMs)) {
             console.log("bridge ignored non-speech transcript", { text, voiceMs });
             return;
@@ -1023,13 +1023,13 @@ Deno.serve((req) => {
             // Soft barge-in guard: only cancel once we've heard meaningful
             // words backed by gated caller audio, not stray background noise.
             if (session.speaking && looksLikeSpeech(latestInterim, voiceMs)) session.cancelSpeech();
-            scheduleCommit(850, true);
+            scheduleCommit(520, true);
           },
           onFinal: (t, speechFinal) => {
             pending = (pending ? pending + " " : "") + t.trim();
             latestInterim = "";
             if (speechFinal) commit();
-            else scheduleCommit(420);
+            else scheduleCommit(260);
           },
           onUtteranceEnd: () => {
             // Deepgram's silence watchdog fired — flush anything buffered.
