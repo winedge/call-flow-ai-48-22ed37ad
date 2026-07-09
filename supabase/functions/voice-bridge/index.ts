@@ -444,6 +444,20 @@ function sendMulawFrame(s: Session, frame: Uint8Array) {
   }));
 }
 
+async function awaitBriefly<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<null>((resolve) => {
+        timer = setTimeout(() => resolve(null), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // ---------- Deepgram streaming STT ----------
 
 type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
@@ -707,15 +721,44 @@ async function speak(s: Session, text: string) {
       const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
       if (preload) s.greetingAudio = null;
       if (preload) {
-        const mu = await preload.catch(async (e) => {
-          console.warn("greeting prefetch rejected, falling back to fresh synth", e);
-          return await synthElevenLabsMulaw(text, s.agent!.voice_id, s.agent!.voice_settings);
+        const mu = await awaitBriefly(preload, 120).catch((e) => {
+          console.warn("greeting prefetch rejected, falling back to stream", e);
+          return null;
         });
-        for (const frame of chunk20ms(mu)) {
-          if (cancelled || s.closed) break;
-          sendMulawFrame(s, frame);
-          sentFrames++;
-          if (Math.random() < 0.02) await Promise.resolve();
+        if (mu) {
+          for (const frame of chunk20ms(mu)) {
+            if (cancelled || s.closed) break;
+            sendMulawFrame(s, frame);
+            sentFrames++;
+            if (Math.random() < 0.02) await Promise.resolve();
+          }
+        } else {
+          const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
+          const reader = stream.getReader();
+          let carry = new Uint8Array(0);
+          try {
+            while (!cancelled && !s.closed) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              if (!value?.length) continue;
+              const buf = concatBytes(carry, value);
+              const frameable = Math.floor(buf.length / 160) * 160;
+              for (let i = 0; i < frameable; i += 160) {
+                if (cancelled || s.closed) break;
+                sendMulawFrame(s, buf.subarray(i, i + 160));
+                sentFrames++;
+              }
+              carry = buf.subarray(frameable);
+            }
+          } finally {
+            try { reader.releaseLock(); } catch { /* ignore */ }
+          }
+          if (!cancelled && !s.closed && carry.length) {
+            const last = new Uint8Array(160).fill(0xff);
+            last.set(carry.subarray(0, 160));
+            sendMulawFrame(s, last);
+            sentFrames++;
+          }
         }
       } else {
         const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
