@@ -8,7 +8,7 @@
  * the caller to the target number.
  *
  * Modifying the call causes Twilio to end the current <Stream>, which
- * closes the bridge WebSocket — the bridge treats that as normal cleanup.
+ * closes the bridge WebSocket - the bridge treats that as normal cleanup.
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { verifyBridge } from "@/lib/voice/bridge-auth";

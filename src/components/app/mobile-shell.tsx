@@ -1,5 +1,5 @@
 /**
- * Mobile app shell — native-feeling top bar + bottom tab nav.
+ * Mobile app shell - native-feeling top bar + bottom tab nav.
  *
  * Shown only under `md`. Above `md` the desktop Sidebar + Topbar take over.
  */
@@ -73,7 +73,7 @@ export function MobileTopBar() {
         <SheetTrigger asChild>
           <button
             aria-label="Open menu"
-            className="size-9 grid place-items-center rounded-full text-zinc-300 hover:text-zinc-100 active:bg-zinc-800/60 transition"
+            className="size-9 grid place-items-center rounded-full text-neutral-800 hover:text-neutral-900 active:bg-neutral-200 transition"
           >
             <Menu className="size-5" strokeWidth={2} />
           </button>
@@ -84,8 +84,8 @@ export function MobileTopBar() {
       <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
         <img src={logoAsset.url} alt="BulkCall AI" className="h-5 w-auto object-contain shrink-0" />
         <div className="min-w-0 leading-tight">
-          <p className="truncate text-[9px] font-mono uppercase tracking-wider text-zinc-500">
-            {org?.name ?? "—"}
+          <p className="truncate text-[9px] font-mono uppercase tracking-wider text-neutral-500">
+            {org?.name ?? "-"}
           </p>
         </div>
       </Link>
@@ -125,8 +125,8 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
           <div className="flex items-center gap-3">
             <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain shrink-0" />
             <div className="min-w-0 text-left">
-              <p className="truncate text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-                {org?.name ?? "—"}
+              <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
+                {org?.name ?? "-"}
               </p>
             </div>
           </div>
@@ -145,7 +145,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        <p className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+        <p className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-widest text-neutral-400">
           Navigation
         </p>
         {[...TABS, ...MORE_NAV].map((item) => (
@@ -153,16 +153,16 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
             key={item.to + item.label}
             to={item.to as "/dashboard"}
             onClick={onNavigate}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-zinc-300 hover:text-zinc-100 active:bg-zinc-800/60 transition-colors"
+            className="flex items-center gap-3 px-3 py-3 rounded-lg text-neutral-800 hover:text-neutral-900 active:bg-neutral-200 transition-colors"
           >
-            <item.icon className="size-[18px] text-zinc-500 shrink-0" strokeWidth={1.75} />
+            <item.icon className="size-[18px] text-neutral-500 shrink-0" strokeWidth={1.75} />
             <span className="text-[15px]">{item.label}</span>
           </Link>
         ))}
 
         {orgs.length > 1 && (
           <>
-            <p className="px-3 pt-4 pb-1 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+            <p className="px-3 pt-4 pb-1 text-[10px] font-mono uppercase tracking-widest text-neutral-400">
               Workspaces
             </p>
             {orgs.map((o) => (
@@ -172,7 +172,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
                   switchOrg(o.id);
                   onNavigate();
                 }}
-                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-zinc-300 active:bg-zinc-800/60 transition-colors"
+                className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-neutral-800 active:bg-neutral-200 transition-colors"
               >
                 <span className="text-sm truncate">{o.name}</span>
                 {o.id === org?.id && (
@@ -185,23 +185,23 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
       </nav>
 
       <div className="p-4 border-t border-surface-border/60 space-y-3">
-        <div className="p-3 bg-zinc-900/50 rounded-lg ring-1 ring-white/5">
+        <div className="p-3 bg-neutral-50 rounded-lg ring-1 ring-black/5">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">
               AI Minutes
             </p>
-            <p className="text-[10px] font-mono text-zinc-400">{Math.round(pct)}%</p>
+            <p className="text-[10px] font-mono text-neutral-600">{Math.round(pct)}%</p>
           </div>
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mb-2">
+          <div className="h-1 bg-neutral-200 rounded-full overflow-hidden mb-2">
             <div className="h-full bg-brand-primary" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-[11px] font-mono text-zinc-400">
+          <p className="text-[11px] font-mono text-neutral-600">
             {Math.round(aiMinutes).toLocaleString()} / {quota.toLocaleString()} min
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="size-9 rounded-full bg-zinc-800 ring-1 ring-white/10 grid place-items-center text-xs font-medium text-zinc-300 shrink-0">
+          <div className="size-9 rounded-full bg-neutral-200 ring-1 ring-black/10 grid place-items-center text-xs font-medium text-neutral-800 shrink-0">
             {user?.full_name
               .split(" ")
               .map((p) => p[0])
@@ -209,8 +209,8 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
               .join("")}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm text-zinc-200 truncate">{user?.full_name}</p>
-            <p className="text-[11px] text-zinc-500 truncate">{user?.email}</p>
+            <p className="text-sm text-neutral-900 truncate">{user?.full_name}</p>
+            <p className="text-[11px] text-neutral-500 truncate">{user?.email}</p>
           </div>
           <button
             aria-label="Sign out"
@@ -219,7 +219,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
               onNavigate();
               router.navigate({ to: "/auth" });
             }}
-            className="size-9 grid place-items-center rounded-full text-zinc-400 active:bg-zinc-800/60 transition"
+            className="size-9 grid place-items-center rounded-full text-neutral-600 active:bg-neutral-200 transition"
           >
             <LogOut className="size-4" strokeWidth={1.75} />
           </button>
@@ -255,7 +255,7 @@ export function MobileBottomNav() {
               <Link
                 key={tab.to}
                 to={tab.to as "/dashboard"}
-                className="relative flex flex-col items-center justify-center gap-1 active:bg-zinc-800/40 transition-colors"
+                className="relative flex flex-col items-center justify-center gap-1 active:bg-neutral-200/40 transition-colors"
               >
                 <div
                   className={cn(
@@ -266,7 +266,7 @@ export function MobileBottomNav() {
                   <Icon
                     className={cn(
                       "size-[18px] transition-colors",
-                      active ? "text-brand-primary" : "text-zinc-500",
+                      active ? "text-brand-primary" : "text-neutral-500",
                     )}
                     strokeWidth={active ? 2.25 : 1.75}
                   />
@@ -277,7 +277,7 @@ export function MobileBottomNav() {
                 <span
                   className={cn(
                     "text-[10px] font-medium tracking-tight transition-colors",
-                    active ? "text-brand-primary" : "text-zinc-500",
+                    active ? "text-brand-primary" : "text-neutral-500",
                   )}
                 >
                   {tab.label}
@@ -288,12 +288,12 @@ export function MobileBottomNav() {
 
           <button
             onClick={() => setMoreOpen(true)}
-            className="relative flex flex-col items-center justify-center gap-1 active:bg-zinc-800/40 transition-colors"
+            className="relative flex flex-col items-center justify-center gap-1 active:bg-neutral-200/40 transition-colors"
           >
             <div className="flex items-center justify-center size-8 rounded-full">
-              <Menu className="size-[18px] text-zinc-500" strokeWidth={1.75} />
+              <Menu className="size-[18px] text-neutral-500" strokeWidth={1.75} />
             </div>
-            <span className="text-[10px] font-medium tracking-tight text-zinc-500">
+            <span className="text-[10px] font-medium tracking-tight text-neutral-500">
               More
             </span>
           </button>
@@ -305,13 +305,13 @@ export function MobileBottomNav() {
           side="bottom"
           className="bg-surface-base border-surface-border/60 rounded-t-2xl p-0 max-h-[80vh]"
         >
-          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-zinc-700" />
+          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-neutral-300" />
           <div className="flex items-center justify-between px-5 pt-3 pb-2">
-            <h3 className="text-sm font-medium text-zinc-100">More</h3>
+            <h3 className="text-sm font-medium text-neutral-900">More</h3>
             <button
               aria-label="Close"
               onClick={() => setMoreOpen(false)}
-              className="size-8 grid place-items-center rounded-full text-zinc-400 active:bg-zinc-800/60"
+              className="size-8 grid place-items-center rounded-full text-neutral-600 active:bg-neutral-200"
             >
               <X className="size-4" />
             </button>
@@ -322,9 +322,9 @@ export function MobileBottomNav() {
                 key={item.to + item.label}
                 to={item.to as "/dashboard"}
                 onClick={() => setMoreOpen(false)}
-                className="flex items-center gap-3 px-3 py-3.5 rounded-lg text-zinc-200 active:bg-zinc-800/60 transition-colors"
+                className="flex items-center gap-3 px-3 py-3.5 rounded-lg text-neutral-900 active:bg-neutral-200 transition-colors"
               >
-                <div className="size-9 grid place-items-center rounded-lg bg-zinc-900/60 ring-1 ring-white/5 shrink-0">
+                <div className="size-9 grid place-items-center rounded-lg bg-neutral-50 ring-1 ring-black/5 shrink-0">
                   <item.icon className="size-4 text-brand-primary" strokeWidth={1.75} />
                 </div>
                 <span className="text-[15px]">{item.label}</span>

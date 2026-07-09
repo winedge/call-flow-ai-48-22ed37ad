@@ -1,5 +1,5 @@
 /**
- * voice-bridge — Deno edge function port of services/voice-bridge.
+ * voice-bridge - Deno edge function port of services/voice-bridge.
  *
  * Twilio Media Streams (μ-law/8k) <-> Deepgram STT <-> Lovable app
  * (Gemini turn + Kokoro TTS). Full-duplex over a single WebSocket that
@@ -217,7 +217,7 @@ async function requestTransfer(callSid: string, to: string): Promise<void> {
 
 /**
  * Fire-and-forget: tell the app why this call ended so the UI can show it.
- * Never throws — we're mid-cleanup and can't afford to interrupt.
+ * Never throws - we're mid-cleanup and can't afford to interrupt.
  */
 async function reportCallEvent(
   callSid: string,
@@ -379,7 +379,7 @@ async function speak(s: Session, text: string) {
     const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
     if (cancelled || s.closed) return;
 
-    // Fast path: ElevenLabs returns raw μ-law 8kHz as data URI —
+    // Fast path: ElevenLabs returns raw μ-law 8kHz as data URI -
     // no fetch, no WAV parse, no downsample, no encode. Twilio's wire format.
     let mu: Uint8Array;
     if (audio_url.startsWith("data:audio/mulaw;base64,")) {
@@ -451,7 +451,7 @@ async function handleUserTurn(s: Session, text: string) {
         await new Promise((r) => setTimeout(r, 300));
         try {
           await requestTransfer(s.callSid, to);
-          // Report the transfer up front — Twilio will drop the <Stream>
+          // Report the transfer up front - Twilio will drop the <Stream>
           // as soon as it fetches new TwiML, and socket.onclose fires
           // cleanup with "socket closed" which would otherwise be
           // (mis)classified as caller_hangup.

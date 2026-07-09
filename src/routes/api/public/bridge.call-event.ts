@@ -3,7 +3,7 @@
  *
  * Body: { call_sid: string, end_reason?: string, ended_at?: string }
  *
- * end_reason is a canonical short code — see END_REASONS in
+ * end_reason is a canonical short code - see END_REASONS in
  * src/lib/voice/call-end-reasons.ts. We update the matching calls row
  * (matched by twilio_call_sid) with the reason, ended_at, and, if the row
  * is still "in_progress", flip status to "completed".
@@ -91,7 +91,7 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
           updated_at: endedAt,
         };
         if (endReason) patch.end_reason = endReason;
-        // Bridge is authoritative for terminal state — Twilio's status
+        // Bridge is authoritative for terminal state - Twilio's status
         // callback may not always land (signature mismatch behind proxy,
         // network drop). Always flip non-terminal statuses to completed
         // and compute duration_sec from started_at → ended_at when we
@@ -228,7 +228,7 @@ async function extractCallData(
 
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) {
-    console.warn("[bridge.call-event] LOVABLE_API_KEY missing — skipping extraction");
+    console.warn("[bridge.call-event] LOVABLE_API_KEY missing - skipping extraction");
     return null;
   }
 

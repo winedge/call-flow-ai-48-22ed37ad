@@ -19,8 +19,8 @@ export const Route = createFileRoute("/_app")({
 function AppLayout() {
   useSupabaseSync();
   return (
-    <div className="flex min-h-screen bg-surface-base text-zinc-100">
-      {/* Desktop sidebar — hidden on mobile */}
+    <div className="flex min-h-screen bg-surface-base text-neutral-900">
+      {/* Desktop sidebar - hidden on mobile */}
       <div className="hidden md:flex">
         <Sidebar />
       </div>

@@ -51,7 +51,7 @@ export function computeCampaignMetrics(campaign: Campaign, calls: Call[], contac
   const successRate = placed ? (booked / placed) * 100 : 0;
   const avgDur = placed ? sumDur / placed : 0;
 
-  // ETA — based on last N calls throughput
+  // ETA - based on last N calls throughput
   let etaMinutes: number | null = null;
   if (campaign.status === "running" && remaining > 0 && placed >= 2 && firstAt && lastAt) {
     const spanMin = Math.max(1, (lastAt - firstAt) / 60_000);
@@ -87,7 +87,7 @@ export function computeCampaignMetrics(campaign: Campaign, calls: Call[], contac
 }
 
 export function formatEta(mins: number | null): string {
-  if (mins == null) return "—";
+  if (mins == null) return "-";
   if (mins < 1) return "<1 min";
   if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);

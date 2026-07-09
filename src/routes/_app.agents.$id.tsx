@@ -28,11 +28,11 @@ import { listElevenLabsVoices, previewElevenLabsVoice, type ElevenLabsVoice } fr
 import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
-  head: () => ({ meta: [{ title: "Edit agent — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Edit agent - BulkCall AI" }] }),
   component: AgentEditor,
 });
 
-// Kokoro speaker presets — Apache-2.0, commercially licensed.
+// Kokoro speaker presets - Apache-2.0, commercially licensed.
 const VOICES = KOKORO_VOICES.map((v) => ({ id: v.id, name: v.label, language: v.language }));
 
 type KokoroLang = keyof typeof KOKORO_LANGUAGES;
@@ -335,21 +335,21 @@ function AgentEditor() {
             </Field>
           </div>
           {form.tts_engine === "elevenlabs" ? (
-            <p className="text-[10px] text-zinc-500 font-mono pt-1">
+            <p className="text-[10px] text-neutral-500 font-mono pt-1">
               {elError
                 ? `ElevenLabs: ${elError}`
                 : `ElevenLabs · ${elVoices?.length ?? 0} voices loaded from your account. Uses eleven_multilingual_v2.`}
             </p>
           ) : (
-            <p className="text-[10px] text-zinc-500 font-mono pt-1">
-              Powered by Kokoro-82M via Replicate — Apache-2.0, commercially licensed.
+            <p className="text-[10px] text-neutral-500 font-mono pt-1">
+              Powered by Kokoro-82M via Replicate - Apache-2.0, commercially licensed.
             </p>
           )}
         </Card>
 
         {form.tts_engine === "elevenlabs" && (
           <Card title="Voice tuning (ElevenLabs)">
-            <p className="text-[11px] text-zinc-500 mb-3">
+            <p className="text-[11px] text-neutral-500 mb-3">
               Fine-tune how expressive and consistent this voice sounds. Lower stability + higher style = more emotional, varied delivery. Higher stability = flatter, more predictable.
             </p>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -361,7 +361,7 @@ function AgentEditor() {
                   step={0.05}
                   onValueChange={(v) => patch("voice_stability", v[0])}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">Lower = more emotional variation. Higher = more monotone/consistent.</p>
+                <p className="text-[10px] text-neutral-500 mt-1">Lower = more emotional variation. Higher = more monotone/consistent.</p>
               </Field>
               <Field label={`Similarity boost: ${(form.voice_similarity_boost ?? 0.8).toFixed(2)}`}>
                 <Slider
@@ -371,7 +371,7 @@ function AgentEditor() {
                   step={0.05}
                   onValueChange={(v) => patch("voice_similarity_boost", v[0])}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">How closely to match the original voice character.</p>
+                <p className="text-[10px] text-neutral-500 mt-1">How closely to match the original voice character.</p>
               </Field>
               <Field label={`Style: ${(form.voice_style ?? 0.45).toFixed(2)}`}>
                 <Slider
@@ -381,7 +381,7 @@ function AgentEditor() {
                   step={0.05}
                   onValueChange={(v) => patch("voice_style", v[0])}
                 />
-                <p className="text-[10px] text-zinc-500 mt-1">Style exaggeration. Higher = more expressive, but can drift.</p>
+                <p className="text-[10px] text-neutral-500 mt-1">Style exaggeration. Higher = more expressive, but can drift.</p>
               </Field>
               <Field label="Speaker boost">
                 <div className="flex items-center gap-3 h-9">
@@ -389,7 +389,7 @@ function AgentEditor() {
                     checked={form.voice_speaker_boost ?? true}
                     onCheckedChange={(v) => patch("voice_speaker_boost", v)}
                   />
-                  <span className="text-xs text-zinc-500">Enhances clarity and voice similarity.</span>
+                  <span className="text-xs text-neutral-500">Enhances clarity and voice similarity.</span>
                 </div>
               </Field>
             </div>
@@ -404,7 +404,7 @@ function AgentEditor() {
                 checked={form.speak_first ?? true}
                 onCheckedChange={(v) => patch("speak_first", v)}
               />
-              <span className="text-xs text-zinc-500">
+              <span className="text-xs text-neutral-500">
                 {form.speak_first ?? true
                   ? "Agent greets the caller as soon as the call connects."
                   : "Agent waits silently until the caller speaks first."}
@@ -484,7 +484,7 @@ function AgentEditor() {
         </Card>
 
         <Card title="Data collection">
-          <p className="text-[11px] text-zinc-500 mb-3">
+          <p className="text-[11px] text-neutral-500 mb-3">
             Define the fields this agent should collect from callers. After each call ends, the transcript is
             scanned for these fields and the values are saved on the call record.
           </p>
@@ -535,17 +535,17 @@ function TestCallCard({ agentId, isNew }: { agentId: string; isNew: boolean }) {
   }
 
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-medium text-zinc-200 border-b border-surface-border/40 pb-3">
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 space-y-4">
+      <h2 className="text-sm font-medium text-neutral-900 border-b border-surface-border/40 pb-3">
         Test call (live)
       </h2>
-      <p className="text-xs text-zinc-400">
+      <p className="text-xs text-neutral-600">
         Places a real outbound call via Twilio → voice bridge → Deepgram STT →
         Gemini → Kokoro TTS. Requires{" "}
-        <code className="text-zinc-300">TWILIO_*</code>,{" "}
-        <code className="text-zinc-300">PUBLIC_APP_URL</code>,{" "}
-        <code className="text-zinc-300">BRIDGE_URL</code>, and{" "}
-        <code className="text-zinc-300">REPLICATE_API_KEY</code> in admin secrets.
+        <code className="text-neutral-800">TWILIO_*</code>,{" "}
+        <code className="text-neutral-800">PUBLIC_APP_URL</code>,{" "}
+        <code className="text-neutral-800">BRIDGE_URL</code>, and{" "}
+        <code className="text-neutral-800">REPLICATE_API_KEY</code> in admin secrets.
       </p>
       <div className="flex gap-2">
         <Input
@@ -569,7 +569,7 @@ function TestCallCard({ agentId, isNew }: { agentId: string; isNew: boolean }) {
         </Button>
       </div>
       {lastSid && (
-        <p className="text-[11px] text-zinc-500 font-mono">Last CallSid: {lastSid}</p>
+        <p className="text-[11px] text-neutral-500 font-mono">Last CallSid: {lastSid}</p>
       )}
     </div>
   );
@@ -578,8 +578,8 @@ function TestCallCard({ agentId, isNew }: { agentId: string; isNew: boolean }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-medium text-zinc-200 border-b border-surface-border/40 pb-3">{title}</h2>
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 space-y-4">
+      <h2 className="text-sm font-medium text-neutral-900 border-b border-surface-border/40 pb-3">{title}</h2>
       {children}
     </div>
   );
@@ -587,7 +587,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">{label}</Label>
+      <Label className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">{label}</Label>
       {children}
     </div>
   );
@@ -634,14 +634,14 @@ function DataFieldsEditor({
   return (
     <div className="space-y-3">
       {value.length === 0 && (
-        <p className="text-[11px] text-zinc-500 italic">
-          No fields yet. Add one — e.g. "Full name", "Email", "Preferred callback time".
+        <p className="text-[11px] text-neutral-500 italic">
+          No fields yet. Add one - e.g. "Full name", "Email", "Preferred callback time".
         </p>
       )}
       {value.map((f, i) => (
         <div
           key={i}
-          className="grid grid-cols-1 sm:grid-cols-[1fr_140px_110px_auto] gap-2 items-center bg-zinc-950/40 ring-1 ring-white/5 rounded-lg p-2"
+          className="grid grid-cols-1 sm:grid-cols-[1fr_140px_110px_auto] gap-2 items-center bg-neutral-100 ring-1 ring-black/5 rounded-lg p-2"
         >
           <Input
             value={f.label}
@@ -665,7 +665,7 @@ function DataFieldsEditor({
               ))}
             </SelectContent>
           </Select>
-          <label className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
+          <label className="flex items-center gap-2 text-[11px] text-neutral-600 font-mono">
             <input
               type="checkbox"
               checked={f.required}

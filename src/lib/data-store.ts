@@ -9,7 +9,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/integrations/supabase/client";
 
-// Fire-and-forget DB write. Errors log to console — UI stays responsive.
+// Fire-and-forget DB write. Errors log to console - UI stays responsive.
 function dbWrite(p: PromiseLike<unknown>) {
   Promise.resolve(p).then((r) => {
     const err = (r as { error?: { message?: string } })?.error;
@@ -85,7 +85,7 @@ export type AIAgent = {
   id: UUID;
   org_id: UUID;
   name: string;
-  /** TTS engine key — resolved via src/lib/voice/tts/registry.ts. */
+  /** TTS engine key - resolved via src/lib/voice/tts/registry.ts. */
   tts_engine: "kokoro" | "elevenlabs";
   voice_id: string;
   voice_name: string;
@@ -105,7 +105,7 @@ export type AIAgent = {
   max_retries: number;
   retry_delay_minutes: number;
   data_fields: DataField[];
-  /** ElevenLabs voice tuning — falls back to sensible defaults when null. */
+  /** ElevenLabs voice tuning - falls back to sensible defaults when null. */
   voice_stability?: number | null;
   voice_similarity_boost?: number | null;
   voice_style?: number | null;
@@ -220,7 +220,7 @@ export type OrgSettings = {
 };
 
 // ============================================================
-// Empty initial state — no demo data. Real data is loaded from
+// Empty initial state - no demo data. Real data is loaded from
 // Supabase after auth via the sync layer in src/lib/sync.ts.
 // ============================================================
 

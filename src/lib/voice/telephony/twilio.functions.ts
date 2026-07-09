@@ -1,5 +1,5 @@
 /**
- * Twilio Programmable Voice — outbound call initiation.
+ * Twilio Programmable Voice - outbound call initiation.
  *
  * Uses standard Twilio REST (Account SID + Auth Token, HTTP Basic).
  * On connect, Twilio hits our TwiML endpoint at
@@ -49,7 +49,7 @@ export const initiateCall = createServerFn({ method: "POST" })
       .map(([k]) => k);
     if (missing.length) {
       throw new Error(
-        `Missing env vars: ${missing.join(", ")} — set them in the admin secrets.`,
+        `Missing env vars: ${missing.join(", ")} - set them in the admin secrets.`,
       );
     }
 
@@ -155,7 +155,7 @@ export const initiateCall = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (insErr) {
-      // Don't fail the call — the Twilio dial already succeeded. Log and
+      // Don't fail the call - the Twilio dial already succeeded. Log and
       // continue; the row can still be reconciled later via the SID.
       console.error("[initiateCall] calls insert failed:", insErr.message);
       return { callSid, callId: "" };

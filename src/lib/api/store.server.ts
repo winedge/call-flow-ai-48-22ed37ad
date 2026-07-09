@@ -1,7 +1,7 @@
 /**
  * In-memory server-side store for the REST API layer.
  *
- * Lives in the worker process — resets on redeploy. Mirrors the client
+ * Lives in the worker process - resets on redeploy. Mirrors the client
  * Zustand shapes so migrating to Supabase later is a drop-in.
  */
 

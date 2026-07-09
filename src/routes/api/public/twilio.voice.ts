@@ -1,12 +1,12 @@
 /**
- * Twilio Voice URL — returns TwiML that hands the call's audio to the
+ * Twilio Voice URL - returns TwiML that hands the call's audio to the
  * voice-bridge service via <Connect><Stream>.
  *
  * Handles BOTH:
- *   • Outbound calls we originated — Twilio invokes this URL with
+ *   • Outbound calls we originated - Twilio invokes this URL with
  *     `?agent_id=…` (we pass it in initiateCall). The calls row already
  *     exists.
- *   • Inbound calls to your Twilio number — Twilio invokes this URL with
+ *   • Inbound calls to your Twilio number - Twilio invokes this URL with
  *     no query params. We look up the phone_numbers row for the `To`
  *     number and use its `inbound_agent_id` (falling back to the user's
  *     first agent). A calls row is created on the fly so the same

@@ -5,8 +5,8 @@
  * Returns: { reply: string, end_call: boolean, transfer: boolean }
  *
  * Control tokens the model may prepend to the reply:
- *   [END_CALL]  — hang up after speaking `reply`
- *   [TRANSFER]  — warm-transfer to agent.transfer_number after speaking `reply`
+ *   [END_CALL]  - hang up after speaking `reply`
+ *   [TRANSFER]  - warm-transfer to agent.transfer_number after speaking `reply`
  *
  * Uses the Lovable AI Gateway (Gemini 3 Flash). Keeps LOVABLE_API_KEY server-side.
  * Auth: HMAC via BRIDGE_SHARED_SECRET (see bridge-auth.ts).
@@ -108,7 +108,7 @@ function stripIdentityTokenFromNamePosition(reply: string, token: string): strin
 // is Sarah too", "I'm Sarah as well", "what a coincidence, we have the
 // same name", "we're both Sarah"). These arise when the model mirrors
 // filler words like "too/also" from the caller and treats them as a name
-// claim. Removing the whole sentence is safe — the assistant already
+// claim. Removing the whole sentence is safe - the assistant already
 // introduced itself in the greeting and never needs to restate its name.
 function stripNameCoincidenceClaims(reply: string, agentName: string | undefined): string {
   const name = normalizeName(agentName);
@@ -134,7 +134,7 @@ function stripNameCoincidenceClaims(reply: string, agentName: string | undefined
 function stripAgentNameAsCaller(reply: string, agentName: string | undefined, history: Turn[]): string {
   const name = normalizeName(agentName);
   if (!name) return reply;
-  // Always strip name-coincidence claims — the caller saying "too" is filler,
+  // Always strip name-coincidence claims - the caller saying "too" is filler,
   // not a name reveal, and the assistant must never claim their names match.
   let out = stripNameCoincidenceClaims(reply, name);
   // If the caller explicitly gave the same name as their own, leave vocatives alone.
@@ -265,7 +265,7 @@ function preventPrematureContactCollection(reply: string, a: AgentSummary, histo
   const fields = a.data_fields ?? [];
   const contactAsk = asksForPersonalContactDetail(reply) || asksForContactField(reply, fields);
   if (!contactAsk) return reply;
-  // Only guard the very first user turn. After that, trust the model —
+  // Only guard the very first user turn. After that, trust the model -
   // the caller is engaged and the conversation is moving forward.
   if (userTurnCount(history) > 1) return reply;
   if (callerShowsBookingIntent(history)) return reply;
@@ -280,8 +280,8 @@ function preventPrematureContactCollection(reply: string, a: AgentSummary, histo
 function describeField(f: DataField): string {
   const req = f.required ? " (required)" : "";
   const hint =
-    f.type === "phone" ? " — collect the full phone number with country/area code, then confirm it slowly in 3-4 digit groups"
-    : f.type === "email" ? " — spell it back to confirm"
+    f.type === "phone" ? " - collect the full phone number with country/area code, then confirm it slowly in 3-4 digit groups"
+    : f.type === "email" ? " - spell it back to confirm"
     : "";
   return `${f.label} [${f.key}]${req}${hint}`;
 }
@@ -370,7 +370,7 @@ function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
 
 function stateGuidance(state: ConvState, agent: AgentSummary, collected: CollectedField[]): string {
   const collectedLines = collected.length
-    ? `ALREADY COLLECTED (do NOT ask for these again — treat as final):\n${collected.map((c) => `- ${c.field.label} [${c.field.key}] = "${c.value}"`).join("\n")}`
+    ? `ALREADY COLLECTED (do NOT ask for these again - treat as final):\n${collected.map((c) => `- ${c.field.label} [${c.field.key}] = "${c.value}"`).join("\n")}`
     : "ALREADY COLLECTED: none.";
   const pending = (agent.data_fields ?? []).filter((f) => !collected.find((c) => c.field.key === f.key));
   const pendingLines = pending.length
@@ -379,7 +379,7 @@ function stateGuidance(state: ConvState, agent: AgentSummary, collected: Collect
   const phase = {
     GREETING: "PHASE = GREETING. The caller has not spoken yet. Say the greeting only.",
     INTRO: "PHASE = INTRO. The caller has just answered your greeting or made small talk. Briefly acknowledge (one short clause), then move into a business-intro or discovery question from the system prompt. Do NOT ask for name, phone, email, or contact details in this phase.",
-    DISCOVERY: "PHASE = DISCOVERY. Ask discovery/qualification questions from the system prompt. Do NOT collect contact details yet — wait until the caller asks to book/schedule/demo or otherwise signals intent.",
+    DISCOVERY: "PHASE = DISCOVERY. Ask discovery/qualification questions from the system prompt. Do NOT collect contact details yet - wait until the caller asks to book/schedule/demo or otherwise signals intent.",
     COLLECTING: "PHASE = COLLECTING. The caller has shown booking/scheduling intent. Ask for the next STILL PENDING field, one at a time. NEVER re-ask a field listed under ALREADY COLLECTED.",
     CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. Confirm the details back once, tell the caller the next step, and wait for their goodbye. Do not ask for more information.",
     CLOSING: "PHASE = CLOSING. Wrap up warmly and prepend [END_CALL] to the reply.",
@@ -422,27 +422,27 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
     fields.length
-      ? `Information to collect ONLY during PHASE = COLLECTING. These fields are NOT the opening script. Ask one item at a time and confirm it. NEVER re-ask a field that is already listed under ALREADY COLLECTED — treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
+      ? `Information to collect ONLY during PHASE = COLLECTING. These fields are NOT the opening script. Ask one item at a time and confirm it. NEVER re-ask a field that is already listed under ALREADY COLLECTED - treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
       : "",
     a.qualification_questions?.length
       ? `Qualification questions:\n- ${a.qualification_questions.join("\n- ")}`
       : "",
     a.end_call_conditions?.length
-      ? `End the call ONLY when: ${a.end_call_conditions.join("; ")}. When ending, first give a warm closing line (thank them, confirm next step, say goodbye) and prepend [END_CALL] to that closing reply. Never [END_CALL] on the same turn where you just received information — always confirm the info back, share the next step, and wait for the caller's goodbye first.`
+      ? `End the call ONLY when: ${a.end_call_conditions.join("; ")}. When ending, first give a warm closing line (thank them, confirm next step, say goodbye) and prepend [END_CALL] to that closing reply. Never [END_CALL] on the same turn where you just received information - always confirm the info back, share the next step, and wait for the caller's goodbye first.`
       : `Only end the call after the caller clearly says goodbye or asks to end. Never hang up mid-flow. When ending, prepend [END_CALL] to a warm closing reply.`,
     canTransfer
       ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
       : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
-    "CRITICAL — Control tokens [END_CALL] and [TRANSFER] are SILENT machine signals. They must appear as the very first characters of your reply, in square brackets. NEVER speak the words 'END CALL', 'END_CALL', 'TRANSFER', or read the brackets out loud. To end the call, prepend [END_CALL] to a natural goodbye sentence — never put those words in the sentence itself.",
+    "CRITICAL - Control tokens [END_CALL] and [TRANSFER] are SILENT machine signals. They must appear as the very first characters of your reply, in square brackets. NEVER speak the words 'END CALL', 'END_CALL', 'TRANSFER', or read the brackets out loud. To end the call, prepend [END_CALL] to a natural goodbye sentence - never put those words in the sentence itself.",
     "Never use both [END_CALL] and [TRANSFER] in the same reply.",
-    "Speak like a warm, calm human on a live phone call: use contractions, brief acknowledgements ('mm-hm', 'got it', 'okay'), and natural punctuation for pauses. Vary your sentence length. Keep tone professional and grounded — do NOT sound overly excited, bubbly, or salesy, especially in the opening line. No exclamation marks. No 'so excited', 'amazing', 'awesome' filler.",
+    "Speak like a warm, calm human on a live phone call: use contractions, brief acknowledgements ('mm-hm', 'got it', 'okay'), and natural punctuation for pauses. Vary your sentence length. Keep tone professional and grounded - do NOT sound overly excited, bubbly, or salesy, especially in the opening line. No exclamation marks. No 'so excited', 'amazing', 'awesome' filler.",
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
-    "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string. State a phone number EXACTLY ONCE per turn — do NOT say the digits, then repeat them in the same reply (no 'that's <digits>', no 'to confirm, <digits>' after already saying it). If the caller confirms, acknowledge with words only (e.g. 'perfect, got it'), never re-state the digits.",
+    "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string. State a phone number EXACTLY ONCE per turn - do NOT say the digits, then repeat them in the same reply (no 'that's <digits>', no 'to confirm, <digits>' after already saying it). If the caller confirms, acknowledge with words only (e.g. 'perfect, got it'), never re-state the digits.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
-    "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
-    "Words like 'too', 'also', 'as well', 'either' from the caller are filler agreement, NEVER a name reveal or an identity claim. Do NOT interpret them as the caller sharing a name, and do NOT respond with any 'coincidence' or 'same name' remark. After the greeting, do NOT re-introduce yourself or restate your own name — never say 'my name is …', 'I'm … too', 'we have the same name', or similar. Your name was given once in the greeting and that is enough.",
+    "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on - do NOT pretend they asked you back.",
+    "Words like 'too', 'also', 'as well', 'either' from the caller are filler agreement, NEVER a name reveal or an identity claim. Do NOT interpret them as the caller sharing a name, and do NOT respond with any 'coincidence' or 'same name' remark. After the greeting, do NOT re-introduce yourself or restate your own name - never say 'my name is …', 'I'm … too', 'we have the same name', or similar. Your name was given once in the greeting and that is enough.",
     a.name ? `Name safety rule: "${a.name}" is the assistant's name only. If the caller has not explicitly said "my name is ${a.name}" or "call me ${a.name}" in this conversation, any reply that addresses the caller as "${a.name}" is wrong. Use no caller name instead.` : "Name safety rule: the caller's name is unknown unless they explicitly say it during this call. Use no caller name by default.",
-    "Keep replies short — under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
+    "Keep replies short - under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
 }
@@ -491,8 +491,8 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
               if (from) parts.push(`Your outbound business number (the number showing on their caller ID) is ${from}.`);
               if (parts.length) {
                 phoneContext =
-                  `CALL CONTEXT — GROUND TRUTH PHONE NUMBERS (use these exact digits, never invent others):\n${parts.join(" ")} ` +
-                  `If the caller asks what number you are calling them on, or references "this number", "the number you called", or "my number", answer with the caller's phone number above — never any other digits. ` +
+                  `CALL CONTEXT - GROUND TRUTH PHONE NUMBERS (use these exact digits, never invent others):\n${parts.join(" ")} ` +
+                  `If the caller asks what number you are calling them on, or references "this number", "the number you called", or "my number", answer with the caller's phone number above - never any other digits. ` +
                   `When speaking a phone number aloud, group the digits (e.g. "2 1 2 ... 5 5 5 ... 0 1 2 3").`;
               }
             }
@@ -537,7 +537,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         let endCall = false;
         let transfer = false;
 
-        // Strip control tokens aggressively — models sometimes emit them
+        // Strip control tokens aggressively - models sometimes emit them
         // without brackets, with different casing, or mid-reply. Any form
         // must be treated as a control signal and never spoken.
         const tokenRe = /\[?\s*(END[_\s-]?CALL|TRANSFER)\s*\]?/gi;

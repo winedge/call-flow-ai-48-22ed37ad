@@ -1,7 +1,7 @@
 /**
  * Deepgram streaming STT over WebSocket.
  *
- * We send raw μ-law/8k audio (same format Twilio gives us — zero
+ * We send raw μ-law/8k audio (same format Twilio gives us - zero
  * conversion). Deepgram sends back interim + final transcripts. We only
  * surface finals to the dialog loop; interims are used to detect that the
  * caller is talking so we can barge-in on our current TTS playback.

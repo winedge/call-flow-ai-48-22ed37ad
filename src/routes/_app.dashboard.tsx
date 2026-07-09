@@ -1,24 +1,17 @@
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import {
-  AreaChart,
-  Area,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Tooltip as RTooltip,
-  CartesianGrid,
-} from "recharts";
+import { PhoneCall, Voicemail, CalendarCheck, Radio, Users } from "lucide-react";
 
-import { PageHeader, StatTile, StatusPill } from "@/components/app/primitives";
+import { PageHeader, StatusPill } from "@/components/app/primitives";
 import { useDB } from "@/lib/data-store";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — BulkCall AI" },
-      { name: "description", content: "Real-time overview of your AI calling campaigns." },
+      { title: "Dispatch Board - BulkCall AI" },
+      { name: "description", content: "Live call-ops console for your outbound AI dispatchers." },
     ],
   }),
   component: Dashboard,
@@ -30,168 +23,164 @@ function Dashboard() {
   const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startToday = today.getTime();
-
-  const callsToday = calls.filter(
-    (c) => new Date(c.started_at).getTime() >= startToday,
-  );
-  const answered = callsToday.filter((c) =>
-    ["completed", "voicemail", "in_progress"].includes(c.status),
-  );
+  const now = Date.now();
+  const startToday = new Date().setHours(0, 0, 0, 0);
+  const callsToday = calls.filter((c) => new Date(c.started_at).getTime() >= startToday);
+  const answered = callsToday.filter((c) => ["completed", "voicemail", "in_progress"].includes(c.status));
   const completed = callsToday.filter((c) => c.status === "completed");
-  const booked = completed.filter((c) => c.appointment_booked).length;
-  const aiMins = calls.reduce((s, c) => s + c.ai_minutes, 0);
-  const liveCalls = calls.filter((c) => c.status === "in_progress");
+  const voicemails = callsToday.filter((c) => c.status === "voicemail");
   const failed = callsToday.filter((c) => c.status === "failed");
+  const booked = completed.filter((c) => c.appointment_booked).length;
+  const liveCalls = calls.filter((c) => c.status === "in_progress");
 
-  const chartData = useMemo(() => {
-    const buckets: { hour: string; calls: number; answered: number }[] = [];
-    for (let h = 23; h >= 0; h--) {
-      const from = Date.now() - h * 3600_000;
-      const to = from + 3600_000;
-      const inBucket = calls.filter((c) => {
-        const t = new Date(c.started_at).getTime();
-        return t >= from && t < to;
-      });
-      buckets.push({
-        hour: new Date(from).toLocaleTimeString([], { hour: "2-digit", hour12: false }),
-        calls: inBucket.length,
-        answered: inBucket.filter((c) => ["completed", "voicemail"].includes(c.status)).length,
-      });
+  // 60-minute density strip (each cell = 1 minute of the last hour)
+  const heat = useMemo(() => {
+    const cells: number[] = new Array(60).fill(0);
+    for (const c of calls) {
+      const t = new Date(c.started_at).getTime();
+      const mins = Math.floor((now - t) / 60000);
+      if (mins >= 0 && mins < 60) cells[59 - mins] += 1;
     }
-    return buckets;
-  }, [calls]);
+    return cells;
+  }, [calls, now]);
+  const heatMax = Math.max(1, ...heat);
+
+  // Per-agent occupancy roster
+  const roster = useMemo(
+    () =>
+      agents.map((a) => {
+        const inFlight = calls.filter((c) => c.agent_id === a.id && c.status === "in_progress").length;
+        const doneToday = callsToday.filter((c) => c.agent_id === a.id && c.status === "completed").length;
+        return { agent: a, inFlight, doneToday };
+      }),
+    [agents, calls, callsToday],
+  );
+
+  const activeCampaigns = campaigns.filter((c) => c.status === "running");
+  const pace = activeCampaigns.reduce((s, c) => s + (c.calls_per_minute ?? 0), 0);
 
   return (
     <>
       <PageHeader
-        title="Dispatch Overview"
-        description="Real-time activity across all campaigns and agents."
+        title="Dispatch Board"
+        description="Live view of every outbound line, dispatcher, and campaign in motion."
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        <StatTile
-          label="Active Campaigns"
-          value={campaigns.filter((c) => c.status === "running").length}
-          hint={`${campaigns.length} total`}
-        />
-        <StatTile
-          label="Calls Today"
-          value={callsToday.length.toLocaleString()}
-          delta={`+${Math.round(callsToday.length * 0.18)} since 12h`}
-        />
-        <StatTile
-          label="Answered"
-          value={callsToday.length ? `${Math.round((answered.length / callsToday.length) * 100)}%` : "—"}
-          hint={`${answered.length} of ${callsToday.length}`}
-        />
-        <StatTile
-          label="Success Rate"
-          value={completed.length ? `${Math.round((booked / completed.length) * 100)}%` : "0%"}
-          hint={`${booked} booked`}
-        />
-        <StatTile
-          label="AI Minutes"
-          value={Math.round(aiMins).toLocaleString()}
-          accent
-          hint={`${agents.length} agents on duty`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-        <div className="lg:col-span-8 bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-sm font-medium text-zinc-200">Call Throughput</h2>
-              <p className="text-[11px] text-zinc-500 mt-0.5">Last 24 hours</p>
+      {/* SITREP band - the "state of the room" at a glance */}
+      <div className="mb-6 rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] divide-y md:divide-y-0 md:divide-x divide-neutral-200/70">
+          <div className="p-5">
+            <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+              <span className={cn("size-2 rounded-full", liveCalls.length ? "bg-emerald-500 animate-pulse" : "bg-neutral-300")} />
+              {liveCalls.length ? "On the wire" : "Room quiet"}
             </div>
-            <div className="flex gap-2 text-[10px] font-mono">
-              <span className="px-2 py-1 bg-zinc-800 text-zinc-300 rounded">24H</span>
-              <span className="px-2 py-1 text-zinc-500">7D</span>
+            <div className="mt-2 flex items-end gap-3">
+              <span className="text-5xl font-mono font-medium tracking-tight text-neutral-900 tabular-nums">
+                {String(liveCalls.length).padStart(2, "0")}
+              </span>
+              <span className="pb-2 text-xs text-neutral-500">
+                {liveCalls.length === 1 ? "line active" : "lines active"}
+              </span>
             </div>
+            <p className="mt-3 text-[11px] font-mono text-neutral-500">
+              Pacing {pace}/min - {activeCampaigns.length} campaign{activeCampaigns.length === 1 ? "" : "s"} running
+            </p>
           </div>
-          <div className="h-64 -mx-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="gradCalls" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                <XAxis dataKey="hour" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} width={30} />
-                <RTooltip
-                  contentStyle={{
-                    background: "#18181b",
-                    border: "1px solid #27272a",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  cursor={{ stroke: "#10b981", strokeOpacity: 0.3 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="calls"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fill="url(#gradCalls)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="answered"
-                  stroke="#52525b"
-                  strokeWidth={1}
-                  fill="transparent"
-                  strokeDasharray="4 4"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <SitrepCell icon={PhoneCall} label="Placed today" value={callsToday.length} />
+          <SitrepCell
+            icon={CalendarCheck}
+            label="Booked"
+            value={booked}
+            sub={completed.length ? `${Math.round((booked / completed.length) * 100)}% of completed` : "no completed calls"}
+          />
+          <SitrepCell
+            icon={Voicemail}
+            label="Voicemail / Failed"
+            value={`${voicemails.length} / ${failed.length}`}
+            sub={callsToday.length ? `${Math.round((answered.length / callsToday.length) * 100)}% answered` : "-"}
+          />
         </div>
 
-        <div className="lg:col-span-4 bg-zinc-900/40 ring-1 ring-white/5 rounded-xl flex flex-col">
-          <div className="p-4 border-b border-surface-border/60 flex items-center justify-between">
-            <h2 className="text-sm font-medium text-zinc-200">Live Dispatch</h2>
-            <span className="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded-full font-mono">
-              {liveCalls.length} Active
+        {/* Minute-by-minute call density strip */}
+        <div className="border-t border-neutral-200/70 px-5 pt-4 pb-5">
+          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-neutral-500 mb-2">
+            <span>Last 60 minutes - call density</span>
+            <span>peak {heatMax}/min</span>
+          </div>
+          <div className="flex items-end gap-[2px] h-14">
+            {heat.map((v, i) => {
+              const h = Math.max(2, Math.round((v / heatMax) * 100));
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "flex-1 rounded-t-sm",
+                    v === 0 ? "bg-neutral-100" : v >= heatMax * 0.66 ? "bg-brand-primary" : v >= heatMax * 0.33 ? "bg-brand-primary/60" : "bg-brand-primary/30",
+                  )}
+                  style={{ height: `${h}%` }}
+                  title={`t-${59 - i} min · ${v} calls`}
+                />
+              );
+            })}
+          </div>
+          <div className="mt-1 flex justify-between text-[9px] font-mono text-neutral-400">
+            <span>-60m</span>
+            <span>-45m</span>
+            <span>-30m</span>
+            <span>-15m</span>
+            <span>now</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Two-column ops split: live wire + dispatcher roster */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-6">
+        {/* Live wire */}
+        <div className="lg:col-span-3 rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-neutral-200/70 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Radio className="size-4 text-brand-primary" strokeWidth={1.75} />
+              <h2 className="text-sm font-medium text-neutral-900">The Wire</h2>
+            </div>
+            <span className="text-[10px] font-mono text-neutral-500">
+              {liveCalls.length} open
             </span>
           </div>
-          <div className="p-4 space-y-3 max-h-[280px] overflow-y-auto">
+          <div className="divide-y divide-neutral-100 max-h-[360px] overflow-y-auto">
             {liveCalls.length === 0 && (
-              <p className="text-xs text-zinc-500 text-center py-8">
-                No live calls right now.
-              </p>
+              <div className="px-5 py-16 text-center">
+                <p className="text-xs text-neutral-500">No conversations in progress.</p>
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  When a campaign is running, live calls stream in here.
+                </p>
+              </div>
             )}
             {liveCalls.map((c) => {
               const agent = agents.find((a) => a.id === c.agent_id);
-              const dur = Math.round(
-                (Date.now() - new Date(c.started_at).getTime()) / 1000,
-              );
+              const dur = Math.round((now - new Date(c.started_at).getTime()) / 1000);
               const mm = String(Math.floor(dur / 60)).padStart(2, "0");
               const ss = String(dur % 60).padStart(2, "0");
               const last = c.transcript.at(-1);
               return (
-                <div
-                  key={c.id}
-                  className="p-3 bg-zinc-800/30 rounded-lg ring-1 ring-white/5 space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-xs font-medium text-zinc-100">{c.phone_to}</p>
-                      <p className="text-[10px] text-zinc-500">
-                        Agent: {agent?.name ?? "—"}
+                <div key={c.id} className="px-5 py-4 hover:bg-neutral-50/60 transition-colors">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-mono font-medium text-neutral-900 tabular-nums">
+                        {c.phone_to}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 truncate">
+                        via {agent?.name ?? "unassigned"}
                       </p>
                     </div>
-                    <span className="text-[10px] font-mono text-brand-primary">
-                      {mm}:{ss}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs font-mono text-neutral-800 tabular-nums">
+                        {mm}:{ss}
+                      </span>
+                    </div>
                   </div>
                   {last && (
-                    <div className="text-[11px] text-zinc-400 bg-zinc-950/40 p-2 rounded italic font-mono">
+                    <div className="mt-2 pl-3 border-l-2 border-brand-primary/40 text-[12px] text-neutral-700 italic">
                       "{last.text}"
                     </div>
                   )}
@@ -200,76 +189,131 @@ function Dashboard() {
             })}
           </div>
         </div>
+
+        {/* Dispatcher roster - who's on shift */}
+        <div className="lg:col-span-2 rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-neutral-200/70 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="size-4 text-neutral-500" strokeWidth={1.75} />
+              <h2 className="text-sm font-medium text-neutral-900">Dispatchers on shift</h2>
+            </div>
+            <span className="text-[10px] font-mono text-neutral-500">{agents.length}</span>
+          </div>
+          <div className="divide-y divide-neutral-100 max-h-[360px] overflow-y-auto">
+            {roster.length === 0 && (
+              <div className="px-5 py-12 text-center text-xs text-neutral-500">
+                No AI agents configured yet.
+              </div>
+            )}
+            {roster.map(({ agent, inFlight, doneToday }) => (
+              <div key={agent.id} className="px-5 py-3 flex items-center gap-3">
+                <div
+                  className={cn(
+                    "size-9 rounded-full grid place-items-center text-[11px] font-mono font-medium ring-1",
+                    inFlight > 0
+                      ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20"
+                      : "bg-neutral-100 text-neutral-600 ring-black/5",
+                  )}
+                >
+                  {agent.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900 truncate">{agent.name}</p>
+                  <p className="text-[11px] text-neutral-500">
+                    {inFlight > 0 ? `on call - ${inFlight} line${inFlight === 1 ? "" : "s"}` : "standby"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-mono text-neutral-900 tabular-nums">{doneToday}</p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">today</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
-            Appointments booked
-          </p>
-          <p className="text-2xl font-mono font-medium text-zinc-100">{booked}</p>
-          <p className="text-[10px] text-zinc-500 mt-2">Across today's completed calls</p>
+      {/* Campaign roster with progress bars */}
+      <div className="rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-neutral-200/70 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-neutral-900">Campaign roster</h2>
+          <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+            {activeCampaigns.length} running / {campaigns.length} total
+          </span>
         </div>
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
-            Failed calls
-          </p>
-          <p className="text-2xl font-mono font-medium text-red-400">{failed.length}</p>
-          <p className="text-[10px] text-zinc-500 mt-2">Retry logic engaged</p>
-        </div>
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1 font-mono">
-            Avg duration
-          </p>
-          <p className="text-2xl font-mono font-medium text-zinc-100">
-            {completed.length
-              ? Math.round(completed.reduce((s, c) => s + c.duration_sec, 0) / completed.length)
-              : 0}
-            <span className="text-xs text-zinc-500 ml-1">s</span>
-          </p>
-          <p className="text-[10px] text-zinc-500 mt-2">For completed calls today</p>
-        </div>
-      </div>
-
-      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-surface-border/60 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-zinc-200">Recent Campaigns</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[640px]">
-            <thead>
-              <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
-                <th className="px-6 py-3 font-medium">Campaign</th>
-                <th className="px-6 py-3 font-medium">Status</th>
-                <th className="px-6 py-3 font-medium">Calls</th>
-                <th className="px-6 py-3 font-medium">Agent</th>
-                <th className="px-6 py-3 font-medium text-right">Conversion</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm">
-              {campaigns.slice(0, 6).map((c) => {
-                const cCalls = calls.filter((x) => x.campaign_id === c.id);
-                const cBooked = cCalls.filter((x) => x.appointment_booked).length;
-                const cConv = cCalls.length
-                  ? ((cBooked / cCalls.length) * 100).toFixed(1) + "%"
-                  : "—";
-                const agent = agents.find((a) => a.id === c.agent_id);
-                return (
-                  <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
-                    <td className="px-6 py-4 font-medium text-zinc-200">{c.name}</td>
-                    <td className="px-6 py-4">
-                      <StatusPill status={c.status} />
-                    </td>
-                    <td className="px-6 py-4 font-mono text-zinc-300">{cCalls.length}</td>
-                    <td className="px-6 py-4 text-zinc-400">{agent?.name ?? "—"}</td>
-                    <td className="px-6 py-4 text-right font-mono text-brand-primary">{cConv}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="divide-y divide-neutral-100">
+          {campaigns.slice(0, 6).map((c) => {
+            const cCalls = calls.filter((x) => x.campaign_id === c.id);
+            const cBooked = cCalls.filter((x) => x.appointment_booked).length;
+            const cConv = cCalls.length ? (cBooked / cCalls.length) * 100 : 0;
+            const agent = agents.find((a) => a.id === c.agent_id);
+            return (
+              <div key={c.id} className="px-5 py-4 grid grid-cols-1 md:grid-cols-[1.5fr_auto_1fr_1fr] items-center gap-3">
+                <div>
+                  <p className="text-sm font-medium text-neutral-900">{c.name}</p>
+                  <p className="text-[11px] text-neutral-500">
+                    {agent?.name ?? "unassigned"} - {c.calls_per_minute ?? 0}/min
+                  </p>
+                </div>
+                <StatusPill status={c.status} />
+                <div className="min-w-[120px]">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-neutral-500 mb-1">
+                    <span>calls</span>
+                    <span className="text-neutral-900 tabular-nums">{cCalls.length}</span>
+                  </div>
+                  <div className="h-1 rounded-full bg-neutral-100 overflow-hidden">
+                    <div
+                      className="h-full bg-neutral-800"
+                      style={{ width: `${Math.min(100, cCalls.length ? Math.log(cCalls.length + 1) * 22 : 0)}%` }}
+                    />
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-mono text-brand-primary tabular-nums">
+                    {cCalls.length ? `${cConv.toFixed(1)}%` : "-"}
+                  </p>
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                    conv
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          {campaigns.length === 0 && (
+            <div className="px-5 py-12 text-center">
+              <p className="text-xs text-neutral-500">No campaigns yet.</p>
+            </div>
+          )}
         </div>
       </div>
     </>
   );
 }
+
+function SitrepCell({
+  icon: Icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  label: string;
+  value: string | number;
+  sub?: string;
+}) {
+  return (
+    <div className="p-5">
+      <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+        <Icon className="size-3.5" strokeWidth={1.75} />
+        {label}
+      </div>
+      <p className="mt-2 text-3xl font-mono font-medium tracking-tight text-neutral-900 tabular-nums">
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </p>
+      {sub && <p className="mt-1 text-[11px] font-mono text-neutral-500">{sub}</p>}
+    </div>
+  );
+}
+
+// Unused imports to appease TS if referenced elsewhere.
+void PhoneOff;

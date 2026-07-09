@@ -1,5 +1,5 @@
 /**
- * voice-bridge — Deno edge function port of services/voice-bridge.
+ * voice-bridge - Deno edge function port of services/voice-bridge.
  *
  * Twilio Media Streams (μ-law/8k) <-> Deepgram STT <-> Lovable app
  * (Gemini turn + Kokoro TTS). Full-duplex over a single WebSocket that
@@ -295,7 +295,7 @@ async function requestTransfer(callSid: string, to: string): Promise<void> {
 
 /**
  * Fire-and-forget: tell the app why this call ended so the UI can show it.
- * Never throws — we're mid-cleanup and can't afford to interrupt.
+ * Never throws - we're mid-cleanup and can't afford to interrupt.
  */
 async function reportCallEvent(
   callSid: string,
@@ -486,7 +486,7 @@ function openDeepgram(cb: {
   // from becoming speech while still letting real callers finish naturally.
   // watchdog below covers cases where the model never marks speech_final.
   url.searchParams.set("endpointing", "180");
-  // VAD events give us a hard UtteranceEnd signal — used to flush any
+  // VAD events give us a hard UtteranceEnd signal - used to flush any
   // buffered finals when Deepgram doesn't emit speech_final in time.
   url.searchParams.set("vad_events", "true");
   // Deepgram currently rejects values under 1000ms with HTTP 400. Keep this
@@ -992,7 +992,7 @@ async function handleUserTurn(s: Session, text: string) {
         await new Promise((r) => setTimeout(r, 300));
         try {
           await requestTransfer(s.callSid, to);
-          // Report the transfer up front — Twilio will drop the <Stream>
+          // Report the transfer up front - Twilio will drop the <Stream>
           // as soon as it fetches new TwiML, and socket.onclose fires
           // cleanup with "socket closed" which would otherwise be
           // (mis)classified as caller_hangup.
@@ -1127,7 +1127,7 @@ Deno.serve((req) => {
         voiceId: a.voice_id,
       });
       // Prefetch the greeting audio in parallel with the Twilio start
-      // handshake — by the time speak() runs, TTS is already done.
+      // handshake - by the time speak() runs, TTS is already done.
       primeGreeting(session, a);
       // Hard call-duration cap. Default 15min if agent doesn't specify.
       const maxSec = Math.max(30, Math.min(3600, a.max_call_seconds ?? 900));
@@ -1203,7 +1203,7 @@ Deno.serve((req) => {
         // Aggregate final fragments across an utterance so we call the LLM
         // once per turn (Deepgram can emit several is_final chunks before
         // the caller actually stops). Commit on speech_final OR a
-        // UtteranceEnd VAD event — whichever fires first.
+        // UtteranceEnd VAD event - whichever fires first.
         let pending = "";
         let latestInterim = "";
         let commitTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1256,7 +1256,7 @@ Deno.serve((req) => {
             else scheduleCommit(260);
           },
           onUtteranceEnd: () => {
-            // Deepgram's silence watchdog fired — flush anything buffered.
+            // Deepgram's silence watchdog fired - flush anything buffered.
             if (pending) commit();
             else if (latestInterim) commit(true);
           },

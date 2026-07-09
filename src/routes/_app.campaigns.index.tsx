@@ -14,7 +14,7 @@ import {
 import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/campaigns/")({
-  head: () => ({ meta: [{ title: "Campaigns — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaigns - BulkCall AI" }] }),
   component: CampaignsList,
 });
 
@@ -54,11 +54,11 @@ function CampaignsList() {
           }
         />
       ) : (
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[860px]">
               <thead>
-                <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
+                <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                   <th className="px-6 py-3 font-medium">Campaign</th>
                   <th className="px-6 py-3 font-medium">Status</th>
                   <th className="px-6 py-3 font-medium">Agent</th>
@@ -75,28 +75,28 @@ function CampaignsList() {
                   const booked = cCalls.filter((x) => x.appointment_booked).length;
                   const conv = cCalls.length
                     ? ((booked / cCalls.length) * 100).toFixed(1) + "%"
-                    : "—";
+                    : "-";
                   const agent = agents.find((a) => a.id === c.agent_id);
                   return (
-                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
+                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
                       <td className="px-6 py-4">
                         <Link
                           to="/campaigns/$id"
                           params={{ id: c.id }}
-                          className="font-medium text-zinc-200 hover:text-brand-primary"
+                          className="font-medium text-neutral-900 hover:text-brand-primary"
                         >
                           {c.name}
                         </Link>
-                        <p className="text-[11px] text-zinc-500 font-mono mt-0.5">
+                        <p className="text-[11px] text-neutral-500 font-mono mt-0.5">
                           {c.calls_per_minute}/min · {c.timezone}
                         </p>
                       </td>
                       <td className="px-6 py-4">
                         <StatusPill status={c.status} />
                       </td>
-                      <td className="px-6 py-4 text-zinc-400">{agent?.name ?? "—"}</td>
-                      <td className="px-6 py-4 font-mono text-zinc-300">{cCalls.length}</td>
-                      <td className="px-6 py-4 font-mono text-zinc-300">{connected}</td>
+                      <td className="px-6 py-4 text-neutral-600">{agent?.name ?? "-"}</td>
+                      <td className="px-6 py-4 font-mono text-neutral-800">{cCalls.length}</td>
+                      <td className="px-6 py-4 font-mono text-neutral-800">{connected}</td>
                       <td className="px-6 py-4 font-mono text-brand-primary">{conv}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-1">
@@ -126,7 +126,7 @@ function CampaignsList() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost">
-                                <span className="text-lg leading-none text-zinc-500">⋯</span>
+                                <span className="text-lg leading-none text-neutral-500">⋯</span>
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

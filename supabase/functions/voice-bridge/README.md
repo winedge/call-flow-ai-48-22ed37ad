@@ -12,9 +12,9 @@ short qualification calls. For production / long calls, deploy
 
 ## Required secrets (set in Lovable Cloud → Secrets)
 
-- `DEEPGRAM_API_KEY` — Deepgram Nova-2 key
-- `LOVABLE_APP_URL` — public URL of this app, e.g. `https://<slug>.lovable.app`
-- `BRIDGE_SHARED_SECRET` — must match the app-side value
+- `DEEPGRAM_API_KEY` - Deepgram Nova-2 key
+- `LOVABLE_APP_URL` - public URL of this app, e.g. `https://<slug>.lovable.app`
+- `BRIDGE_SHARED_SECRET` - must match the app-side value
 
 ## Wire-up
 

@@ -25,7 +25,7 @@ import { Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Settings - BulkCall AI" }] }),
   component: SettingsPage,
 });
 
@@ -105,7 +105,7 @@ function SettingsPage() {
         <TabsContent value="integrations" className="space-y-6">
           <KeyCard
             title="Twilio"
-            description="Outbound / inbound calling, AMD, recording, ConversationRelay. Keys are stored securely as backend secrets — ask in chat to add them."
+            description="Outbound / inbound calling, AMD, recording, ConversationRelay. Keys are stored securely as backend secrets - ask in chat to add them."
             connected={settings?.has_twilio ?? false}
             fields={[
               { label: "Account SID", placeholder: "ACxxxxxxxxxxxxxx" },
@@ -133,21 +133,21 @@ function SettingsPage() {
         <TabsContent value="telephony" className="space-y-6">
           <Card title="Phone numbers">
             <div className="flex items-start justify-between gap-3 mb-4">
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-neutral-500">
                 Numbers provisioned via Twilio for outbound caller ID and inbound webhooks.
               </p>
               <SyncTwilioButton orgId={orgId} />
             </div>
             <div className="space-y-2 mb-4">
               {phones.map((p) => (
-                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
+                <div key={p.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-neutral-50 ring-1 ring-black/5 p-3 rounded-md">
                   <div className="min-w-0">
-                    <p className="font-mono text-zinc-200">{p.number}</p>
-                    <p className="text-[11px] text-zinc-500">{p.type} · {p.capabilities.join(", ")}</p>
+                    <p className="font-mono text-neutral-900">{p.number}</p>
+                    <p className="text-[11px] text-neutral-500">{p.type} · {p.capabilities.join(", ")}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex flex-col">
-                      <Label className="text-[10px] text-zinc-500 mb-1">Inbound agent</Label>
+                      <Label className="text-[10px] text-neutral-500 mb-1">Inbound agent</Label>
                       <Select
                         value={p.inbound_agent_id ?? "none"}
                         onValueChange={(v) => {
@@ -157,7 +157,7 @@ function SettingsPage() {
                       >
                         <SelectTrigger className="w-56"><SelectValue placeholder="Not routed" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">— None —</SelectItem>
+                          <SelectItem value="none">- None -</SelectItem>
                           {agents.map((a) => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                           ))}
@@ -171,7 +171,7 @@ function SettingsPage() {
                 </div>
               ))}
               {phones.length === 0 && (
-                <p className="text-xs text-zinc-500 italic">No numbers provisioned. Click “Sync from Twilio” to import numbers from your Twilio account.</p>
+                <p className="text-xs text-neutral-500 italic">No numbers provisioned. Click “Sync from Twilio” to import numbers from your Twilio account.</p>
               )}
 
             </div>
@@ -203,7 +203,7 @@ function SettingsPage() {
               <FieldRow label="User"><Input defaultValue={settings?.smtp_user ?? ""} onBlur={(e) => saveSmtp({ smtp_user: e.target.value })} /></FieldRow>
               <FieldRow label="Password"><Input type="password" placeholder="Stored as backend secret" disabled /></FieldRow>
             </div>
-            <p className="text-[11px] text-zinc-500 mt-3">SMTP passwords are stored as backend secrets. Ask in chat to save one.</p>
+            <p className="text-[11px] text-neutral-500 mt-3">SMTP passwords are stored as backend secrets. Ask in chat to save one.</p>
           </Card>
         </TabsContent>
 
@@ -211,20 +211,20 @@ function SettingsPage() {
           <Card title="Team members">
             <div className="space-y-2">
               {me ? (
-                <div className="flex items-center gap-3 bg-zinc-900/60 ring-1 ring-white/5 p-3 rounded-md">
-                  <div className="size-8 rounded-full bg-zinc-800 ring-1 ring-white/10 grid place-items-center text-xs text-zinc-300">
+                <div className="flex items-center gap-3 bg-neutral-50 ring-1 ring-black/5 p-3 rounded-md">
+                  <div className="size-8 rounded-full bg-neutral-200 ring-1 ring-black/10 grid place-items-center text-xs text-neutral-800">
                     {me.full_name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase() || <UserIcon className="size-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-zinc-200">{me.full_name}</p>
-                    <p className="text-[11px] text-zinc-500">{me.email}</p>
+                    <p className="text-sm text-neutral-900">{me.full_name}</p>
+                    <p className="text-[11px] text-neutral-500">{me.email}</p>
                   </div>
-                  <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                  <span className="text-[10px] uppercase tracking-wider font-mono px-2 py-0.5 rounded bg-neutral-200 text-neutral-600">
                     Owner
                   </span>
                 </div>
               ) : (
-                <p className="text-xs text-zinc-500 italic">Loading…</p>
+                <p className="text-xs text-neutral-500 italic">Loading…</p>
               )}
             </div>
             <Button variant="outline" size="sm" className="mt-4" onClick={() => toast.info("Team invites are coming soon")}>
@@ -237,10 +237,10 @@ function SettingsPage() {
           <Card title="Plan">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-100">Starter · Free</p>
-                <p className="text-[11px] text-zinc-500">Pay-as-you-go for calls · connect a payment method to enable higher volume</p>
+                <p className="text-sm font-medium text-neutral-900">Starter · Free</p>
+                <p className="text-[11px] text-neutral-500">Pay-as-you-go for calls · connect a payment method to enable higher volume</p>
               </div>
-              <Button variant="outline" onClick={() => toast.info("Billing setup coming soon — ask in chat to enable Stripe.")}>Manage plan</Button>
+              <Button variant="outline" onClick={() => toast.info("Billing setup coming soon - ask in chat to enable Stripe.")}>Manage plan</Button>
             </div>
           </Card>
           <Card title="Usage this month">
@@ -251,19 +251,19 @@ function SettingsPage() {
               <MiniStat label="Spend" value={`$${usage.spend.toFixed(2)}`} />
             </div>
             {usage.calls === 0 && (
-              <p className="text-[11px] text-zinc-500 mt-3 italic">No calls yet this month — launch a campaign to see usage here.</p>
+              <p className="text-[11px] text-neutral-500 mt-3 italic">No calls yet this month - launch a campaign to see usage here.</p>
             )}
           </Card>
         </TabsContent>
 
         <TabsContent value="api" className="space-y-6">
           <Card title="REST API">
-            <p className="text-sm text-zinc-400 mb-4">
+            <p className="text-sm text-neutral-600 mb-4">
               Programmatic access to campaigns, contacts, calls, and webhooks. Base URL:
             </p>
-            <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300 mb-4">
+            <div className="flex items-center gap-2 bg-neutral-100 ring-1 ring-black/5 p-3 rounded font-mono text-xs text-neutral-800 mb-4">
               <span className="truncate">{projectUrl}/api</span>
-              <button className="ml-auto text-zinc-500 hover:text-zinc-200" onClick={() => { navigator.clipboard.writeText(`${projectUrl}/api`); toast.success("Copied"); }}>
+              <button className="ml-auto text-neutral-500 hover:text-neutral-900" onClick={() => { navigator.clipboard.writeText(`${projectUrl}/api`); toast.success("Copied"); }}>
                 <Copy className="size-3" />
               </button>
             </div>
@@ -328,10 +328,10 @@ function SyncTwilioButton({ orgId }: { orgId: UUID }) {
 function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
   const color = method === "GET" ? "text-emerald-400" : "text-blue-400";
   return (
-    <div className="flex items-center gap-2 bg-zinc-950/60 ring-1 ring-white/5 p-3 rounded font-mono text-xs text-zinc-300">
+    <div className="flex items-center gap-2 bg-neutral-100 ring-1 ring-black/5 p-3 rounded font-mono text-xs text-neutral-800">
       <span className={color}>{method}</span>
       <span className="truncate">{path}</span>
-      <button className="ml-auto text-zinc-500 hover:text-zinc-200" onClick={() => { navigator.clipboard.writeText(path); toast.success("Copied"); }}>
+      <button className="ml-auto text-neutral-500 hover:text-neutral-900" onClick={() => { navigator.clipboard.writeText(path); toast.success("Copied"); }}>
         <Copy className="size-3" />
       </button>
     </div>
@@ -340,8 +340,8 @@ function Endpoint({ method, path }: { method: "GET" | "POST"; path: string }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
-      <h2 className="text-sm font-medium text-zinc-200 mb-4 border-b border-surface-border/40 pb-3">{title}</h2>
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
+      <h2 className="text-sm font-medium text-neutral-900 mb-4 border-b border-surface-border/40 pb-3">{title}</h2>
       {children}
     </div>
   );
@@ -354,11 +354,11 @@ function KeyCard({ title, description, connected, fields, onSave, extraAction }:
   extraAction?: React.ReactNode;
 }) {
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-sm font-medium text-zinc-100">{title}</h3>
-          <p className="text-xs text-zinc-500 mt-1 max-w-md">{description}</p>
+          <h3 className="text-sm font-medium text-neutral-900">{title}</h3>
+          <p className="text-xs text-neutral-500 mt-1 max-w-md">{description}</p>
         </div>
         {connected ? (
           <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-emerald-400 font-mono">
@@ -414,11 +414,11 @@ function SecretField({ label, placeholder, secret }: { label: string; placeholde
   const [show, setShow] = useState(false);
   return (
     <div>
-      <Label className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono mb-2 block">{label}</Label>
+      <Label className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono mb-2 block">{label}</Label>
       <div className="relative">
         <Input type={secret && !show ? "password" : "text"} placeholder={placeholder} />
         {secret && (
-          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200">
+          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-900">
             {show ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
           </button>
         )}
@@ -430,7 +430,7 @@ function SecretField({ label, placeholder, secret }: { label: string; placeholde
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <Label className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">{label}</Label>
+      <Label className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">{label}</Label>
       {children}
     </div>
   );
@@ -438,9 +438,9 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-zinc-950/40 ring-1 ring-white/5 rounded-lg p-3">
-      <p className="text-[10px] uppercase tracking-wider text-zinc-500 font-mono mb-1">{label}</p>
-      <p className="font-mono text-zinc-100">{value}</p>
+    <div className="bg-neutral-100 ring-1 ring-black/5 rounded-lg p-3">
+      <p className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono mb-1">{label}</p>
+      <p className="font-mono text-neutral-900">{value}</p>
     </div>
   );
 }

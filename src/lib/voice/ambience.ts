@@ -43,7 +43,7 @@ async function fetchAmbience(originHint?: string): Promise<Uint8Array | null> {
   if (ambienceMulaw) return ambienceMulaw;
   if (ambiencePromise) return ambiencePromise;
   ambiencePromise = (async () => {
-    // Assets are served same-origin at /__l5e/… — build an absolute URL from
+    // Assets are served same-origin at /__l5e/… - build an absolute URL from
     // the request so the Worker fetch can resolve it.
     const base =
       originHint ??

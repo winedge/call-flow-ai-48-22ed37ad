@@ -1,5 +1,5 @@
 /**
- * Campaign dialer tick — invoked once per minute by pg_cron.
+ * Campaign dialer tick - invoked once per minute by pg_cron.
  *
  * For every running campaign:
  *   - Compute available concurrency slots (MAX_CONCURRENT - active calls).
@@ -112,7 +112,7 @@ async function runCampaign(
     if (!hist) {
       eligible.push(c);
     } else if (hist.anyActive) {
-      // currently ringing/in-progress — skip
+      // currently ringing/in-progress - skip
     } else if (hist.attempts >= maxAttempts) {
       exhausted += 1;
     } else if (now - hist.lastStartMs >= gapMs) {

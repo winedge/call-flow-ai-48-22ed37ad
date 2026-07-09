@@ -23,7 +23,7 @@ const END_REASON_FILL: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign — BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaign - BulkCall AI" }] }),
   component: CampaignDetail,
 });
 
@@ -124,8 +124,8 @@ function CampaignDetail() {
       ["Campaign", cmp.name],
       ["Status", cmp.status],
       ["Created", new Date(cmp.created_at).toLocaleString()],
-      ["First call", metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "—"],
-      ["Last call", metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "—"],
+      ["First call", metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "-"],
+      ["Last call", metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "-"],
       ["Total contacts", metrics.totalContacts],
       ["Calls placed", metrics.placed],
       ["Calls answered", metrics.answered],
@@ -184,21 +184,21 @@ function CampaignDetail() {
       />
 
       {/* Progress + ETA banner */}
-      <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5 mb-6">
+      <div className="bg-white ring-1 ring-black/5 rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">Campaign progress</p>
-            <p className="text-lg font-medium text-zinc-100">
+            <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">Campaign progress</p>
+            <p className="text-lg font-medium text-neutral-900">
               {metrics.placed.toLocaleString()} / {metrics.totalContacts.toLocaleString()} calls
-              <span className="text-zinc-500 text-sm font-mono ml-2">({metrics.completionRate.toFixed(1)}%)</span>
+              <span className="text-neutral-500 text-sm font-mono ml-2">({metrics.completionRate.toFixed(1)}%)</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] uppercase tracking-wider text-zinc-500 font-mono">Est. remaining</p>
+            <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">Est. remaining</p>
             <p className="text-lg font-mono text-brand-primary">{formatEta(metrics.etaMinutes)}</p>
           </div>
         </div>
-        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-brand-primary transition-all"
             style={{ width: `${Math.min(100, metrics.completionRate)}%` }}
@@ -244,9 +244,9 @@ function CampaignDetail() {
           </div>
 
           {/* Live calls stream */}
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
             <div className="p-4 border-b border-surface-border/60 flex justify-between items-center">
-              <h2 className="text-sm font-medium text-zinc-200 flex items-center gap-2">
+              <h2 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
                 <Radio className="size-3.5 text-brand-primary" />
                 Active calls
                 {liveCalls.length > 0 && (
@@ -258,7 +258,7 @@ function CampaignDetail() {
               <Link to="/live-calls" className="text-xs text-brand-primary hover:underline">Open full monitor →</Link>
             </div>
             {liveCalls.length === 0 ? (
-              <div className="p-8 text-center text-xs text-zinc-500">
+              <div className="p-8 text-center text-xs text-neutral-500">
                 No calls in flight. When campaigns are running, live calls stream here automatically.
               </div>
             ) : (
@@ -266,11 +266,11 @@ function CampaignDetail() {
                 {liveCalls.map((c) => {
                   const dur = Math.round((Date.now() - new Date(c.started_at).getTime()) / 1000);
                   return (
-                    <Link to="/calls/$id" params={{ id: c.id }} key={c.id} className="p-4 flex items-center gap-4 hover:bg-zinc-800/30 transition-colors">
+                    <Link to="/calls/$id" params={{ id: c.id }} key={c.id} className="p-4 flex items-center gap-4 hover:bg-neutral-100 transition-colors">
                       <div className="size-2 rounded-full bg-brand-primary animate-pulse" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-sm text-zinc-100">{c.phone_to}</p>
-                        <p className="text-[11px] text-zinc-500">{c.status}</p>
+                        <p className="font-mono text-sm text-neutral-900">{c.phone_to}</p>
+                        <p className="text-[11px] text-neutral-500">{c.status}</p>
                       </div>
                       <p className="font-mono text-sm text-brand-primary">{formatDuration(dur)}</p>
                     </Link>
@@ -296,11 +296,11 @@ function CampaignDetail() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
-              <h3 className="text-sm font-medium text-zinc-200 mb-4">Overview</h3>
+            <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
+              <h3 className="text-sm font-medium text-neutral-900 mb-4">Overview</h3>
               <dl className="grid grid-cols-2 gap-3 text-xs">
-                <ReportRow label="Started" value={metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "—"} />
-                <ReportRow label="Last activity" value={metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "—"} />
+                <ReportRow label="Started" value={metrics.firstAt ? new Date(metrics.firstAt).toLocaleString() : "-"} />
+                <ReportRow label="Last activity" value={metrics.lastAt ? new Date(metrics.lastAt).toLocaleString() : "-"} />
                 <ReportRow label="Total contacts" value={metrics.totalContacts.toLocaleString()} />
                 <ReportRow label="Calls placed" value={metrics.placed.toLocaleString()} />
                 <ReportRow label="Answer rate" value={`${metrics.answerRate.toFixed(1)}%`} />
@@ -314,10 +314,10 @@ function CampaignDetail() {
               </dl>
             </div>
 
-            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6">
-              <h3 className="text-sm font-medium text-zinc-200 mb-4">Call status breakdown</h3>
+            <div className="bg-white ring-1 ring-black/5 rounded-xl p-6">
+              <h3 className="text-sm font-medium text-neutral-900 mb-4">Call status breakdown</h3>
               {statusData.length === 0 ? (
-                <div className="h-64 grid place-items-center text-xs text-zinc-500">No data yet</div>
+                <div className="h-64 grid place-items-center text-xs text-neutral-500">No data yet</div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
@@ -330,10 +330,10 @@ function CampaignDetail() {
               )}
             </div>
 
-            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
-              <h3 className="text-sm font-medium text-zinc-200 mb-4">Outcome breakdown</h3>
+            <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 md:col-span-2">
+              <h3 className="text-sm font-medium text-neutral-900 mb-4">Outcome breakdown</h3>
               {outcomeData.length === 0 ? (
-                <div className="h-56 grid place-items-center text-xs text-zinc-500">No outcomes recorded yet</div>
+                <div className="h-56 grid place-items-center text-xs text-neutral-500">No outcomes recorded yet</div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={outcomeData}>
@@ -349,11 +349,11 @@ function CampaignDetail() {
               )}
             </div>
 
-            <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
-              <h3 className="text-sm font-medium text-zinc-200 mb-4">Why calls ended</h3>
+            <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 md:col-span-2">
+              <h3 className="text-sm font-medium text-neutral-900 mb-4">Why calls ended</h3>
               {endReasonData.length === 0 ? (
-                <div className="h-56 grid place-items-center text-xs text-zinc-500">
-                  No end reasons recorded yet — they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
+                <div className="h-56 grid place-items-center text-xs text-neutral-500">
+                  No end reasons recorded yet - they appear once the AI, transfer, voicemail, or timeout logic fires on a live call.
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
@@ -372,8 +372,8 @@ function CampaignDetail() {
 
 
             {hourlyData.length > 1 && (
-              <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 md:col-span-2">
-                <h3 className="text-sm font-medium text-zinc-200 mb-4">Call volume over time</h3>
+              <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 md:col-span-2">
+                <h3 className="text-sm font-medium text-neutral-900 mb-4">Call volume over time</h3>
                 <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={hourlyData}>
                     <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
@@ -392,16 +392,16 @@ function CampaignDetail() {
         {/* ============ CALL HISTORY ============ */}
         <TabsContent value="calls" className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-xs text-zinc-500">{calls.length.toLocaleString()} calls</p>
+            <p className="text-xs text-neutral-500">{calls.length.toLocaleString()} calls</p>
             <Button size="sm" variant="outline" onClick={exportCallsCsv}>
               <Download className="size-3.5 mr-1" /> Export CSV
             </Button>
           </div>
-          <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl overflow-hidden">
+          <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse min-w-[860px]">
                 <thead>
-                  <tr className="text-[11px] text-zinc-500 uppercase tracking-wider border-b border-surface-border/60">
+                  <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                     <th className="px-4 py-3 text-left font-medium">When</th>
                     <th className="px-4 py-3 text-left font-medium">Number</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -414,22 +414,22 @@ function CampaignDetail() {
                 </thead>
                 <tbody>
                   {calls.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-zinc-500">No calls yet</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-neutral-500">No calls yet</td></tr>
                   ) : (
                     calls.slice(0, 200).map((c) => (
-                      <tr key={c.id} className="border-b border-surface-border/30 hover:bg-zinc-800/20">
-                        <td className="px-4 py-3 text-zinc-400 font-mono text-xs">
+                      <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
+                        <td className="px-4 py-3 text-neutral-600 font-mono text-xs">
                           {new Date(c.started_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
                         </td>
-                        <td className="px-4 py-3 font-mono text-zinc-200">
+                        <td className="px-4 py-3 font-mono text-neutral-900">
                           <Link to="/calls/$id" params={{ id: c.id }} className="hover:text-brand-primary">{c.phone_to}</Link>
                         </td>
-                        <td className="px-4 py-3 text-zinc-400">{c.status}</td>
-                        <td className="px-4 py-3 text-zinc-400 text-xs">{endReasonLabel(c.end_reason)}</td>
-                        <td className="px-4 py-3 text-zinc-400">{c.outcome || "—"}</td>
-                        <td className="px-4 py-3 text-zinc-400">{c.sentiment ?? "—"}</td>
-                        <td className="px-4 py-3 text-right font-mono text-zinc-400">{formatDuration(c.duration_sec)}</td>
-                        <td className="px-4 py-3 text-right font-mono text-zinc-300">{leadScore(c)}</td>
+                        <td className="px-4 py-3 text-neutral-600">{c.status}</td>
+                        <td className="px-4 py-3 text-neutral-600 text-xs">{endReasonLabel(c.end_reason)}</td>
+                        <td className="px-4 py-3 text-neutral-600">{c.outcome || "-"}</td>
+                        <td className="px-4 py-3 text-neutral-600">{c.sentiment ?? "-"}</td>
+                        <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
+                        <td className="px-4 py-3 text-right font-mono text-neutral-800">{leadScore(c)}</td>
                       </tr>
                     ))
                   )}
@@ -442,9 +442,9 @@ function CampaignDetail() {
         {/* ============ CONFIG ============ */}
         <TabsContent value="config" className="space-y-4">
           <div className="grid lg:grid-cols-3 gap-6">
-            <InfoCard title="Agent" body={agent?.name ?? "—"} sub={agent?.voice_name} />
-            <InfoCard title="Contact list" body={list?.name ?? "—"} sub={list?.description} />
-            <InfoCard title="From number" body={phone?.number ?? "—"} sub={phone?.type ?? ""} />
+            <InfoCard title="Agent" body={agent?.name ?? "-"} sub={agent?.voice_name} />
+            <InfoCard title="Contact list" body={list?.name ?? "-"} sub={list?.description} />
+            <InfoCard title="From number" body={phone?.number ?? "-"} sub={phone?.type ?? ""} />
             <InfoCard title="Timezone" body={cmp.timezone} sub={`${cmp.calling_hours.start}–${cmp.calling_hours.end}`} />
             <InfoCard title="Pace" body={`${cmp.calls_per_minute} calls/min`} />
             <InfoCard title="Retries" body={`${cmp.retry_rules.max_attempts}× · ${cmp.retry_rules.gap_minutes}m gap`} />
@@ -464,18 +464,18 @@ function CampaignDetail() {
 function ReportRow({ label, value }: { label: string; value: string | number }) {
   return (
     <>
-      <dt className="text-zinc-500 uppercase tracking-wider text-[10px] font-mono">{label}</dt>
-      <dd className="text-zinc-200 font-mono text-right">{value}</dd>
+      <dt className="text-neutral-500 uppercase tracking-wider text-[10px] font-mono">{label}</dt>
+      <dd className="text-neutral-900 font-mono text-right">{value}</dd>
     </>
   );
 }
 
 function InfoCard({ title, body, sub }: { title: string; body: string; sub?: string }) {
   return (
-    <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-5">
-      <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 font-mono">{title}</p>
-      <p className="text-sm font-medium text-zinc-200">{body}</p>
-      {sub && <p className="text-[11px] text-zinc-500 mt-1">{sub}</p>}
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+      <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-2 font-mono">{title}</p>
+      <p className="text-sm font-medium text-neutral-900">{body}</p>
+      {sub && <p className="text-[11px] text-neutral-500 mt-1">{sub}</p>}
     </div>
   );
 }

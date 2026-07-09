@@ -3,7 +3,7 @@
  *
  * On mount + auth state change:
  *  - Reads the current Supabase user, hydrates useDB.currentUserId/currentOrgId
- *    (org_id = user.id for now — single-tenant per user).
+ *    (org_id = user.id for now - single-tenant per user).
  *  - Loads the user's rows from every table into the zustand cache.
  *
  * Mutations write through to Supabase via the helpers exported below; each

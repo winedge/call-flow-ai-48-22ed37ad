@@ -53,8 +53,8 @@ export function Sidebar() {
         <Link to="/dashboard" className="flex items-center gap-3">
           <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain" />
           <div className="min-w-0">
-            <p className="truncate text-[10px] font-mono uppercase tracking-wider text-zinc-500">
-              {org?.name ?? "—"}
+            <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
+              {org?.name ?? "-"}
             </p>
           </div>
         </Link>
@@ -70,7 +70,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 px-4 space-y-0.5 overflow-y-auto">
-        <p className="px-3 pb-2 pt-1 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+        <p className="px-3 pb-2 pt-1 text-[10px] font-mono uppercase tracking-widest text-neutral-400">
           Operations
         </p>
 
@@ -86,14 +86,14 @@ export function Sidebar() {
               className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 active
-                  ? "bg-zinc-800/60 text-brand-primary ring-1 ring-white/5"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/30",
+                  ? "bg-neutral-200 text-brand-primary ring-1 ring-black/5"
+                  : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100",
               )}
             >
               <Icon
                 className={cn(
                   "size-4 shrink-0",
-                  active ? "text-brand-primary" : "text-zinc-500 group-hover:text-zinc-300",
+                  active ? "text-brand-primary" : "text-neutral-500 group-hover:text-neutral-800",
                 )}
                 strokeWidth={1.75}
               />
@@ -110,22 +110,22 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-surface-border/60">
-        <div className="p-3 bg-zinc-900/50 rounded-lg ring-1 ring-white/5">
+        <div className="p-3 bg-neutral-50 rounded-lg ring-1 ring-black/5">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-medium">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">
               AI Minutes
             </p>
-            <p className="text-[10px] font-mono text-zinc-400">
+            <p className="text-[10px] font-mono text-neutral-600">
               {Math.round((aiMinutes / quota) * 100)}%
             </p>
           </div>
-          <div className="h-1 bg-zinc-800 rounded-full overflow-hidden mb-2">
+          <div className="h-1 bg-neutral-200 rounded-full overflow-hidden mb-2">
             <div
               className="h-full bg-brand-primary"
               style={{ width: `${Math.min(100, (aiMinutes / quota) * 100)}%` }}
             />
           </div>
-          <p className="text-[11px] font-mono text-zinc-400">
+          <p className="text-[11px] font-mono text-neutral-600">
             {Math.round(aiMinutes).toLocaleString()} /{" "}
             {quota.toLocaleString()} min
           </p>

@@ -35,7 +35,7 @@ strict JSON matching this shape (no extra keys, no prose):
 {
   "name": "short human name, e.g. 'Sarah'",
   "greeting": "the first line the agent says (<= 25 words, conversational, mentions the caller's name/company)",
-  "system_prompt": "the master instruction the LLM follows on every turn — includes role, tone, boundaries, hard rules; 4-8 sentences",
+  "system_prompt": "the master instruction the LLM follows on every turn - includes role, tone, boundaries, hard rules; 4-8 sentences",
   "prompt": "the specific objective for THIS call in one sentence",
   "business_knowledge": "concise facts, offering, pricing, differentiators the agent MAY reference; 3-8 bullet-style lines",
   "personality": "3-5 adjectives",
@@ -61,7 +61,7 @@ export const generateAgentFromBrief = createServerFn({ method: "POST" })
   .inputValidator(
     (d: { brief: string; audience?: string; goal?: string }) => {
       if (!d?.brief || d.brief.trim().length < 8) {
-        throw new Error("Brief is too short — describe what the agent should do.");
+        throw new Error("Brief is too short - describe what the agent should do.");
       }
       if (d.brief.length > 4000) throw new Error("Brief too long (max 4000 chars).");
       return {
@@ -111,7 +111,7 @@ export const generateAgentFromBrief = createServerFn({ method: "POST" })
     if (!res.ok) {
       const t = await res.text().catch(() => "");
       if (res.status === 429) {
-        throw new Error("AI is rate-limited — please try again in a moment.");
+        throw new Error("AI is rate-limited - please try again in a moment.");
       }
       if (res.status === 402) {
         throw new Error(

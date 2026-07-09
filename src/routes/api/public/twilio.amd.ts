@@ -76,7 +76,7 @@ export const Route = createFileRoute("/api/public/twilio/amd")({
         const callSid = form.get("CallSid") ?? "";
         const answeredBy = (form.get("AnsweredBy") ?? "").toLowerCase();
 
-        // Not a machine — let the bridge keep talking to the human.
+        // Not a machine - let the bridge keep talking to the human.
         if (!answeredBy.startsWith("machine")) {
           return new Response("", { status: 204 });
         }

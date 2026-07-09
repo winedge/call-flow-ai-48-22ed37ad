@@ -13,7 +13,7 @@ import { lovable } from "@/integrations/lovable";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — BulkCall AI" },
+      { title: "Sign in - BulkCall AI" },
       { name: "description", content: "Sign in to BulkCall AI to manage your AI calling campaigns." },
     ],
   }),
@@ -61,7 +61,7 @@ function AuthPage() {
     });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Account created — you're signed in");
+    toast.success("Account created - you're signed in");
     navigate({ to: "/dashboard" });
   }
 
@@ -79,7 +79,7 @@ function AuthPage() {
           <img src={logoAsset.url} alt="BulkCall AI" className="h-8 w-auto object-contain" />
         </Link>
 
-        <div className="bg-zinc-900/40 ring-1 ring-white/5 rounded-xl p-6 backdrop-blur-sm">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 backdrop-blur-sm">
           <Tabs defaultValue="signin">
             <TabsList className="grid grid-cols-2 w-full mb-6">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
