@@ -213,6 +213,7 @@ function CallHistory() {
                 <th className="px-4 py-3 text-left font-medium">End reason</th>
                 <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                 <th className="px-4 py-3 text-right font-medium">Duration</th>
+                <th className="px-4 py-3 text-left font-medium">Recording</th>
                 <th className="px-4 py-3 text-right font-medium">Score</th>
                 <th className="px-4 py-3 text-right font-medium">Cost</th>
               </tr>
