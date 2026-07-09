@@ -71,9 +71,8 @@ function stripAgentNameAsCaller(reply: string, agentName: string | undefined, hi
   cleaned = cleaned
     .replace(new RegExp(`(^|[.!?]\\s+)${escaped}\\s*,\\s*`, "gi"), "$1")
     .replace(new RegExp(`,\\s*${escaped}(?=\\s*[.!?]|$)`, "gi"), "")
-    .replace(new RegExp(`\\b(?:thanks|thank you|great|okay|ok|got it|sure|perfect),?\\s+${escaped}\\b`, "gi"), (match) => {
-      const firstWord = match.split(/[\s,]+/)[0] ?? "Okay";
-      return firstWord;
+    .replace(new RegExp(`\\b(thanks|thank you|great|okay|ok|got it|sure|perfect|alright|sounds good|glad to hear that|good to hear|nice to hear|happy to hear),?\\s+${escaped}\\b`, "gi"), (_match, phrase: string) => {
+      return phrase;
     })
     .replace(/\s+([,.!?])/g, "$1")
     .replace(/\s{2,}/g, " ")
