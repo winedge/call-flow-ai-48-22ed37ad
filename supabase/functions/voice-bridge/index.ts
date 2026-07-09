@@ -531,6 +531,7 @@ type Session = {
   dgReconnects: number;
   history: { role: "user" | "assistant"; content: string }[];
   speaking: boolean;
+  greeted: boolean;
   turnLock: boolean;
   cancelSpeech: () => void;
   closed: boolean;
@@ -649,7 +650,7 @@ function bootstrapAgent(agentId: string | null, bootstrap: Partial<AgentConfig> 
 }
 
 function primeGreeting(s: Session, a: AgentConfig) {
-  if (a.speak_first === false || s.greetingAudio) return;
+  if (s.greeted || a.speak_first === false || s.greetingAudio) return;
   if (a.tts_engine !== "elevenlabs" || !ELEVENLABS_KEY) return;
   const greeting = a.greeting || "Hello, this is your AI assistant.";
   s.greetingAudio = {
@@ -915,6 +916,7 @@ Deno.serve((req) => {
     dgReconnects: 0,
     history: [],
     speaking: false,
+    greeted: false,
     turnLock: false,
     cancelSpeech: () => {},
     closed: false,
@@ -981,6 +983,7 @@ Deno.serve((req) => {
   // Backward compatibility for manual tests / old URLs. Real Twilio calls use
   // <Parameter> values delivered in the start frame because <Stream url> does
   // not support query strings.
+  if (session.agent) primeGreeting(session, session.agent);
   if (session.agentId) void loadAgent(session.agentId);
 
   socket.onmessage = async (ev) => {
@@ -1108,6 +1111,7 @@ Deno.serve((req) => {
       if (session.agent.speak_first !== false) {
         const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
         session.history.push({ role: "assistant", content: greeting });
+        session.greeted = true;
         void speak(session, greeting);
       } else {
         // Listening already started above.
