@@ -359,6 +359,39 @@ async function synthTts(
   return await res.json();
 }
 
+async function synthElevenLabsMulaw(
+  text: string,
+  voice: string,
+  voice_settings?: AgentConfig["voice_settings"],
+): Promise<Uint8Array> {
+  if (!ELEVENLABS_KEY) throw new Error("ElevenLabs not configured on bridge");
+  const settings = {
+    stability: voice_settings?.stability ?? 0.56,
+    similarity_boost: voice_settings?.similarity_boost ?? 0.78,
+    style: voice_settings?.style ?? 0.22,
+    use_speaker_boost: voice_settings?.use_speaker_boost ?? true,
+    speed: 0.96,
+  };
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}/stream?output_format=ulaw_8000&optimize_streaming_latency=4`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_KEY,
+        "Content-Type": "application/json",
+        Accept: "audio/basic",
+      },
+      body: JSON.stringify({
+        text: prepareSpeechText(text),
+        model_id: "eleven_flash_v2_5",
+        voice_settings: settings,
+      }),
+    },
+  );
+  if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${await res.text().catch(() => "")}`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
 // ---------- Deepgram streaming STT ----------
 
 type DgHandle = { send: (mu: Uint8Array) => void; close: () => void };
@@ -452,7 +485,7 @@ type Session = {
   timers: ReturnType<typeof setTimeout>[];
   playbackMark: string | null;
   finishPlayback: () => void;
-  greetingAudio: { text: string; promise: Promise<{ audio_url: string }> } | null;
+  greetingAudio: { text: string; promise: Promise<Uint8Array> } | null;
   queuedUserText: string;
   activeTurnInterrupted: boolean;
   noiseGate: {
