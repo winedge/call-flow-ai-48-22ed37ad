@@ -467,9 +467,13 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         }
         if (!body.agent) return errorJson(400, "agent required");
 
+        const history = body.history ?? [];
+        const collected = detectCollectedFields(body.agent, history);
+        const state = computeConvState(body.agent, history);
+
         const messages = [
-          { role: "system", content: buildSystem(body.agent) },
-          ...(body.history ?? []).slice(-20),
+          { role: "system", content: buildSystem(body.agent, state, collected) },
+          ...history.slice(-20),
           {
             role: "system",
             content: body.agent.name
