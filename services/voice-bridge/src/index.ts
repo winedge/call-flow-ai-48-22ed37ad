@@ -339,7 +339,7 @@ async function handleUserTurn(session: Session, userText: string) {
   session.turnLock = true;
   session.history.push({ role: "user", content: userText });
   try {
-    const { reply, end_call } = await runTurn(session.agent, session.history);
+    const { reply, end_call } = await runTurn(session.agent, session.history, session.callSid);
     if (!reply) return;
     session.history.push({ role: "assistant", content: reply });
     await speak(session, reply);
