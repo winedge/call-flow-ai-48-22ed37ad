@@ -45,6 +45,7 @@ import { Route as ApiPublicWebhooksAutomationsRouteImport } from './routes/api/p
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio.voice'
 import { Route as ApiPublicTwilioTransferRouteImport } from './routes/api/public/twilio.transfer'
 import { Route as ApiPublicTwilioAmdRouteImport } from './routes/api/public/twilio.amd'
+import { Route as ApiPublicHooksCampaignTickRouteImport } from './routes/api/public/hooks.campaign-tick'
 import { Route as ApiPublicBridgeTurnRouteImport } from './routes/api/public/bridge.turn'
 import { Route as ApiPublicBridgeTtsRouteImport } from './routes/api/public/bridge.tts'
 import { Route as ApiPublicBridgeTransferRouteImport } from './routes/api/public/bridge.transfer'
@@ -234,6 +235,12 @@ const ApiPublicTwilioAmdRoute = ApiPublicTwilioAmdRouteImport.update({
   path: '/api/public/twilio/amd',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksCampaignTickRoute =
+  ApiPublicHooksCampaignTickRouteImport.update({
+    id: '/api/public/hooks/campaign-tick',
+    path: '/api/public/hooks/campaign-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicBridgeTurnRoute = ApiPublicBridgeTurnRouteImport.update({
   id: '/api/public/bridge/turn',
   path: '/api/public/bridge/turn',
@@ -308,6 +315,7 @@ export interface FileRoutesByFullPath {
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/hooks/campaign-tick': typeof ApiPublicHooksCampaignTickRoute
   '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
   '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -352,6 +360,7 @@ export interface FileRoutesByTo {
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/hooks/campaign-tick': typeof ApiPublicHooksCampaignTickRoute
   '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
   '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -398,6 +407,7 @@ export interface FileRoutesById {
   '/api/public/bridge/transfer': typeof ApiPublicBridgeTransferRoute
   '/api/public/bridge/tts': typeof ApiPublicBridgeTtsRoute
   '/api/public/bridge/turn': typeof ApiPublicBridgeTurnRoute
+  '/api/public/hooks/campaign-tick': typeof ApiPublicHooksCampaignTickRoute
   '/api/public/twilio/amd': typeof ApiPublicTwilioAmdRoute
   '/api/public/twilio/transfer': typeof ApiPublicTwilioTransferRoute
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
@@ -444,6 +454,7 @@ export interface FileRouteTypes {
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/hooks/campaign-tick'
     | '/api/public/twilio/amd'
     | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/hooks/campaign-tick'
     | '/api/public/twilio/amd'
     | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
@@ -533,6 +545,7 @@ export interface FileRouteTypes {
     | '/api/public/bridge/transfer'
     | '/api/public/bridge/tts'
     | '/api/public/bridge/turn'
+    | '/api/public/hooks/campaign-tick'
     | '/api/public/twilio/amd'
     | '/api/public/twilio/transfer'
     | '/api/public/twilio/voice'
@@ -557,6 +570,7 @@ export interface RootRouteChildren {
   ApiPublicBridgeTransferRoute: typeof ApiPublicBridgeTransferRoute
   ApiPublicBridgeTtsRoute: typeof ApiPublicBridgeTtsRoute
   ApiPublicBridgeTurnRoute: typeof ApiPublicBridgeTurnRoute
+  ApiPublicHooksCampaignTickRoute: typeof ApiPublicHooksCampaignTickRoute
   ApiPublicTwilioAmdRoute: typeof ApiPublicTwilioAmdRoute
   ApiPublicTwilioTransferRoute: typeof ApiPublicTwilioTransferRoute
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
@@ -819,6 +833,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioAmdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/campaign-tick': {
+      id: '/api/public/hooks/campaign-tick'
+      path: '/api/public/hooks/campaign-tick'
+      fullPath: '/api/public/hooks/campaign-tick'
+      preLoaderRoute: typeof ApiPublicHooksCampaignTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/bridge/turn': {
       id: '/api/public/bridge/turn'
       path: '/api/public/bridge/turn'
@@ -1007,6 +1028,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBridgeTransferRoute: ApiPublicBridgeTransferRoute,
   ApiPublicBridgeTtsRoute: ApiPublicBridgeTtsRoute,
   ApiPublicBridgeTurnRoute: ApiPublicBridgeTurnRoute,
+  ApiPublicHooksCampaignTickRoute: ApiPublicHooksCampaignTickRoute,
   ApiPublicTwilioAmdRoute: ApiPublicTwilioAmdRoute,
   ApiPublicTwilioTransferRoute: ApiPublicTwilioTransferRoute,
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
@@ -1017,13 +1039,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
