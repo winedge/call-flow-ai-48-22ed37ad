@@ -189,10 +189,10 @@ export const Route = createFileRoute("/api/public/hooks/campaign-tick")({
           if (c.phone_number_id) {
             const { data: pn } = await admin
               .from("phone_numbers")
-              .select("e164")
+              .select("number")
               .eq("id", c.phone_number_id)
-              .maybeSingle<{ e164: string | null }>();
-            if (pn?.e164) fromNumber = pn.e164;
+              .maybeSingle<{ number: string | null }>();
+            if (pn?.number) fromNumber = pn.number;
           }
           if (!fromNumber) {
             results[c.id] = { error: "no from number" };
