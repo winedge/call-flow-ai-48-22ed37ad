@@ -103,12 +103,43 @@ function stripIdentityTokenFromNamePosition(reply: string, token: string): strin
   return cleaned || reply;
 }
 
+// Strip hallucinated "name coincidence" claims: any sentence in which the
+// assistant asserts that the caller's name matches its own (e.g. "my name
+// is Sarah too", "I'm Sarah as well", "what a coincidence, we have the
+// same name", "we're both Sarah"). These arise when the model mirrors
+// filler words like "too/also" from the caller and treats them as a name
+// claim. Removing the whole sentence is safe — the assistant already
+// introduced itself in the greeting and never needs to restate its name.
+function stripNameCoincidenceClaims(reply: string, agentName: string | undefined): string {
+  const name = normalizeName(agentName);
+  if (!name) return reply;
+  const escaped = escapeRegex(name);
+
+  const nameClaim = new RegExp(
+    `\\b(?:my name is|i(?:'m| am)|it'?s|this is|call me)\\s+${escaped}\\b\\s*(?:too|also|as well|either)?`,
+    "i",
+  );
+  const coincidence = new RegExp(
+    `\\b(?:what a coincidence|same name|(?:we(?:'re| are)|we both are)\\s+both\\s+${escaped}|we have the same name)\\b`,
+    "i",
+  );
+
+  // Split into sentences, drop any that make a name-coincidence claim.
+  const sentences = reply.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [reply];
+  const kept = sentences.filter((s) => !nameClaim.test(s) && !coincidence.test(s));
+  const cleaned = kept.join(" ").replace(/\s{2,}/g, " ").trim();
+  return cleaned || reply;
+}
+
 function stripAgentNameAsCaller(reply: string, agentName: string | undefined, history: Turn[]): string {
   const name = normalizeName(agentName);
   if (!name) return reply;
-  // If the caller explicitly gave the same name as their own, leave it alone.
-  if (callerExplicitlyGaveName(history, name)) return reply;
-  return stripIdentityTokenFromNamePosition(reply, name);
+  // Always strip name-coincidence claims — the caller saying "too" is filler,
+  // not a name reveal, and the assistant must never claim their names match.
+  let out = stripNameCoincidenceClaims(reply, name);
+  // If the caller explicitly gave the same name as their own, leave vocatives alone.
+  if (callerExplicitlyGaveName(history, name)) return out;
+  return stripIdentityTokenFromNamePosition(out, name);
 }
 
 function describeField(f: DataField): string {
