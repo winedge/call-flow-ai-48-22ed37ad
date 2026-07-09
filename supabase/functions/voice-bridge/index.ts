@@ -745,47 +745,60 @@ async function speak(s: Session, text: string) {
   let sentFrames = 0;
   try {
     if (s.agent.tts_engine === "elevenlabs" && ELEVENLABS_KEY) {
-      const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
+      const preload = s.greetingAudio?.text === text ? s.greetingAudio : null;
       if (preload) s.greetingAudio = null;
       if (preload) {
-        const mu = await awaitBriefly(preload, 120).catch((e) => {
-          console.warn("greeting prefetch rejected, falling back to stream", e);
-          return null;
-        });
-        if (mu) {
-          for (const frame of chunk20ms(mu)) {
-            if (cancelled || s.closed) break;
-            sendMulawFrame(s, frame);
-            sentFrames++;
-            if (Math.random() < 0.02) await Promise.resolve();
+        let carry = new Uint8Array(0);
+        let idx = 0;
+        while (!cancelled && !s.closed) {
+          if (idx >= preload.buffered.length) {
+            if (preload.done) break;
+            await new Promise<void>((resolve) => preload.waiters.push(resolve));
+            continue;
           }
-        } else {
+          const chunk = preload.buffered[idx++];
+          const buf = concatBytes(carry, chunk);
+          const frameable = Math.floor(buf.length / 160) * 160;
+          for (let i = 0; i < frameable; i += 160) {
+            if (cancelled || s.closed) break;
+            sendMulawFrame(s, buf.subarray(i, i + 160));
+            sentFrames++;
+          }
+          carry = buf.subarray(frameable);
+        }
+        if (preload.error && sentFrames === 0) {
+          // Prefetch failed before any bytes; fall back to a fresh stream.
           const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
           const reader = stream.getReader();
-          let carry = new Uint8Array(0);
+          let carry2 = new Uint8Array(0);
           try {
             while (!cancelled && !s.closed) {
               const { value, done } = await reader.read();
               if (done) break;
               if (!value?.length) continue;
-              const buf = concatBytes(carry, value);
+              const buf = concatBytes(carry2, value);
               const frameable = Math.floor(buf.length / 160) * 160;
               for (let i = 0; i < frameable; i += 160) {
                 if (cancelled || s.closed) break;
                 sendMulawFrame(s, buf.subarray(i, i + 160));
                 sentFrames++;
               }
-              carry = buf.subarray(frameable);
+              carry2 = buf.subarray(frameable);
             }
           } finally {
             try { reader.releaseLock(); } catch { /* ignore */ }
           }
-          if (!cancelled && !s.closed && carry.length) {
+          if (!cancelled && !s.closed && carry2.length) {
             const last = new Uint8Array(160).fill(0xff);
-            last.set(carry.subarray(0, 160));
+            last.set(carry2.subarray(0, Math.min(160, carry2.length)));
             sendMulawFrame(s, last);
             sentFrames++;
           }
+        } else if (!cancelled && !s.closed && carry.length) {
+          const last = new Uint8Array(160).fill(0xff);
+          last.set(carry.subarray(0, Math.min(160, carry.length)));
+          sendMulawFrame(s, last);
+          sentFrames++;
         }
       } else {
         const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
