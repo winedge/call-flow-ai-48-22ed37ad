@@ -654,53 +654,65 @@ async function speak(s: Session, text: string) {
   };
   s.speaking = true;
   try {
-    // Reuse a preloaded audio promise (used for the greeting) when it
-    // matches the text we're about to speak — cuts first-speak latency.
-    // If prefetch failed, fall back to a fresh synth so the call isn't silent.
-    const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
-    if (preload) s.greetingAudio = null;
-    let audio_url: string;
-    try {
-      audio_url = (await (preload ?? synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings))).audio_url;
-    } catch (e) {
+    if (s.agent.tts_engine === "elevenlabs" && ELEVENLABS_KEY) {
+      const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
+      if (preload) s.greetingAudio = null;
       if (preload) {
-        console.warn("greeting prefetch rejected, falling back to fresh synth");
-        audio_url = (await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings)).audio_url;
+        const mu = await preload.catch(async (e) => {
+          console.warn("greeting prefetch rejected, falling back to fresh synth", e);
+          return await synthElevenLabsMulaw(text, s.agent!.voice_id, s.agent!.voice_settings);
+        });
+        for (const frame of chunk20ms(mu)) {
+          if (cancelled || s.closed) break;
+          sendMulawFrame(s, frame);
+          if (Math.random() < 0.02) await Promise.resolve();
+        }
       } else {
-        throw e;
+        const stream = await openElevenLabsMulawStream(text, s.agent.voice_id, s.agent.voice_settings);
+        const reader = stream.getReader();
+        let carry = new Uint8Array(0);
+        try {
+          while (!cancelled && !s.closed) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (!value?.length) continue;
+            const buf = concatBytes(carry, value);
+            const frameable = Math.floor(buf.length / 160) * 160;
+            for (let i = 0; i < frameable; i += 160) {
+              if (cancelled || s.closed) break;
+              sendMulawFrame(s, buf.subarray(i, i + 160));
+            }
+            carry = buf.subarray(frameable);
+          }
+        } finally {
+          try { reader.releaseLock(); } catch { /* ignore */ }
+        }
+        if (!cancelled && !s.closed && carry.length) {
+          const last = new Uint8Array(160).fill(0xff);
+          last.set(carry.subarray(0, 160));
+          sendMulawFrame(s, last);
+        }
       }
-    }
-    if (cancelled || s.closed) return;
-
-    // Fast path: ElevenLabs returns raw μ-law 8kHz encoded as a data URI —
-    // no fetch, no WAV parse, no downsample, no encode. Twilio's wire format.
-    let mu: Uint8Array;
-    if (audio_url.startsWith("data:audio/mulaw;base64,")) {
-      const b64 = audio_url.slice("data:audio/mulaw;base64,".length);
-      const bin = atob(b64);
-      mu = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) mu[i] = bin.charCodeAt(i);
     } else {
-      const buf = await (await fetch(audio_url)).arrayBuffer();
+      const { audio_url } = await synthTts(text, s.agent.voice_id, s.agent.language, s.agent.tts_engine, s.agent.voice_settings);
       if (cancelled || s.closed) return;
-      const { sampleRate, samples } = parseWav(buf);
-      const pcm8k = downsampleTo8k(samples, sampleRate);
-      mu = pcm8kToMuLaw(pcm8k);
-    }
-
-    const frames = chunk20ms(mu);
-    for (let i = 0; i < frames.length; i++) {
-      if (cancelled || s.closed) break;
-      const frame = frames[i];
-      let bin = "";
-      for (let j = 0; j < frame.length; j++) bin += String.fromCharCode(frame[j]);
-      const payload = btoa(bin);
-      s.twilio.send(JSON.stringify({
-        event: "media",
-        streamSid: s.streamSid,
-        media: { payload },
-      }));
-      if (i % 50 === 49) await Promise.resolve();
+      let mu: Uint8Array;
+      if (audio_url.startsWith("data:audio/mulaw;base64,")) {
+        const b64 = audio_url.slice("data:audio/mulaw;base64,".length);
+        const bin = atob(b64);
+        mu = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) mu[i] = bin.charCodeAt(i);
+      } else {
+        const buf = await (await fetch(audio_url)).arrayBuffer();
+        if (cancelled || s.closed) return;
+        const { sampleRate, samples } = parseWav(buf);
+        const pcm8k = downsampleTo8k(samples, sampleRate);
+        mu = pcm8kToMuLaw(pcm8k);
+      }
+      for (const frame of chunk20ms(mu)) {
+        if (cancelled || s.closed) break;
+        sendMulawFrame(s, frame);
+      }
     }
     if (!cancelled && !s.closed) {
       s.twilio.send(JSON.stringify({
