@@ -601,7 +601,18 @@ function gateInboundAudio(s: Session, bytes: Uint8Array): Uint8Array[] {
   return [silenceFrame(bytes.length)];
 }
 
-function initialPathMetadata(pathname: string): { agentId: string | null; callSid: string | null } {
+function decodeBootstrap(raw?: string): Partial<AgentConfig> | null {
+  if (!raw) return null;
+  try {
+    const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(decodeURIComponent(escape(atob(padded)))) as Partial<AgentConfig>;
+  } catch {
+    return null;
+  }
+}
+
+function initialPathMetadata(pathname: string): { agentId: string | null; callSid: string | null; bootstrap: Partial<AgentConfig> | null } {
   const parts = pathname.split("/").filter(Boolean).map((p) => {
     try {
       return decodeURIComponent(p);
@@ -610,10 +621,11 @@ function initialPathMetadata(pathname: string): { agentId: string | null; callSi
     }
   });
   const idx = parts.findIndex((p) => p === "voice-bridge");
-  if (idx < 0) return { agentId: null, callSid: null };
+  if (idx < 0) return { agentId: null, callSid: null, bootstrap: null };
   const agentId = parts[idx + 1] && parts[idx + 1] !== "healthz" ? parts[idx + 1] : null;
   const callSid = parts[idx + 2] && parts[idx + 2] !== "unknown" ? parts[idx + 2] : null;
-  return { agentId, callSid };
+  const bootstrap = decodeBootstrap(parts[idx + 3]);
+  return { agentId, callSid, bootstrap };
 }
 
 function looksLikeSpeech(text: string, voiceMs: number): boolean {
@@ -653,6 +665,7 @@ async function speak(s: Session, text: string) {
     finishPlayback();
   };
   s.speaking = true;
+  let sentFrames = 0;
   try {
     if (s.agent.tts_engine === "elevenlabs" && ELEVENLABS_KEY) {
       const preload = s.greetingAudio?.text === text ? s.greetingAudio.promise : null;
@@ -665,6 +678,7 @@ async function speak(s: Session, text: string) {
         for (const frame of chunk20ms(mu)) {
           if (cancelled || s.closed) break;
           sendMulawFrame(s, frame);
+          sentFrames++;
           if (Math.random() < 0.02) await Promise.resolve();
         }
       } else {
@@ -681,6 +695,7 @@ async function speak(s: Session, text: string) {
             for (let i = 0; i < frameable; i += 160) {
               if (cancelled || s.closed) break;
               sendMulawFrame(s, buf.subarray(i, i + 160));
+              sentFrames++;
             }
             carry = buf.subarray(frameable);
           }
@@ -691,6 +706,7 @@ async function speak(s: Session, text: string) {
           const last = new Uint8Array(160).fill(0xff);
           last.set(carry.subarray(0, 160));
           sendMulawFrame(s, last);
+          sentFrames++;
         }
       }
     } else {
@@ -712,6 +728,7 @@ async function speak(s: Session, text: string) {
       for (const frame of chunk20ms(mu)) {
         if (cancelled || s.closed) break;
         sendMulawFrame(s, frame);
+        sentFrames++;
       }
     }
     if (!cancelled && !s.closed) {
@@ -720,7 +737,7 @@ async function speak(s: Session, text: string) {
         streamSid: s.streamSid,
         mark: { name: markName },
       }));
-      const fallback = setTimeout(finishPlayback, Math.max(500, frames.length * 20 + 750));
+      const fallback = setTimeout(finishPlayback, Math.max(500, sentFrames * 20 + 750));
       await playbackDone.finally(() => clearTimeout(fallback));
     }
   } catch (e) {
