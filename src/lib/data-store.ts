@@ -111,6 +111,15 @@ function toListFromDb(r: Record<string, unknown>): ContactList {
   };
 }
 
+async function requireCurrentUserId(setState: (state: Partial<DBState>) => void, getState: () => DBState) {
+  const existing = getState().currentOrgId || getState().currentUserId;
+  if (existing) return existing;
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) throw new Error("Sign in before saving contacts.");
+  setState({ currentUserId: data.user.id, currentOrgId: data.user.id });
+  return data.user.id;
+}
+
 export type DataFieldType = "text" | "email" | "phone" | "number" | "date" | "boolean";
 
 export type DataField = {
@@ -426,8 +435,7 @@ export const useDB = create<DBState>()(
         return list;
       },
       createList: async (name, description) => {
-        const orgId = get().currentOrgId;
-        if (!orgId) throw new Error("Sign in before creating contact lists.");
+        const orgId = await requireCurrentUserId(set, get);
         const id = uid();
         const { data, error } = await supabase
           .from("contact_lists")
@@ -509,8 +517,7 @@ export const useDB = create<DBState>()(
         return made.length;
       },
       importContacts: async (cs, listId) => {
-        const orgId = get().currentOrgId;
-        if (!orgId) throw new Error("Sign in before importing contacts.");
+        const orgId = await requireCurrentUserId(set, get);
         if (!listId) throw new Error("Choose a contact list before importing.");
 
         const { data: existingRows, error: existingError } = await supabase
