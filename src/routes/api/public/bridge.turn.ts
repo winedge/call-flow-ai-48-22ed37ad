@@ -36,6 +36,51 @@ type AgentSummary = {
 
 type Turn = { role: "user" | "assistant"; content: string };
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeName(value: string | undefined): string {
+  return (value ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/[^\p{L}\p{M}\s.'-]/gu, "")
+    .trim();
+}
+
+function callerExplicitlyGaveName(history: Turn[], agentName: string): boolean {
+  if (!agentName) return false;
+  const escaped = escapeRegex(agentName);
+  const explicitNamePatterns = [
+    new RegExp(`\\b(?:my name is|this is|i am|i'm|im|it's|its)\\s+${escaped}\\b`, "i"),
+    new RegExp(`\\b(?:call me|you can call me)\\s+${escaped}\\b`, "i"),
+  ];
+  return history
+    .filter((turn) => turn.role === "user")
+    .some((turn) => explicitNamePatterns.some((pattern) => pattern.test(turn.content)));
+}
+
+function stripAgentNameAsCaller(reply: string, agentName: string | undefined, history: Turn[]): string {
+  const name = normalizeName(agentName);
+  if (!name || callerExplicitlyGaveName(history, name)) return reply;
+
+  const escaped = escapeRegex(name);
+  let cleaned = reply;
+
+  // Remove direct-address uses of the assistant's own name, e.g.
+  // "Great, Sarah", "Sarah, got it", or "How are you, Sarah?".
+  cleaned = cleaned
+    .replace(new RegExp(`(^|[.!?]\\s+)${escaped}\\s*,\\s*`, "gi"), "$1")
+    .replace(new RegExp(`,\\s*${escaped}(?=\\s*[.!?]|$)`, "gi"), "")
+    .replace(new RegExp(`\\b(thanks|thank you|great|okay|ok|got it|sure|perfect|alright|sounds good|glad to hear that|good to hear|nice to hear|happy to hear),?\\s+${escaped}\\b`, "gi"), (_match, phrase: string) => {
+      return phrase;
+    })
+    .replace(/\s+([,.!?])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return cleaned || reply;
+}
+
 function describeField(f: DataField): string {
   const req = f.required ? " (required)" : "";
   const hint =
@@ -74,6 +119,7 @@ function buildSystem(a: AgentSummary): string {
     "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
     "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
+    a.name ? `Name safety rule: "${a.name}" is the assistant's name only. If the caller has not explicitly said "my name is ${a.name}" or "call me ${a.name}" in this conversation, any reply that addresses the caller as "${a.name}" is wrong. Use no caller name instead.` : "Name safety rule: the caller's name is unknown unless they explicitly say it during this call. Use no caller name by default.",
     "Keep replies short — under 25 spoken words. Never break character. Never mention you are AI unless asked directly.",
   ].filter(Boolean);
   return parts.join("\n\n");
@@ -102,6 +148,12 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         const messages = [
           { role: "system", content: buildSystem(body.agent) },
           ...(body.history ?? []).slice(-20),
+          {
+            role: "system",
+            content: body.agent.name
+              ? `Final name check before answering: your assistant name is "${body.agent.name}". Do not address the caller as "${body.agent.name}" unless the caller explicitly gave that as their own name. If no caller name was given, address them with no name.`
+              : "Final name check before answering: no caller name is known. Address the caller with no name.",
+          },
         ];
 
         const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -141,6 +193,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         if (endCall || transfer) {
           reply = reply.replace(tokenRe, "").replace(/\s{2,}/g, " ").trim();
         }
+        reply = stripAgentNameAsCaller(reply, body.agent.name, body.history ?? []);
         // Transfer wins over end_call if both were emitted.
         if (transfer) endCall = false;
 
