@@ -459,7 +459,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         const key = process.env.LOVABLE_API_KEY;
         if (!key) return errorJson(500, "LOVABLE_API_KEY not configured");
 
-        let body: { agent: AgentSummary; history: Turn[] };
+        let body: { agent: AgentSummary; history: Turn[]; call_sid?: string };
         try {
           body = JSON.parse(raw);
         } catch {
@@ -471,8 +471,39 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         const collected = detectCollectedFields(body.agent, history);
         const state = computeConvState(body.agent, history);
 
+        // Look up authoritative phone context for this call so the assistant
+        // can accurately answer questions like "what number are you calling
+        // me on?" instead of hallucinating a different number.
+        let phoneContext = "";
+        if (body.call_sid) {
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: callRow } = await supabaseAdmin
+              .from("calls")
+              .select("phone_to, phone_from")
+              .eq("twilio_call_sid", body.call_sid)
+              .maybeSingle<{ phone_to: string | null; phone_from: string | null }>();
+            if (callRow) {
+              const to = callRow.phone_to?.trim();
+              const from = callRow.phone_from?.trim();
+              const parts: string[] = [];
+              if (to) parts.push(`The caller's phone number (the number you dialed to reach them) is ${to}.`);
+              if (from) parts.push(`Your outbound business number (the number showing on their caller ID) is ${from}.`);
+              if (parts.length) {
+                phoneContext =
+                  `CALL CONTEXT — GROUND TRUTH PHONE NUMBERS (use these exact digits, never invent others):\n${parts.join(" ")} ` +
+                  `If the caller asks what number you are calling them on, or references "this number", "the number you called", or "my number", answer with the caller's phone number above — never any other digits. ` +
+                  `When speaking a phone number aloud, group the digits (e.g. "2 1 2 ... 5 5 5 ... 0 1 2 3").`;
+              }
+            }
+          } catch (e) {
+            console.warn("bridge.turn phone context lookup failed", e);
+          }
+        }
+
         const messages = [
           { role: "system", content: buildSystem(body.agent, state, collected) },
+          ...(phoneContext ? [{ role: "system", content: phoneContext }] : []),
           ...history.slice(-20),
           {
             role: "system",
