@@ -286,10 +286,134 @@ function describeField(f: DataField): string {
   return `${f.label} [${f.key}]${req}${hint}`;
 }
 
-function buildSystem(a: AgentSummary): string {
+// ---------- Conversation state machine ----------
+
+type ConvState = "GREETING" | "INTRO" | "DISCOVERY" | "COLLECTING" | "CONFIRMING" | "CLOSING";
+
+type CollectedField = { field: DataField; value: string };
+
+function fieldSemantic(f: DataField): "name" | "phone" | "email" | "other" {
+  if (f.type === "phone") return "phone";
+  if (f.type === "email") return "email";
+  const label = `${f.key} ${f.label}`.toLowerCase();
+  if (/\b(phone|mobile|cell|number|contact number)\b/.test(label)) return "phone";
+  if (/\b(email|e-mail)\b/.test(label)) return "email";
+  if (/\bname\b/.test(label) && !/\b(business|company|organization|practice)\b/.test(label)) return "name";
+  return "other";
+}
+
+function extractPhone(text: string): string | null {
+  const m = text.match(/(?:\+?\d[\s\-().]*){7,}/);
+  if (!m) return null;
+  const digits = m[0].replace(/\D/g, "");
+  return digits.length >= 7 ? digits : null;
+}
+
+function extractEmail(text: string): string | null {
+  const m = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  return m ? m[0] : null;
+}
+
+function extractName(text: string): string | null {
+  const m = text.match(/\b(?:my name is|this is|i(?:'m| am)|call me|it'?s)\s+([A-Z][A-Za-z'.\-]+(?:\s+[A-Z][A-Za-z'.\-]+){0,2})/);
+  return m?.[1]?.trim() ?? null;
+}
+
+function detectCollectedFields(agent: AgentSummary, history: Turn[]): CollectedField[] {
+  const fields = agent.data_fields ?? [];
+  if (!fields.length) return [];
+  const out: CollectedField[] = [];
+  const userDialogue = history.filter((t) => t.role === "user").map((t) => t.content).join("\n");
+
+  for (let i = 0; i < fields.length; i++) {
+    const f = fields[i];
+    const sem = fieldSemantic(f);
+    let value: string | null = null;
+
+    if (sem === "phone") value = extractPhone(userDialogue);
+    else if (sem === "email") value = extractEmail(userDialogue);
+    else if (sem === "name") value = extractName(userDialogue);
+    else {
+      // Generic field: if the immediately-prior assistant turn referenced this field's label,
+      // treat the next user reply as its answer.
+      const labelRe = new RegExp(`\\b${escapeRegex(f.label)}\\b`, "i");
+      for (let j = 0; j < history.length - 1; j++) {
+        if (history[j].role === "assistant" && labelRe.test(history[j].content)) {
+          const next = history[j + 1];
+          if (next?.role === "user" && next.content.trim().length > 0) {
+            value = next.content.trim().slice(0, 120);
+            break;
+          }
+        }
+      }
+    }
+
+    if (value) out.push({ field: f, value });
+  }
+  return out;
+}
+
+function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
+  const userTurns = userTurnCount(history);
+  if (userTurns === 0) return "GREETING";
+  const collected = detectCollectedFields(agent, history);
+  const required = (agent.data_fields ?? []).filter((f) => f.required !== false);
+  const collectedKeys = new Set(collected.map((c) => c.field.key));
+  const pendingRequired = required.filter((f) => !collectedKeys.has(f.key));
+  const bookingIntent = callerShowsBookingIntent(history);
+
+  if (bookingIntent && pendingRequired.length > 0) return "COLLECTING";
+  if (bookingIntent && pendingRequired.length === 0 && required.length > 0) return "CONFIRMING";
+  if (userTurns <= 1) return "INTRO";
+  return "DISCOVERY";
+}
+
+function stateGuidance(state: ConvState, agent: AgentSummary, collected: CollectedField[]): string {
+  const collectedLines = collected.length
+    ? `ALREADY COLLECTED (do NOT ask for these again — treat as final):\n${collected.map((c) => `- ${c.field.label} [${c.field.key}] = "${c.value}"`).join("\n")}`
+    : "ALREADY COLLECTED: none.";
+  const pending = (agent.data_fields ?? []).filter((f) => !collected.find((c) => c.field.key === f.key));
+  const pendingLines = pending.length
+    ? `STILL PENDING:\n${pending.map(describeField).join("\n- ")}`
+    : "STILL PENDING: none.";
+  const phase = {
+    GREETING: "PHASE = GREETING. The caller has not spoken yet. Say the greeting only.",
+    INTRO: "PHASE = INTRO. The caller has just answered your greeting or made small talk. Briefly acknowledge (one short clause), then move into a business-intro or discovery question from the system prompt. Do NOT ask for name, phone, email, or contact details in this phase.",
+    DISCOVERY: "PHASE = DISCOVERY. Ask discovery/qualification questions from the system prompt. Do NOT collect contact details yet — wait until the caller asks to book/schedule/demo or otherwise signals intent.",
+    COLLECTING: "PHASE = COLLECTING. The caller has shown booking/scheduling intent. Ask for the next STILL PENDING field, one at a time. NEVER re-ask a field listed under ALREADY COLLECTED.",
+    CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. Confirm the details back once, tell the caller the next step, and wait for their goodbye. Do not ask for more information.",
+    CLOSING: "PHASE = CLOSING. Wrap up warmly and prepend [END_CALL] to the reply.",
+  }[state];
+  return `${phase}\n\n${collectedLines}\n\n${pendingLines}`;
+}
+
+function stripFieldReAsks(reply: string, collected: CollectedField[]): string {
+  if (!collected.length) return reply;
+  const sentences = reply.match(/[^.!?]+[.!?]+|[^.!?]+$/g) ?? [reply];
+  const kept = sentences.filter((s) => {
+    for (const c of collected) {
+      const sem = fieldSemantic(c.field);
+      if (sem === "name" && /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|tell me|confirm)\b[^.!?]{0,60}\bname\b/i.test(s)
+          && !/\b(business|company|organization|practice)\s+name\b/i.test(s)) return false;
+      if (sem === "phone" && /\b(?:phone|mobile|cell|contact)\s+number\b|\bbest\s+(?:number|phone)\b|\bnumber to (?:reach|contact|call)\b|\breach you at\b/i.test(s)) return false;
+      if (sem === "email" && /\b(?:email|e-mail)\s+address\b|\bwhere should i send\b|\bwhat(?:'s| is) your (?:email|e-mail)\b/i.test(s)) return false;
+      if (sem === "other") {
+        const labelRe = new RegExp(`\\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|tell me|confirm)\\b[^.!?]{0,60}\\b${escapeRegex(c.field.label)}\\b`, "i");
+        if (labelRe.test(s)) return false;
+      }
+    }
+    return true;
+  });
+  const cleaned = kept.join(" ").replace(/\s{2,}/g, " ").trim();
+  return cleaned || reply;
+}
+
+function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedField[]): string {
   const canTransfer = !!a.transfer_number?.trim();
   const fields = a.data_fields ?? [];
   const parts = [
+    "You are operating under a strict conversation state machine. Obey the current PHASE below.",
+    stateGuidance(state, a, collected),
     "Conversation flow priority: follow the configured system prompt's conversation order first. Do not treat required data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
     a.system_prompt?.trim(),
     a.name ? `Your name is ${a.name}. This is YOUR name (the assistant's), NOT the caller's. NEVER address the caller as "${a.name}" or use "${a.name}" as if it were their name. The caller has NOT told you their name. Do NOT guess, assume, or invent a name for the caller. Address them neutrally ("you", "there") until they explicitly say their name in this conversation. If unsure, do not use any name at all.` : "You do not know the caller's name. Never invent or assume one. Address them neutrally until they say their name.",
@@ -298,7 +422,7 @@ function buildSystem(a: AgentSummary): string {
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
     fields.length
-      ? `Information to collect ONLY when it becomes contextually appropriate, such as after the caller asks to book, agrees to a demo/appointment, requests follow-up, or volunteers contact details. These fields are NOT the opening script and do NOT override the system prompt's discovery flow. Never ask for name, phone, email, or other contact details in the first exchange just because they are listed here. When collection is appropriate, ask one item at a time and confirm it:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
+      ? `Information to collect ONLY during PHASE = COLLECTING. These fields are NOT the opening script. Ask one item at a time and confirm it. NEVER re-ask a field that is already listed under ALREADY COLLECTED — treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
       : "",
     a.qualification_questions?.length
       ? `Qualification questions:\n- ${a.qualification_questions.join("\n- ")}`
@@ -315,7 +439,6 @@ function buildSystem(a: AgentSummary): string {
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
     "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
-    "Early-call guardrail: if the caller has only answered how they are doing, greeted you, or made small talk, do not ask for their name, phone number, email, or contact details. Move into discovery from the system prompt instead.",
     "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
     "Words like 'too', 'also', 'as well', 'either' from the caller are filler agreement, NEVER a name reveal or an identity claim. Do NOT interpret them as the caller sharing a name, and do NOT respond with any 'coincidence' or 'same name' remark. After the greeting, do NOT re-introduce yourself or restate your own name — never say 'my name is …', 'I'm … too', 'we have the same name', or similar. Your name was given once in the greeting and that is enough.",
     a.name ? `Name safety rule: "${a.name}" is the assistant's name only. If the caller has not explicitly said "my name is ${a.name}" or "call me ${a.name}" in this conversation, any reply that addresses the caller as "${a.name}" is wrong. Use no caller name instead.` : "Name safety rule: the caller's name is unknown unless they explicitly say it during this call. Use no caller name by default.",
@@ -344,9 +467,13 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         }
         if (!body.agent) return errorJson(400, "agent required");
 
+        const history = body.history ?? [];
+        const collected = detectCollectedFields(body.agent, history);
+        const state = computeConvState(body.agent, history);
+
         const messages = [
-          { role: "system", content: buildSystem(body.agent) },
-          ...(body.history ?? []).slice(-20),
+          { role: "system", content: buildSystem(body.agent, state, collected) },
+          ...history.slice(-20),
           {
             role: "system",
             content: body.agent.name
@@ -392,9 +519,10 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         if (endCall || transfer) {
           reply = reply.replace(tokenRe, "").replace(/\s{2,}/g, " ").trim();
         }
-        reply = stripAgentNameAsCaller(reply, body.agent.name, body.history ?? []);
-        reply = stripUnpromptedSelfAnswer(reply, body.history ?? []);
-        reply = preventPrematureContactCollection(reply, body.agent, body.history ?? []);
+        reply = stripAgentNameAsCaller(reply, body.agent.name, history);
+        reply = stripUnpromptedSelfAnswer(reply, history);
+        reply = stripFieldReAsks(reply, collected);
+        reply = preventPrematureContactCollection(reply, body.agent, history);
         // Transfer wins over end_call if both were emitted.
         if (transfer) endCall = false;
 
