@@ -161,6 +161,10 @@ function userAskedQuestion(history: Turn[]): boolean {
   return /\?|\b(?:what|why|how|when|where|who|which|can you|could you|would you|do you|are you|is it|tell me)\b/i.test(text);
 }
 
+function userTurnCount(history: Turn[]): number {
+  return history.filter((turn) => turn.role === "user").length;
+}
+
 function stripUnpromptedSelfAnswer(reply: string, history: Turn[]): string {
   if (userAskedQuestion(history)) return reply;
   const cleaned = reply
@@ -172,8 +176,14 @@ function stripUnpromptedSelfAnswer(reply: string, history: Turn[]): string {
 }
 
 function callerShowsBookingIntent(history: Turn[]): boolean {
-  const dialogue = history.map((turn) => turn.content).join("\n");
-  if (/\b(?:book|schedule|set up|demo|appointment|meeting|calendar|call me back|follow up|send me|sign me up|interested|let'?s do it|that works)\b/i.test(dialogue)) {
+  // Only the caller can create booking/contact-collection intent. Assistant
+  // words like "demo" or "schedule" must never self-authorize collecting
+  // name/phone at the beginning of a call.
+  const userDialogue = history
+    .filter((turn) => turn.role === "user")
+    .map((turn) => turn.content)
+    .join("\n");
+  if (/\b(?:book|schedule|set up|demo|appointment|meeting|calendar|call me back|follow up|send me|sign me up|interested|let'?s do it|that works|sounds good)\b/i.test(userDialogue)) {
     return true;
   }
 
@@ -181,6 +191,13 @@ function callerShowsBookingIntent(history: Turn[]): boolean {
   const assistant = latestAssistantTurn(history);
   return /\b(?:yes|yeah|yep|sure|okay|ok|please|sounds good|that works|let'?s do it)\b/i.test(user)
     && /\b(?:book|schedule|demo|appointment|meeting|calendar|follow up|send you|reach you|contact you)\b/i.test(assistant);
+}
+
+function asksForPersonalContactDetail(reply: string): boolean {
+  return /\b(?:what(?:'s| is)|may i have|can i (?:get|have)|could i (?:get|have)|please (?:tell me|share|provide)|tell me|confirm)\b[^.!?]{0,100}\b(?:your full name|your name|full name|name|phone|mobile|cell|number|email|e-mail|best number|best phone)\b/i.test(reply)
+    || /\b(?:your full name|full name|phone number|mobile number|cell number|best number|best phone|email address|e-mail address)\b/i.test(reply)
+    || /\b(?:reach|contact|call|text|send)\s+you\s+(?:at|on|by)\b/i.test(reply)
+    || /\bwhere should i send\b/i.test(reply);
 }
 
 function asksForContactField(reply: string, fields: DataField[]): boolean {
@@ -234,8 +251,13 @@ function earlyConversationFallback(a: AgentSummary): string {
 
 function preventPrematureContactCollection(reply: string, a: AgentSummary, history: Turn[]): string {
   const fields = a.data_fields ?? [];
-  if (!asksForContactField(reply, fields)) return reply;
+  const contactAsk = asksForPersonalContactDetail(reply) || asksForContactField(reply, fields);
+  if (!contactAsk) return reply;
   if (callerShowsBookingIntent(history)) return reply;
+  console.info("bridge prevented premature contact collection", {
+    agentName: a.name ?? null,
+    userTurns: userTurnCount(history),
+  });
   return earlyConversationFallback(a);
 }
 
@@ -252,6 +274,7 @@ function buildSystem(a: AgentSummary): string {
   const canTransfer = !!a.transfer_number?.trim();
   const fields = a.data_fields ?? [];
   const parts = [
+    "Conversation flow priority: follow the configured system prompt's conversation order first. Do not treat required data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
     a.system_prompt?.trim(),
     a.name ? `Your name is ${a.name}. This is YOUR name (the assistant's), NOT the caller's. NEVER address the caller as "${a.name}" or use "${a.name}" as if it were their name. The caller has NOT told you their name. Do NOT guess, assume, or invent a name for the caller. Address them neutrally ("you", "there") until they explicitly say their name in this conversation. If unsure, do not use any name at all.` : "You do not know the caller's name. Never invent or assume one. Address them neutrally until they say their name.",
     a.personality ? `Personality: ${a.personality}` : "",
@@ -276,6 +299,7 @@ function buildSystem(a: AgentSummary): string {
     "Ask one question at a time. Do not rapid-fire confirmations or lists.",
     "When repeating a phone number back, ALWAYS format it in your reply with spaces or commas between small groups so it is read slowly, e.g. '2 1 2 ... 5 5 5 ... 0 1 2 3'. Never say a phone number as one continuous string.",
     "After collecting information, acknowledge it naturally and tell the caller the next step before asking anything else.",
+    "Early-call guardrail: if the caller has only answered how they are doing, greeted you, or made small talk, do not ask for their name, phone number, email, or contact details. Move into discovery from the system prompt instead.",
     "Never claim the caller said something they did not say. Never say 'thanks for asking', 'good question', or similar unless the caller actually asked you a question in their last message. If the caller only answered your question (e.g. you asked 'how are you' and they replied 'good'), acknowledge briefly ('glad to hear that', 'great') and move on — do NOT pretend they asked you back.",
     "Words like 'too', 'also', 'as well', 'either' from the caller are filler agreement, NEVER a name reveal or an identity claim. Do NOT interpret them as the caller sharing a name, and do NOT respond with any 'coincidence' or 'same name' remark. After the greeting, do NOT re-introduce yourself or restate your own name — never say 'my name is …', 'I'm … too', 'we have the same name', or similar. Your name was given once in the greeting and that is enough.",
     a.name ? `Name safety rule: "${a.name}" is the assistant's name only. If the caller has not explicitly said "my name is ${a.name}" or "call me ${a.name}" in this conversation, any reply that addresses the caller as "${a.name}" is wrong. Use no caller name instead.` : "Name safety rule: the caller's name is unknown unless they explicitly say it during this call. Use no caller name by default.",
