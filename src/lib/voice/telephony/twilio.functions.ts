@@ -29,6 +29,14 @@ const InputSchema = z.object({
   contactId: z.string().uuid().optional(),
 });
 
+function toBridgeBootstrapParam(value: unknown): string {
+  return Buffer.from(JSON.stringify(value), "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
 export const initiateCall = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => InputSchema.parse(data))
@@ -55,6 +63,38 @@ export const initiateCall = createServerFn({ method: "POST" })
 
     const voiceUrl = new URL(`${publicUrl}/api/public/twilio/voice`);
     voiceUrl.searchParams.set("agent_id", data.agentId);
+    const { data: agentBootstrap } = await context.supabase
+      .from("agents")
+      .select("name,greeting,voice_id,language,tts_engine,speak_first,voice_stability,voice_similarity_boost,voice_style,voice_speaker_boost")
+      .eq("id", data.agentId)
+      .maybeSingle<{
+        name: string | null;
+        greeting: string | null;
+        voice_id: string | null;
+        language: string | null;
+        tts_engine: string | null;
+        speak_first: boolean | null;
+        voice_stability: number | null;
+        voice_similarity_boost: number | null;
+        voice_style: number | null;
+        voice_speaker_boost: boolean | null;
+      }>();
+    if (agentBootstrap) {
+      voiceUrl.searchParams.set("b", toBridgeBootstrapParam({
+        name: agentBootstrap.name ?? "",
+        greeting: (agentBootstrap.greeting ?? "").slice(0, 260),
+        voice_id: agentBootstrap.voice_id ?? "af_bella",
+        language: agentBootstrap.language ?? "en",
+        tts_engine: agentBootstrap.tts_engine ?? "elevenlabs",
+        speak_first: agentBootstrap.speak_first ?? true,
+        voice_settings: {
+          stability: agentBootstrap.voice_stability ?? undefined,
+          similarity_boost: agentBootstrap.voice_similarity_boost ?? undefined,
+          style: agentBootstrap.voice_style ?? undefined,
+          use_speaker_boost: agentBootstrap.voice_speaker_boost ?? undefined,
+        },
+      }));
+    }
 
     const statusUrl = `${publicUrl}/api/public/webhooks/twilio`;
     const body = new URLSearchParams({
