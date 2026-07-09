@@ -29,14 +29,6 @@ const InputSchema = z.object({
   contactId: z.string().uuid().optional(),
 });
 
-function toBridgeBootstrapParam(value: unknown): string {
-  return Buffer.from(JSON.stringify(value), "utf8")
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
 export const initiateCall = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => InputSchema.parse(data))
@@ -80,6 +72,11 @@ export const initiateCall = createServerFn({ method: "POST" })
         voice_speaker_boost: boolean | null;
       }>();
     if (agentBootstrap) {
+      const toBridgeBootstrapParam = (value: unknown) => Buffer.from(JSON.stringify(value), "utf8")
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
       voiceUrl.searchParams.set("b", toBridgeBootstrapParam({
         name: agentBootstrap.name ?? "",
         greeting: (agentBootstrap.greeting ?? "").slice(0, 260),
