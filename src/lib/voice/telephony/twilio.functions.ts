@@ -95,6 +95,7 @@ export const initiateCall = createServerFn({ method: "POST" })
     }
 
     const statusUrl = `${publicUrl}/api/public/webhooks/twilio`;
+    const recordingUrl = `${publicUrl}/api/public/webhooks/twilio-recording`;
     const body = new URLSearchParams({
       To: data.to,
       From: from!,
@@ -103,6 +104,11 @@ export const initiateCall = createServerFn({ method: "POST" })
       StatusCallback: statusUrl,
       StatusCallbackMethod: "POST",
       StatusCallbackEvent: "initiated ringing answered completed",
+      Record: "true",
+      RecordingChannels: "dual",
+      RecordingStatusCallback: recordingUrl,
+      RecordingStatusCallbackMethod: "POST",
+      RecordingStatusCallbackEvent: "completed",
     });
 
     const basic = btoa(`${sid}:${token}`);
