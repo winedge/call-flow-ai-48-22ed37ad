@@ -39,6 +39,7 @@ import { Route as AppCampaignsNewRouteImport } from './routes/_app.campaigns.new
 import { Route as AppCampaignsIdRouteImport } from './routes/_app.campaigns.$id'
 import { Route as AppCallsIdRouteImport } from './routes/_app.calls.$id'
 import { Route as AppAgentsIdRouteImport } from './routes/_app.agents.$id'
+import { Route as ApiPublicWebhooksTwilioRecordingRouteImport } from './routes/api/public/webhooks.twilio-recording'
 import { Route as ApiPublicWebhooksTwilioRouteImport } from './routes/api/public/webhooks.twilio'
 import { Route as ApiPublicWebhooksAutomationsRouteImport } from './routes/api/public/webhooks.automations'
 import { Route as ApiPublicTwilioVoiceRouteImport } from './routes/api/public/twilio.voice'
@@ -201,6 +202,12 @@ const AppAgentsIdRoute = AppAgentsIdRouteImport.update({
   path: '/agents/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicWebhooksTwilioRecordingRoute =
+  ApiPublicWebhooksTwilioRecordingRouteImport.update({
+    id: '/api/public/webhooks/twilio-recording',
+    path: '/api/public/webhooks/twilio-recording',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicWebhooksTwilioRoute = ApiPublicWebhooksTwilioRouteImport.update({
   id: '/api/public/webhooks/twilio',
   path: '/api/public/webhooks/twilio',
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
+  '/api/public/webhooks/twilio-recording': typeof ApiPublicWebhooksTwilioRecordingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -349,6 +357,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
+  '/api/public/webhooks/twilio-recording': typeof ApiPublicWebhooksTwilioRecordingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -394,6 +403,7 @@ export interface FileRoutesById {
   '/api/public/twilio/voice': typeof ApiPublicTwilioVoiceRoute
   '/api/public/webhooks/automations': typeof ApiPublicWebhooksAutomationsRoute
   '/api/public/webhooks/twilio': typeof ApiPublicWebhooksTwilioRoute
+  '/api/public/webhooks/twilio-recording': typeof ApiPublicWebhooksTwilioRecordingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
+    | '/api/public/webhooks/twilio-recording'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -482,6 +493,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
+    | '/api/public/webhooks/twilio-recording'
   id:
     | '__root__'
     | '/'
@@ -526,6 +538,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio/voice'
     | '/api/public/webhooks/automations'
     | '/api/public/webhooks/twilio'
+    | '/api/public/webhooks/twilio-recording'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -549,6 +562,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioVoiceRoute: typeof ApiPublicTwilioVoiceRoute
   ApiPublicWebhooksAutomationsRoute: typeof ApiPublicWebhooksAutomationsRoute
   ApiPublicWebhooksTwilioRoute: typeof ApiPublicWebhooksTwilioRoute
+  ApiPublicWebhooksTwilioRecordingRoute: typeof ApiPublicWebhooksTwilioRecordingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -762,6 +776,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/$id'
       preLoaderRoute: typeof AppAgentsIdRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/webhooks/twilio-recording': {
+      id: '/api/public/webhooks/twilio-recording'
+      path: '/api/public/webhooks/twilio-recording'
+      fullPath: '/api/public/webhooks/twilio-recording'
+      preLoaderRoute: typeof ApiPublicWebhooksTwilioRecordingRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/twilio': {
       id: '/api/public/webhooks/twilio'
@@ -991,6 +1012,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioVoiceRoute: ApiPublicTwilioVoiceRoute,
   ApiPublicWebhooksAutomationsRoute: ApiPublicWebhooksAutomationsRoute,
   ApiPublicWebhooksTwilioRoute: ApiPublicWebhooksTwilioRoute,
+  ApiPublicWebhooksTwilioRecordingRoute: ApiPublicWebhooksTwilioRecordingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
