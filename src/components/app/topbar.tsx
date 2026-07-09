@@ -75,7 +75,7 @@ export function Topbar() {
             Status
           </p>
           <div className="flex items-center gap-1.5 justify-end">
-            <span className="size-1.5 bg-brand-primary rounded-full animate-pulse" />
+            <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
             <span className="text-xs font-medium text-neutral-800">
               Node-04 Active
             </span>
