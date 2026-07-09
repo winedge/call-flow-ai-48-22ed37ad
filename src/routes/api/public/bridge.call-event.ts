@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         const { data: existing, error: readErr } = await supabaseAdmin
           .from("calls")
           .select(
-            "id, user_id, status, agent_id, campaign_id, contact_id, direction, phone_to, phone_from, started_at, ended_at, duration_sec, recording_url, transcript, end_reason, extracted_data",
+            "id, user_id, status, agent_id, campaign_id, contact_id, phone_to, phone_from, started_at, ended_at, duration_sec, recording_url, transcript, end_reason, extracted_data",
           )
           .eq("twilio_call_sid", callSid)
           .maybeSingle<{
@@ -71,7 +71,6 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
             agent_id: string | null;
             campaign_id: string | null;
             contact_id: string | null;
-            direction: string | null;
             phone_to: string;
             phone_from: string | null;
             started_at: string | null;
@@ -147,7 +146,7 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
             agent_id: existing.agent_id,
             campaign_id: existing.campaign_id,
             contact_id: existing.contact_id,
-            direction: existing.direction,
+            direction: "outbound",
             phone_to: existing.phone_to,
             phone_from: existing.phone_from,
             status: nowStatus,
