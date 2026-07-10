@@ -1220,17 +1220,14 @@ Deno.serve((req) => {
             console.log("deepgram open", { callSid: session.callSid });
           },
           onSpeechStart: () => {
-            // Barge-in only when our local audio gate recently saw real
-            // caller voice; this prevents room noise from cutting off TTS.
-            if (session.speaking && Date.now() - session.noiseGate.lastVoiceAt < 350) session.cancelSpeech();
+            // Deepgram detected caller voice - cut off the agent immediately.
+            if (session.speaking) session.cancelSpeech();
           },
           onInterim: (t) => {
             latestInterim = t.trim();
-            const voiceMs = session.noiseGate.voiceMsSinceCommit;
-            // Soft barge-in guard: only cancel once we've heard meaningful
-            // words backed by gated caller audio, not stray background noise.
-            if (session.speaking && looksLikeSpeech(latestInterim, voiceMs)) session.cancelSpeech();
-            scheduleCommit(520, true);
+            // Any interim text while we're speaking = user is talking. Barge in.
+            if (session.speaking && latestInterim.length >= 2) session.cancelSpeech();
+            scheduleCommit(400, true);
           },
           onFinal: (t, speechFinal) => {
             pending = (pending ? pending + " " : "") + t.trim();
