@@ -29,6 +29,7 @@ import {
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +128,7 @@ type ContactRow = Omit<Contact, "id" | "org_id" | "created_at">;
 
 function LaunchWizard() {
   const router = useRouter();
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addAgent = useDB((s) => s.addAgent);
@@ -459,6 +461,8 @@ function LaunchWizard() {
     for (const c of contacts) if (PHONE_RE.test(c.phone)) seen.add(c.phone);
     return seen.size;
   }, [contacts]);
+
+  if (!hydrated) return <PageSkeleton variant="form" />;
 
   return (
     <>
