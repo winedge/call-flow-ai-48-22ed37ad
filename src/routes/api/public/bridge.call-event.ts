@@ -91,7 +91,8 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
           ended_at: endedAt,
           updated_at: endedAt,
         };
-        if (endReason) patch.end_reason = endReason;
+        // end_reason is applied below, after the voicemail reclass heuristic.
+
         // Bridge is authoritative for terminal state - Twilio's status
         // callback may not always land (signature mismatch behind proxy,
         // network drop). Always flip non-terminal statuses to completed
