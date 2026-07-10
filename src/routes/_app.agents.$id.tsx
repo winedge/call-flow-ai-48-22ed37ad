@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, ArrowLeft, Play, Loader2, PhoneCall, Brain, RotateCcw } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { ReflectionsPanel } from "@/components/app/reflection-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +80,7 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
 function AgentEditor() {
   const router = useRouter();
   const { id } = Route.useParams();
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const existing = useDB((s) => s.agents.find((a) => a.id === id));
   const updateAgent = useDB((s) => s.updateAgent);
@@ -93,6 +95,7 @@ function AgentEditor() {
     if (!isNew && existing) setForm(existing);
   }, [existing, isNew]);
 
+  if (!hydrated) return <PageSkeleton variant="form" />;
   if (!isNew && !existing) throw notFound();
 
   function patch<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
