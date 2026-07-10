@@ -376,6 +376,7 @@ export async function persistAgent(a: AIAgent) {
     end_call_conditions: a.end_call_conditions,
     max_retries: a.max_retries,
     retry_delay_minutes: a.retry_delay_minutes,
+    playbook: a.playbook ?? null,
   });
 }
 
