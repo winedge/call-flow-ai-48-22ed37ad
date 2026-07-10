@@ -102,6 +102,9 @@ export const initiateCall = createServerFn({ method: "POST" })
       From: from!,
       Url: voiceUrl.toString(),
       Method: "POST",
+      // Ring timeout - stop ringing an unreachable phone after 30s and
+      // report `no-answer` via the status callback so the UI can move on.
+      Timeout: "30",
       StatusCallback: statusUrl,
       StatusCallbackMethod: "POST",
       StatusCallbackEvent: "initiated ringing answered completed",
