@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDB } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,6 +43,7 @@ function NewCampaign() {
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
   const phones = useDB(useShallow((s) => s.phones.filter((p) => p.org_id === orgId)));
   const addCampaign = useDB((s) => s.addCampaign);
+  const setCampaignStatus = useDB((s) => s.setCampaignStatus);
 
   const [name, setName] = useState("");
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
@@ -55,6 +57,7 @@ function NewCampaign() {
   const [maxRetries, setMaxRetries] = useState(3);
   const [retryGap, setRetryGap] = useState(60);
   const [vmAction, setVmAction] = useState<"leave" | "skip" | "retry">("leave");
+  const [startNow, setStartNow] = useState(false);
   const [dbListCount, setDbListCount] = useState<number | null>(null);
 
   useEffect(() => {
@@ -102,7 +105,12 @@ function NewCampaign() {
       retry_rules: { max_attempts: maxRetries, gap_minutes: retryGap },
       voicemail_rules: { action: vmAction },
     });
-    toast.success("Campaign created as draft");
+    if (startNow) {
+      setCampaignStatus(camp.id, "running");
+      toast.success("Campaign created and started");
+    } else {
+      toast.success("Campaign created as draft");
+    }
     router.navigate({ to: "/campaigns/$id", params: { id: camp.id } });
   }
 
@@ -159,42 +167,57 @@ function NewCampaign() {
         </Section>
 
         <Section title="Calling window">
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Field label="Time zone">
-              <Select value={timezone} onValueChange={setTimezone}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TZS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Start">
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-            </Field>
-            <Field label="End">
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <label className="flex items-start gap-3 p-3 rounded-md ring-1 ring-black/5 bg-neutral-50/60 cursor-pointer">
+            <Checkbox
+              checked={startNow}
+              onCheckedChange={(v) => setStartNow(v === true)}
+              className="mt-0.5"
+            />
+            <div className="space-y-0.5">
+              <div className="text-sm font-medium text-neutral-900">Start immediately</div>
+              <p className="text-xs text-neutral-500">
+                Launch the campaign as soon as it's created, ignoring the schedule below.
+              </p>
+            </div>
+          </label>
+          <div className={`space-y-4 ${startNow ? "opacity-50 pointer-events-none" : ""}`}>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <Field label="Time zone">
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TZS.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Start">
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+              </Field>
+              <Field label="End">
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </Field>
+            </div>
+            <Field label="Days of week">
+              <div className="flex gap-1.5 flex-wrap">
+                {DAY_LABELS.map((d, i) => (
+                  <button
+                    type="button"
+                    key={d}
+                    onClick={() =>
+                      setDays((cur) => cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i].sort())
+                    }
+                    className={`px-3 py-1.5 rounded-md text-xs font-mono ring-1 transition-colors ${
+                      days.includes(i)
+                        ? "bg-brand-primary/10 ring-brand-primary/40 text-brand-primary"
+                        : "bg-neutral-50 ring-black/5 text-neutral-500 hover:text-neutral-800"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
             </Field>
           </div>
-          <Field label="Days of week">
-            <div className="flex gap-1.5 flex-wrap">
-              {DAY_LABELS.map((d, i) => (
-                <button
-                  type="button"
-                  key={d}
-                  onClick={() =>
-                    setDays((cur) => cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i].sort())
-                  }
-                  className={`px-3 py-1.5 rounded-md text-xs font-mono ring-1 transition-colors ${
-                    days.includes(i)
-                      ? "bg-brand-primary/10 ring-brand-primary/40 text-brand-primary"
-                      : "bg-neutral-50 ring-black/5 text-neutral-500 hover:text-neutral-800"
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </Field>
         </Section>
 
         <Section title="Throughput & retries">
