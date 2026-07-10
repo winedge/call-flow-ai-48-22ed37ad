@@ -800,6 +800,28 @@ function looksLikeSpeech(text: string, _voiceMs: number): boolean {
   return normalized.length >= 3 || shortAnswers.has(normalized);
 }
 
+function isSafeInterimCommit(text: string): boolean {
+  const normalized = text
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!normalized) return false;
+
+  // Only let interim transcripts become a turn when they are clearly complete
+  // short answers. Longer interims like "I got" or "my name is Aka" are often
+  // partial hypotheses and caused the agent to reply before the caller finished.
+  const completeShortAnswers = new Set([
+    "yes", "yeah", "yep", "correct", "right", "no", "nope", "okay", "ok", "sure", "hello", "hi", "hey", "thanks", "thank you", "bye", "goodbye",
+  ]);
+  return completeShortAnswers.has(normalized);
+}
+
+function callerEndedConversation(history: { role: "user" | "assistant"; content: string }[]): boolean {
+  const user = latestUserTurn(history).toLowerCase();
+  return /\b(?:bye|goodbye|that'?s all|end (?:the )?call|hang up|stop calling|remove me|not interested|no thanks)\b/.test(user);
+}
+
 async function speak(s: Session, text: string) {
   if (!s.agent || !s.streamSid || s.closed) return;
   let cancelled = false;
@@ -991,7 +1013,11 @@ async function handleUserTurn(s: Session, text: string) {
       return;
     }
     if (end_call) {
-      await new Promise((r) => setTimeout(r, 400));
+      // Give Twilio/mobile networks time to play the final audio naturally.
+      // If the caller didn't explicitly say goodbye, linger a little longer so
+      // the ending feels intentional rather than like a sudden drop.
+      const lingerMs = callerEndedConversation(s.history) ? 1600 : 3200;
+      await new Promise((r) => setTimeout(r, lingerMs));
       cleanup(s, "agent ended call");
     }
   } catch (e) {
@@ -1025,7 +1051,9 @@ function cleanup(s: Session, reason: string) {
   for (const t of s.timers) clearTimeout(t);
   s.timers = [];
   if (s.callSid) {
-    void reportCallEvent(s.callSid, classifyEndReason(reason), s.history);
+    const persistEvent = reportCallEvent(s.callSid, classifyEndReason(reason), s.history);
+    const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+    edgeRuntime?.waitUntil?.(persistEvent);
   }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
@@ -1227,7 +1255,9 @@ Deno.serve((req) => {
           },
           onInterim: (t) => {
             latestInterim = t.trim();
-            scheduleCommit(400, true);
+            if (isSafeInterimCommit(latestInterim)) {
+              scheduleCommit(320, true);
+            }
           },
           onFinal: (t, speechFinal) => {
             const clean = t.trim();
@@ -1237,7 +1267,7 @@ Deno.serve((req) => {
             // actually talking (not echo). Cut the agent off now.
             if (session.speaking && clean.length >= 2) session.cancelSpeech();
             if (speechFinal) commit();
-            else scheduleCommit(260);
+            else scheduleCommit(140);
           },
           onUtteranceEnd: () => {
             // Deepgram's silence watchdog fired - flush anything buffered.
