@@ -116,6 +116,28 @@ type Session = {
 
 type Ctx = { agentId: string; callSid: string; connectionId: string; session?: Session };
 
+function normalizeVoicemailText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isVoicemailSystemText(value: string): boolean {
+  const text = normalizeVoicemailText(value);
+  if (!text) return false;
+  return (
+    /\b(?:to|you(?:'re| are)? (?:being )?(?:forwarded|sent|redirected))\s+(?:voice\s*mail|voicemail)\b/.test(text) ||
+    /\b(?:voice\s*mail|voicemail)\s+(?:box|system|message|greeting)\b/.test(text) ||
+    /\b(?:the person|the subscriber|the customer|your party|the party|the number|the wireless customer)\b.{0,80}\b(?:not available|unavailable|cannot be reached|is not accepting calls)\b/.test(text) ||
+    /\b(?:at|after)\s+the\s+tone\b/.test(text) ||
+    /\b(?:please|kindly)?\s*(?:record|leave)\s+(?:your\s+)?(?:message|name and number)\b/.test(text) ||
+    /\b(?:leave|record)\s+(?:a\s+)?message\s+(?:after|at)\s+the\s+(?:tone|beep)\b/.test(text) ||
+    /\bwhen\s+you\s+are\s+finished\b.{0,80}\b(?:hang up|press|disconnect)\b/.test(text)
+  );
+}
+
 // ---------- Bun server ----------
 
 const server = Bun.serve<Ctx>({
@@ -338,12 +360,20 @@ async function handleUserTurn(session: Session, userText: string) {
   }
   session.turnLock = true;
   session.history.push({ role: "user", content: userText });
+  if (isVoicemailSystemText(userText)) {
+    hangup(session);
+    return;
+  }
   try {
-    const { reply, end_call } = await runTurn(session.agent, session.history, session.callSid);
+    const { reply, end_call, end_reason } = await runTurn(session.agent, session.history, session.callSid) as { reply: string; end_call: boolean; end_reason?: string };
     if (!reply) return;
     session.history.push({ role: "assistant", content: reply });
     await speak(session, reply);
     if (end_call) {
+      if (end_reason === "voicemail_hangup") {
+        hangup(session);
+        return;
+      }
       await new Promise((r) => setTimeout(r, 400));
       hangup(session);
     }

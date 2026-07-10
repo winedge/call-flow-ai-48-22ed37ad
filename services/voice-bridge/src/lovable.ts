@@ -76,7 +76,7 @@ export function runTurn(
   agent: AgentConfig,
   history: { role: "user" | "assistant"; content: string }[],
   callSid?: string,
-): Promise<{ reply: string; end_call: boolean }> {
+): Promise<{ reply: string; end_call: boolean; transfer?: boolean; end_reason?: string }> {
   return post("/api/public/bridge/turn", { agent, history, call_sid: callSid });
 }
 

@@ -252,6 +252,7 @@ async function reportCallEvent(
  */
 function classifyEndReason(raw: string): string {
   const r = raw.toLowerCase();
+  if (r === "voicemail_hangup" || r.startsWith("voicemail")) return "voicemail_hangup";
   if (r.startsWith("agent ended")) return "agent_ended";
   if (r.startsWith("transfer")) return "transfer";
   if (r.startsWith("max duration")) return "max_duration";
@@ -260,6 +261,28 @@ function classifyEndReason(raw: string): string {
   if (r.startsWith("agent config") || r.startsWith("agent not loaded")) return "agent_config_error";
   if (r.startsWith("socket error")) return "bridge_error";
   return "other";
+}
+
+function normalizeVoicemailText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isVoicemailSystemText(value: string): boolean {
+  const text = normalizeVoicemailText(value);
+  if (!text) return false;
+  return (
+    /\b(?:to|you(?:'re| are)? (?:being )?(?:forwarded|sent|redirected))\s+(?:voice\s*mail|voicemail)\b/.test(text) ||
+    /\b(?:voice\s*mail|voicemail)\s+(?:box|system|message|greeting)\b/.test(text) ||
+    /\b(?:the person|the subscriber|the customer|your party|the party|the number|the wireless customer)\b.{0,80}\b(?:not available|unavailable|cannot be reached|is not accepting calls)\b/.test(text) ||
+    /\b(?:at|after)\s+the\s+tone\b/.test(text) ||
+    /\b(?:please|kindly)?\s*(?:record|leave)\s+(?:your\s+)?(?:message|name and number)\b/.test(text) ||
+    /\b(?:leave|record)\s+(?:a\s+)?message\s+(?:after|at)\s+the\s+(?:tone|beep)\b/.test(text) ||
+    /\bwhen\s+you\s+are\s+finished\b.{0,80}\b(?:hang up|press|disconnect)\b/.test(text)
+  );
 }
 
 async function synthTts(
@@ -438,8 +461,12 @@ async function handleUserTurn(s: Session, text: string) {
   }
   s.turnLock = true;
   s.history.push({ role: "user", content: text });
+  if (isVoicemailSystemText(text)) {
+    cleanup(s, "voicemail detected");
+    return;
+  }
   try {
-    const { reply, end_call, transfer } = await runTurn(s.agent, s.history);
+    const { reply, end_call, transfer, end_reason } = await runTurn(s.agent, s.history) as { reply: string; end_call: boolean; transfer: boolean; end_reason?: string };
     if (!reply && !end_call && !transfer) return;
     if (reply) {
       s.history.push({ role: "assistant", content: reply });
@@ -467,6 +494,10 @@ async function handleUserTurn(s: Session, text: string) {
       return;
     }
     if (end_call) {
+      if (end_reason === "voicemail_hangup") {
+        cleanup(s, "voicemail detected");
+        return;
+      }
       await new Promise((r) => setTimeout(r, 400));
       cleanup(s, "agent ended call");
     }
