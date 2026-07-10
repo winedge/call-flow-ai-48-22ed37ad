@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useDB } from "@/lib/data-store";
 import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel } from "@/lib/voice/call-end-reasons";
-import { SentimentBadge, sentimentLabel } from "@/components/app/sentiment-badge";
+import { sentimentLabel } from "@/components/app/sentiment-badge";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/calls/$id")({
