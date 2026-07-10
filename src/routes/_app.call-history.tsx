@@ -94,6 +94,28 @@ function CallHistory() {
   const orgCampaigns = campaigns.filter((c) => c.org_id === orgId);
   const orgAgents = agents.filter((a) => a.org_id === orgId);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+
+  async function deleteAllHistory() {
+    if (calls.length === 0) return toast.info("No calls to delete");
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("calls").delete().eq("user_id", orgId);
+      if (error) throw error;
+      useDB.setState((s) => ({ calls: s.calls.filter((c) => c.org_id !== orgId) }));
+      toast.success("Call history cleared");
+      setPage(1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete call history");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+
   function exportCsv() {
     if (filtered.length === 0) return toast.info("Nothing to export");
     const rows = filtered.map((c) => {
