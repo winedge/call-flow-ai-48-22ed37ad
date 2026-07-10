@@ -41,10 +41,49 @@ function CallDetail() {
 
   const [local, setLocal] = useState<LocalNotes>({ notes: "", tags: [], next_action: "" });
   const [tagInput, setTagInput] = useState("");
+  const [recordingSrc, setRecordingSrc] = useState<string | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) setLocal(loadLocal(id));
   }, [id]);
+
+  useEffect(() => {
+    if (!call?.recording_url || !id) {
+      setRecordingSrc(null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const token = session.session?.access_token;
+        if (!token) {
+          setRecordingError("Please sign in to play recordings.");
+          return;
+        }
+        const res = await fetch(`/api/calls/${id}/recording`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          setRecordingError(`Recording unavailable (${res.status})`);
+          return;
+        }
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setRecordingSrc(objectUrl);
+        setRecordingError(null);
+      } catch (e) {
+        setRecordingError(e instanceof Error ? e.message : "Failed to load recording");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [call?.recording_url, id]);
 
   if (!call) throw notFound();
 
