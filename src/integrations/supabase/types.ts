@@ -27,6 +27,9 @@ export type Database = {
           name: string
           objective: string
           personality: string
+          playbook: string | null
+          playbook_calls_analyzed: number
+          playbook_updated_at: string | null
           prompt: string
           qualification_questions: Json
           retry_delay_minutes: number
@@ -58,6 +61,9 @@ export type Database = {
           name: string
           objective?: string
           personality?: string
+          playbook?: string | null
+          playbook_calls_analyzed?: number
+          playbook_updated_at?: string | null
           prompt?: string
           qualification_questions?: Json
           retry_delay_minutes?: number
@@ -89,6 +95,9 @@ export type Database = {
           name?: string
           objective?: string
           personality?: string
+          playbook?: string | null
+          playbook_calls_analyzed?: number
+          playbook_updated_at?: string | null
           prompt?: string
           qualification_questions?: Json
           retry_delay_minutes?: number
@@ -192,6 +201,66 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      call_reflections: {
+        Row: {
+          agent_id: string
+          call_id: string
+          created_at: string
+          id: string
+          key_learnings: Json
+          objections: Json
+          success_label: string
+          success_score: number
+          summary: string | null
+          user_id: string
+          what_failed: Json
+          what_worked: Json
+        }
+        Insert: {
+          agent_id: string
+          call_id: string
+          created_at?: string
+          id?: string
+          key_learnings?: Json
+          objections?: Json
+          success_label?: string
+          success_score?: number
+          summary?: string | null
+          user_id: string
+          what_failed?: Json
+          what_worked?: Json
+        }
+        Update: {
+          agent_id?: string
+          call_id?: string
+          created_at?: string
+          id?: string
+          key_learnings?: Json
+          objections?: Json
+          success_label?: string
+          success_score?: number
+          summary?: string | null
+          user_id?: string
+          what_failed?: Json
+          what_worked?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_reflections_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_reflections_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: true
+            referencedRelation: "calls"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calls: {
         Row: {

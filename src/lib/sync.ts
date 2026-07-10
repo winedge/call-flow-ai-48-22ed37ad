@@ -52,6 +52,9 @@ function toAgent(r: Row): AIAgent {
     retry_delay_minutes: Number(r.retry_delay_minutes ?? 60),
     data_fields: Array.isArray(r.data_fields) ? (r.data_fields as AIAgent["data_fields"]) : [],
     speak_first: (r as { speak_first?: boolean }).speak_first ?? true,
+    playbook: (r as { playbook?: string | null }).playbook ?? null,
+    playbook_calls_analyzed: Number((r as { playbook_calls_analyzed?: number }).playbook_calls_analyzed ?? 0),
+    playbook_updated_at: (r as { playbook_updated_at?: string | null }).playbook_updated_at ?? null,
     created_at: (r.created_at as string) ?? new Date().toISOString(),
   };
 }
@@ -373,6 +376,7 @@ export async function persistAgent(a: AIAgent) {
     end_call_conditions: a.end_call_conditions,
     max_retries: a.max_retries,
     retry_delay_minutes: a.retry_delay_minutes,
+    playbook: a.playbook ?? null,
   });
 }
 

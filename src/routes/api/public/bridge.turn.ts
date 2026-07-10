@@ -32,6 +32,7 @@ type AgentSummary = {
   end_call_conditions?: string[];
   transfer_number?: string;
   data_fields?: DataField[];
+  playbook?: string;
 };
 
 type Turn = { role: "user" | "assistant"; content: string };
@@ -476,6 +477,9 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     a.objective ? `Objective: ${a.objective}` : "",
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
+    a.playbook?.trim()
+      ? `LEARNED PLAYBOOK (auto-updated from past calls - obey these rules; they override generic tendencies):\n${a.playbook.trim()}`
+      : "",
     fields.length
       ? `Information to collect during this call. Ask one item at a time and confirm each. NEVER re-ask a field that is already listed under ALREADY COLLECTED - treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. address, DOB) unless it is in the list above.`
       : "",
@@ -537,9 +541,9 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data: callRow } = await supabaseAdmin
               .from("calls")
-              .select("phone_to, phone_from")
+              .select("phone_to, phone_from, agent_id")
               .eq("twilio_call_sid", body.call_sid)
-              .maybeSingle<{ phone_to: string | null; phone_from: string | null }>();
+              .maybeSingle<{ phone_to: string | null; phone_from: string | null; agent_id: string | null }>();
             if (callRow) {
               const to = callRow.phone_to?.trim();
               const from = callRow.phone_from?.trim();
@@ -551,6 +555,34 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
                   `CALL CONTEXT - GROUND TRUTH PHONE NUMBERS (use these exact digits, never invent others):\n${parts.join(" ")} ` +
                   `If the caller asks what number you are calling them on, or references "this number", "the number you called", or "my number", answer with the caller's phone number above - never any other digits. ` +
                   `When speaking a phone number aloud, group the digits (e.g. "2 1 2 ... 5 5 5 ... 0 1 2 3").`;
+              }
+              // Pull the agent's self-improvement playbook (the bridge only
+              // forwards a slim agent config; playbook lives in Supabase).
+              if (callRow.agent_id && !body.agent.playbook) {
+                const { data: agentRow } = await supabaseAdmin
+                  .from("agents")
+                  .select("playbook, personality, objective, business_knowledge, qualification_questions, end_call_conditions, data_fields, transfer_number")
+                  .eq("id", callRow.agent_id)
+                  .maybeSingle<{
+                    playbook: string | null;
+                    personality: string | null;
+                    objective: string | null;
+                    business_knowledge: string | null;
+                    qualification_questions: string[] | null;
+                    end_call_conditions: string[] | null;
+                    data_fields: DataField[] | null;
+                    transfer_number: string | null;
+                  }>();
+                if (agentRow) {
+                  body.agent.playbook = agentRow.playbook || undefined;
+                  body.agent.personality = body.agent.personality || agentRow.personality || undefined;
+                  body.agent.objective = body.agent.objective || agentRow.objective || undefined;
+                  body.agent.business_knowledge = body.agent.business_knowledge || agentRow.business_knowledge || undefined;
+                  body.agent.qualification_questions = body.agent.qualification_questions?.length ? body.agent.qualification_questions : (agentRow.qualification_questions ?? undefined);
+                  body.agent.end_call_conditions = body.agent.end_call_conditions?.length ? body.agent.end_call_conditions : (agentRow.end_call_conditions ?? undefined);
+                  body.agent.data_fields = body.agent.data_fields?.length ? body.agent.data_fields : (agentRow.data_fields ?? undefined);
+                  body.agent.transfer_number = body.agent.transfer_number || agentRow.transfer_number || undefined;
+                }
               }
             }
           } catch (e) {

@@ -36,6 +36,7 @@ type BridgeAgent = {
   tts_engine?: string;
   data_fields?: DataField[];
   speak_first?: boolean;
+  playbook?: string;
   voice_settings?: {
     stability?: number;
     similarity_boost?: number;
@@ -94,6 +95,7 @@ async function fetchFromSupabase(id: string): Promise<BridgeAgent | null> {
       tts_engine: (data as { tts_engine?: string }).tts_engine || "kokoro",
       data_fields: toDataFields((data as { data_fields?: unknown }).data_fields),
       speak_first: (data as { speak_first?: boolean | null }).speak_first ?? true,
+      playbook: (data as { playbook?: string | null }).playbook || undefined,
       voice_settings: (() => {
         const d = data as {
           voice_stability?: number | null;
