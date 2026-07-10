@@ -313,7 +313,7 @@ function CallHistory() {
                           {endReasonLabel(c.end_reason)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "-"}</td>
+                      <td className="px-4 py-3"><SentimentBadge value={c.sentiment} /></td>
                       <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         {c.recording_url ? (
