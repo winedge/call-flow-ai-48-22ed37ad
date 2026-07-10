@@ -353,6 +353,19 @@ function detectCollectedFields(agent: AgentSummary, history: Turn[]): CollectedF
   return out;
 }
 
+function callerSaidGoodbye(history: Turn[]): boolean {
+  const user = latestUserTurn(history).toLowerCase();
+  return /\b(?:bye|goodbye|good bye|see you|talk (?:to you )?later|have a (?:good|great) (?:day|one)|that'?s all|that will be all|nothing else|we'?re done|i'?m done|thanks(?: a lot)?[.! ]*$|thank you[.! ]*$)\b/.test(user);
+}
+
+function assistantAlreadyConfirmed(history: Turn[]): boolean {
+  // True if the assistant's most recent turn already read the collected
+  // details back / signalled a wrap-up. Used to advance CONFIRMING → CLOSING.
+  const last = latestAssistantTurn(history).toLowerCase();
+  if (!last) return false;
+  return /\b(?:just to confirm|to confirm|confirming|got everything|all set|we[' ]?re all set|is there anything else|anything else (?:i can help|before we wrap)|i[' ]?ll (?:send|share|pass|make sure)|someone (?:will|from our team) (?:reach|be in touch|follow up)|you[' ]?ll (?:hear|receive|get) (?:from us|a )|next step)\b/.test(last);
+}
+
 function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
   const userTurns = userTurnCount(history);
   if (userTurns === 0) return "GREETING";
@@ -361,7 +374,23 @@ function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
   const collectedKeys = new Set(collected.map((c) => c.field.key));
   const pendingRequired = required.filter((f) => !collectedKeys.has(f.key));
   const bookingIntent = callerShowsBookingIntent(history);
+  const saidBye = callerSaidGoodbye(history);
 
+  // Caller ended the conversation explicitly - always close with a farewell.
+  if (saidBye) return "CLOSING";
+
+  // When the agent has required fields configured, treat collecting them as
+  // the primary objective. We do not wait for a "book/schedule" keyword -
+  // most info-gathering agents never trigger that phrase.
+  if (required.length > 0) {
+    if (pendingRequired.length === 0) {
+      return assistantAlreadyConfirmed(history) ? "CLOSING" : "CONFIRMING";
+    }
+    if (userTurns <= 1) return "INTRO";
+    return "COLLECTING";
+  }
+
+  // No required fields → discovery-only agent. Fall back to the old flow.
   if (bookingIntent && pendingRequired.length > 0) return "COLLECTING";
   if (bookingIntent && pendingRequired.length === 0 && required.length > 0) return "CONFIRMING";
   if (userTurns <= 1) return "INTRO";
@@ -378,14 +407,15 @@ function stateGuidance(state: ConvState, agent: AgentSummary, collected: Collect
     : "STILL PENDING: none.";
   const phase = {
     GREETING: "PHASE = GREETING. The caller has not spoken yet. Say the greeting only.",
-    INTRO: "PHASE = INTRO. The caller has just answered your greeting or made small talk. Briefly acknowledge (one short clause), then move into a business-intro or discovery question from the system prompt. Do NOT ask for name, phone, email, or contact details in this phase.",
+    INTRO: "PHASE = INTRO. The caller has just answered your greeting or made small talk. Briefly acknowledge (one short clause), then ask the FIRST STILL PENDING required field naturally (e.g. 'Could I start by getting your name?'). Ask only one field.",
     DISCOVERY: "PHASE = DISCOVERY. Ask discovery/qualification questions from the system prompt. Do NOT collect contact details yet - wait until the caller asks to book/schedule/demo or otherwise signals intent.",
-    COLLECTING: "PHASE = COLLECTING. The caller has shown booking/scheduling intent. Ask for the next STILL PENDING field, one at a time. NEVER re-ask a field listed under ALREADY COLLECTED.",
-    CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. Confirm the details back once, tell the caller the next step, and wait for their goodbye. Do not ask for more information.",
-    CLOSING: "PHASE = CLOSING. Wrap up warmly and prepend [END_CALL] to the reply.",
+    COLLECTING: "PHASE = COLLECTING. Ask for the next STILL PENDING field, one at a time. NEVER re-ask a field listed under ALREADY COLLECTED. Do NOT end the call while any required field is pending.",
+    CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. In ONE short reply: briefly confirm the key details back (name + phone/email if collected), tell the caller the next step (e.g. 'someone from our team will reach out shortly'), thank them, wish them a great day, and prepend [END_CALL] to that reply. Do not ask any more questions.",
+    CLOSING: "PHASE = CLOSING. Give a warm farewell in ONE short sentence (thank them, wish them a good day) and prepend [END_CALL] to the reply. Do NOT ask any more questions. Do NOT re-list details.",
   }[state];
   return `${phase}\n\n${collectedLines}\n\n${pendingLines}`;
 }
+
 
 function stripFieldReAsks(reply: string, collected: CollectedField[]): string {
   if (!collected.length) return reply;
