@@ -1,5 +1,40 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
+export function PageHeaderSkeleton({ withActions = false }: { withActions?: boolean } = {}) {
+  return (
+    <div className="border-b border-surface-border/60 bg-surface-base/40 backdrop-blur-sm sticky top-14 md:top-16 z-10 -mx-4 md:-mx-8 px-4 md:px-8 py-4 md:py-6 mb-5 md:mb-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3 w-64" />
+        </div>
+        {withActions && <Skeleton className="h-9 w-32 rounded-md" />}
+      </div>
+    </div>
+  );
+}
+
+export function PageSkeleton({
+  variant,
+  withActions = false,
+}: {
+  variant: "table" | "cards" | "dashboard" | "form" | "detail" | "stats";
+  withActions?: boolean;
+}) {
+  return (
+    <>
+      <PageHeaderSkeleton withActions={withActions} />
+      {variant === "table" && <TableSkeleton />}
+      {variant === "cards" && <CardsSkeleton />}
+      {variant === "dashboard" && <DashboardSkeleton />}
+      {variant === "form" && <FormSkeleton />}
+      {variant === "detail" && <DetailSkeleton />}
+      {variant === "stats" && <StatsSkeleton />}
+    </>
+  );
+}
+
+
 export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
   return (
     <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
