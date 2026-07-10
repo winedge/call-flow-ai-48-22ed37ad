@@ -193,6 +193,17 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
               }).catch(() => {});
             }
           }
+
+          // Kick off self-improvement reflection (fire-and-forget). Runs
+          // after we've responded to the bridge so it never blocks the call.
+          (async () => {
+            try {
+              const { reflectOnCall } = await import("@/lib/voice/reflect.server");
+              await reflectOnCall({ callId: existing.id });
+            } catch (e) {
+              console.error("[bridge.call-event] reflect failed", e);
+            }
+          })();
         }
 
         return json({ ok: true, updated: true });
