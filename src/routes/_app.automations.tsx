@@ -5,6 +5,7 @@ import { Plus, Trash2, Workflow, Webhook, Mail, MessageSquare, Sheet as SheetIco
 import { toast } from "sonner";
 
 import { PageHeader, EmptyState } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
