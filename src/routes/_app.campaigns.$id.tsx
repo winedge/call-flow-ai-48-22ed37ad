@@ -42,8 +42,10 @@ function CampaignDetail() {
   const setStatus = useDB((s) => s.setCampaignStatus);
   const duplicate = useDB((s) => s.duplicateCampaign);
 
-  if (!hydrated) return <PageSkeleton variant="detail" />;
-  if (!campaign) throw notFound();
+  if (!hydrated) {
+    // Hooks below must still run; render skeleton by short-circuiting later.
+  }
+  if (hydrated && !campaign) throw notFound();
   const cmp = campaign;
 
 
