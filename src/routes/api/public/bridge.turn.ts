@@ -263,6 +263,10 @@ function callerProvidedAnyInfo(history: Turn[]): boolean {
 
 function preventPrematureContactCollection(reply: string, a: AgentSummary, history: Turn[]): string {
   const fields = a.data_fields ?? [];
+  const hasRequiredFields = fields.some((f) => f.required !== false);
+  // If the agent is configured with required data fields, collecting them IS
+  // the objective - do not rewrite the reply.
+  if (hasRequiredFields) return reply;
   const contactAsk = asksForPersonalContactDetail(reply) || asksForContactField(reply, fields);
   if (!contactAsk) return reply;
   // Only guard the very first user turn. After that, trust the model -
@@ -276,6 +280,7 @@ function preventPrematureContactCollection(reply: string, a: AgentSummary, histo
   });
   return earlyConversationFallback(a);
 }
+
 
 function describeField(f: DataField): string {
   const req = f.required ? " (required)" : "";
