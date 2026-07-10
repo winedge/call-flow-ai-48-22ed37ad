@@ -485,7 +485,7 @@ function openDeepgram(cb: {
   // Keep this tight; our local noise gate prevents background office noise
   // from becoming speech while still letting real callers finish naturally.
   // watchdog below covers cases where the model never marks speech_final.
-  url.searchParams.set("endpointing", "180");
+  url.searchParams.set("endpointing", "100");
   // VAD events give us a hard UtteranceEnd signal - used to flush any
   // buffered finals when Deepgram doesn't emit speech_final in time.
   url.searchParams.set("vad_events", "true");
@@ -1230,7 +1230,7 @@ Deno.serve((req) => {
           session.noiseGate.voiceMsSinceCommit = 0;
           pending = "";
           latestInterim = "";
-          if (!text || Date.now() - lastCommitAt < 180) return;
+          if (!text || Date.now() - lastCommitAt < 120) return;
           if (!looksLikeSpeech(text, voiceMs)) {
             console.log("bridge ignored non-speech transcript", { text, voiceMs });
             return;
@@ -1267,7 +1267,7 @@ Deno.serve((req) => {
             // actually talking (not echo). Cut the agent off now.
             if (session.speaking && clean.length >= 2) session.cancelSpeech();
             if (speechFinal) commit();
-            else scheduleCommit(140);
+            else scheduleCommit(80);
           },
           onUtteranceEnd: () => {
             // Deepgram's silence watchdog fired - flush anything buffered.
