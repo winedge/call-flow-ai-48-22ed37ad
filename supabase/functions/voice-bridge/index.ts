@@ -1052,11 +1052,8 @@ function cleanup(s: Session, reason: string) {
   s.timers = [];
   if (s.callSid) {
     const persistEvent = reportCallEvent(s.callSid, classifyEndReason(reason), s.history);
-    try {
-      EdgeRuntime.waitUntil(persistEvent);
-    } catch {
-      void persistEvent;
-    }
+    const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (promise: Promise<unknown>) => void } }).EdgeRuntime;
+    edgeRuntime?.waitUntil?.(persistEvent);
   }
   try { s.twilio.close(1000, reason); } catch { /* ignore */ }
 }
