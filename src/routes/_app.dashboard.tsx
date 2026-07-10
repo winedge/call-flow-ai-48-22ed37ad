@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { PhoneCall, Voicemail, CalendarCheck, Radio, Users } from "lucide-react";
 
 import { PageHeader, StatusPill } from "@/components/app/primitives";
+import { ReflectionHealthWidget } from "@/components/app/reflection-status";
 import { useDB } from "@/lib/data-store";
 import { cn } from "@/lib/utils";
 
@@ -231,6 +232,11 @@ function Dashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Self-improvement loop health */}
+      <div className="mb-6">
+        <ReflectionHealthWidget />
       </div>
 
       {/* Campaign roster with progress bars */}

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, ArrowLeft, Play, Loader2, PhoneCall, Brain, RotateCcw } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
+import { ReflectionsPanel } from "@/components/app/reflection-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -498,6 +499,8 @@ function AgentEditor() {
           updatedAt={form.playbook_updated_at ?? null}
           onChange={(v: string) => patch("playbook", v)}
         />
+
+        {!isNew && <ReflectionsPanel agentId={id} />}
 
         <TestCallCard agentId={id} isNew={isNew} />
 
