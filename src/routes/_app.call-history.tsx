@@ -52,6 +52,10 @@ function CallHistory() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [deleting, setDeleting] = useState(false);
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
