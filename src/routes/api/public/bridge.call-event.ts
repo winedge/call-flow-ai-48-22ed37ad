@@ -120,6 +120,21 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
           patch.transcript = cleanTranscript;
         }
 
+        // Heuristic voicemail reclass: if the bridge says the caller hung up
+        // but there is not a single user turn in the transcript, the callee
+        // almost certainly never picked up in person — the stream was a
+        // voicemail greeting the AI talked over. Twilio AMD sometimes
+        // classifies these as "unknown"/"human" so the /twilio/amd path
+        // never fires and we'd otherwise mislabel it as caller_hangup.
+        if (endReason === "caller_hangup") {
+          const userTurns = (cleanTranscript ?? []).filter((t) => t.role === "user").length;
+          if (userTurns === 0) {
+            endReason = "voicemail_hangup";
+          }
+        }
+        if (endReason) patch.end_reason = endReason;
+
+
         // Run structured field extraction if the agent has data_fields defined
         // and we have a transcript to work from.
         let extractedData: Record<string, unknown> | null = null;
