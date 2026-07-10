@@ -782,22 +782,22 @@ function primeGreeting(s: Session, a: AgentConfig) {
   })();
 }
 
-function looksLikeSpeech(text: string, voiceMs: number): boolean {
+function looksLikeSpeech(text: string, _voiceMs: number): boolean {
   const normalized = text
     .toLowerCase()
     .replace(/[^a-z0-9' ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!normalized || normalized.length < 2 || voiceMs < 100) return false;
+  if (!normalized || normalized.length < 2) return false;
   if (/^(uh+|um+|hm+|hmm+|ah+|er+|mm+|noise|background|music|cough|laugh)$/.test(normalized)) return false;
 
   const words = normalized.split(" ").filter(Boolean);
   if (words.length >= 2) return true;
 
   const shortAnswers = new Set([
-    "yes", "yeah", "yep", "no", "nope", "okay", "ok", "sure", "hello", "hi", "thanks", "bye", "correct", "right",
+    "yes", "yeah", "yep", "no", "nope", "okay", "ok", "sure", "hello", "hi", "hey", "thanks", "bye", "correct", "right", "what", "why", "who", "how",
   ]);
-  return normalized.length >= 4 || shortAnswers.has(normalized);
+  return normalized.length >= 3 || shortAnswers.has(normalized);
 }
 
 async function speak(s: Session, text: string) {
