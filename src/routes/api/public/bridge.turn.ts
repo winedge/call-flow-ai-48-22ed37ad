@@ -371,6 +371,21 @@ function assistantAlreadyConfirmed(history: Turn[]): boolean {
   return /\b(?:just to confirm|to confirm|confirming|got everything|all set|we[' ]?re all set|is there anything else|anything else (?:i can help|before we wrap)|i[' ]?ll (?:send|share|pass|make sure)|someone (?:will|from our team) (?:reach|be in touch|follow up)|you[' ]?ll (?:hear|receive|get) (?:from us|a )|next step)\b/.test(last);
 }
 
+function assistantAskedQualification(history: Turn[], agent: AgentSummary): number {
+  // Count how many prior assistant turns already asked a discovery/qualification
+  // question (contains a "?" and is NOT a personal-contact-detail ask).
+  const fields = agent.data_fields ?? [];
+  let count = 0;
+  for (const t of history) {
+    if (t.role !== "assistant") continue;
+    if (!/\?/.test(t.content)) continue;
+    if (asksForPersonalContactDetail(t.content)) continue;
+    if (asksForContactField(t.content, fields)) continue;
+    count += 1;
+  }
+  return count;
+}
+
 function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
   const userTurns = userTurnCount(history);
   if (userTurns === 0) return "GREETING";
@@ -380,25 +395,24 @@ function computeConvState(agent: AgentSummary, history: Turn[]): ConvState {
   const pendingRequired = required.filter((f) => !collectedKeys.has(f.key));
   const bookingIntent = callerShowsBookingIntent(history);
   const saidBye = callerSaidGoodbye(history);
+  const qualTurns = assistantAskedQualification(history, agent);
 
-  // Caller ended the conversation explicitly - always close with a farewell.
   if (saidBye) return "CLOSING";
 
-  // When the agent has required fields configured, treat collecting them as
-  // the primary objective. We do not wait for a "book/schedule" keyword -
-  // most info-gathering agents never trigger that phrase.
-  if (required.length > 0) {
-    if (pendingRequired.length === 0) {
-      return assistantAlreadyConfirmed(history) ? "CLOSING" : "CONFIRMING";
-    }
-    if (userTurns <= 1) return "INTRO";
-    return "COLLECTING";
+  // All required fields collected → confirm then close.
+  if (required.length > 0 && pendingRequired.length === 0) {
+    return assistantAlreadyConfirmed(history) ? "CLOSING" : "CONFIRMING";
   }
 
-  // No required fields → discovery-only agent. Fall back to the old flow.
-  if (bookingIntent && pendingRequired.length > 0) return "COLLECTING";
-  if (bookingIntent && pendingRequired.length === 0 && required.length > 0) return "CONFIRMING";
+  // First caller reply is small talk / permission - stay in INTRO, ask a
+  // discovery question from the system prompt (NOT a data field).
   if (userTurns <= 1) return "INTRO";
+
+  // Move into COLLECTING only after the caller is qualified via the system
+  // prompt's discovery flow, OR they show explicit booking/next-step intent,
+  // OR the assistant has already asked at least 2 discovery questions.
+  if (required.length > 0 && (bookingIntent || qualTurns >= 2)) return "COLLECTING";
+
   return "DISCOVERY";
 }
 
@@ -408,13 +422,13 @@ function stateGuidance(state: ConvState, agent: AgentSummary, collected: Collect
     : "ALREADY COLLECTED: none.";
   const pending = (agent.data_fields ?? []).filter((f) => !collected.find((c) => c.field.key === f.key));
   const pendingLines = pending.length
-    ? `STILL PENDING:\n${pending.map(describeField).join("\n- ")}`
+    ? `STILL PENDING:\n- ${pending.map(describeField).join("\n- ")}`
     : "STILL PENDING: none.";
   const phase = {
     GREETING: "PHASE = GREETING. The caller has not spoken yet. Say the greeting only.",
-    INTRO: "PHASE = INTRO. The caller has just answered your greeting or made small talk. Briefly acknowledge (one short clause), then ask the FIRST STILL PENDING required field naturally (e.g. 'Could I start by getting your name?'). Ask only one field.",
-    DISCOVERY: "PHASE = DISCOVERY. Ask discovery/qualification questions from the system prompt. Do NOT collect contact details yet - wait until the caller asks to book/schedule/demo or otherwise signals intent.",
-    COLLECTING: "PHASE = COLLECTING. Ask for the next STILL PENDING field, one at a time. NEVER re-ask a field listed under ALREADY COLLECTED. Do NOT end the call while any required field is pending.",
+    INTRO: "PHASE = INTRO. The caller has just answered your greeting. Briefly acknowledge (one short clause) and immediately ask the FIRST qualification/discovery question from the system prompt or the Qualification questions list. Do NOT ask for name, phone, email, or any personal contact detail yet - the caller must be qualified first. Ask exactly one question.",
+    DISCOVERY: "PHASE = DISCOVERY. Continue working through the qualification/discovery questions from the system prompt in order, one at a time. Only after the caller is clearly qualified/interested (or explicitly agrees to next steps) may you begin collecting the personal fields listed under STILL PENDING. Do NOT collect contact details before qualifying.",
+    COLLECTING: "PHASE = COLLECTING. The caller is qualified. Now collect the STILL PENDING fields one at a time, in the order listed. Confirm each answer briefly before moving to the next. NEVER re-ask a field listed under ALREADY COLLECTED. Do NOT end the call while any required field is pending.",
     CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. In ONE short reply: briefly confirm the key details back (name + phone/email if collected), tell the caller the next step (e.g. 'someone from our team will reach out shortly'), thank them, wish them a great day, and prepend [END_CALL] to that reply. Do not ask any more questions.",
     CLOSING: "PHASE = CLOSING. Give a warm farewell in ONE short sentence (thank them, wish them a good day) and prepend [END_CALL] to the reply. Do NOT ask any more questions. Do NOT re-list details.",
   }[state];
@@ -451,8 +465,8 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     "You are operating under a strict conversation state machine. Obey the current PHASE below.",
     stateGuidance(state, a, collected),
     hasRequired
-      ? "Conversation flow priority: your primary objective is to collect the required fields listed below. After a brief acknowledgement of the greeting, start asking for the STILL PENDING required fields one at a time. Weave the required questions in naturally alongside any discovery from the system prompt - do not save them for the end. Once ALL required fields are collected, immediately move to PHASE = CONFIRMING (confirm + next step + farewell + [END_CALL])."
-      : "Conversation flow priority: follow the configured system prompt's conversation order first. Do not treat required data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
+      ? "Conversation flow priority: FIRST follow the configured system prompt to qualify and engage the caller (screening / discovery / qualification questions). ONLY AFTER the caller is clearly qualified or has agreed to next steps do you begin collecting the required data fields listed below, one at a time. NEVER open the call by asking for name, phone, email, or any personal contact detail. Once ALL required fields are collected, immediately move to PHASE = CONFIRMING (confirm + next step + farewell + [END_CALL])."
+      : "Conversation flow priority: follow the configured system prompt's conversation order. Do not treat data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
     a.system_prompt?.trim(),
     a.name ? `Your name is ${a.name}. This is YOUR name (the assistant's), NOT the caller's. NEVER address the caller as "${a.name}" or use "${a.name}" as if it were their name. The caller has NOT told you their name. Do NOT guess, assume, or invent a name for the caller. Address them neutrally ("you", "there") until they explicitly say their name in this conversation. If unsure, do not use any name at all.` : "You do not know the caller's name. Never invent or assume one. Address them neutrally until they say their name.",
     a.personality ? `Personality: ${a.personality}` : "",
