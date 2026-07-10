@@ -335,9 +335,28 @@ function CallHistory() {
             </tbody>
           </table>
         </div>
-        {filtered.length > 200 && (
-          <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
-            Showing latest 200 of {filtered.length.toLocaleString()} - refine filters or export to CSV to see the rest.
+        {filtered.length > 0 && (
+          <div className="px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-surface-border/40 text-xs text-neutral-600">
+            <div className="flex items-center gap-2">
+              <span>
+                Showing {(pageStart + 1).toLocaleString()}–{Math.min(pageStart + pageSize, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
+              </span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="h-8 w-[90px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                <ChevronLeft className="size-3.5" /> Prev
+              </Button>
+              <span className="font-mono">Page {currentPage} / {totalPages}</span>
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+                Next <ChevronRight className="size-3.5" />
+              </Button>
+            </div>
           </div>
         )}
       </div>
