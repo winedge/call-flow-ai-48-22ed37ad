@@ -31,8 +31,14 @@ import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent - BulkCall AI" }] }),
-  component: AgentEditor,
+  component: AgentEditorGate,
 });
+
+function AgentEditorGate() {
+  const hydrated = useDB((s) => s.hydrated);
+  if (!hydrated) return <PageSkeleton variant="form" />;
+  return <AgentEditor />;
+}
 
 // Kokoro speaker presets - Apache-2.0, commercially licensed.
 const VOICES = KOKORO_VOICES.map((v) => ({ id: v.id, name: v.label, language: v.language }));
@@ -80,7 +86,6 @@ function blank(orgId: string): Omit<AIAgent, "id" | "created_at"> {
 function AgentEditor() {
   const router = useRouter();
   const { id } = Route.useParams();
-  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const existing = useDB((s) => s.agents.find((a) => a.id === id));
   const updateAgent = useDB((s) => s.updateAgent);
@@ -95,7 +100,6 @@ function AgentEditor() {
     if (!isNew && existing) setForm(existing);
   }, [existing, isNew]);
 
-  if (!hydrated) return <PageSkeleton variant="form" />;
   if (!isNew && !existing) throw notFound();
 
   function patch<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
