@@ -141,6 +141,8 @@ function ContactsPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (!hydrated) return <PageSkeleton variant="table" withActions />;
+
   return (
     <>
       <PageHeader
