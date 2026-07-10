@@ -36,6 +36,7 @@ function saveLocal(id: string, v: LocalNotes) {
 
 function CallDetail() {
   const { id } = Route.useParams();
+  const hydrated = useDB((s) => s.hydrated);
   const call = useDB((s) => s.calls.find((c) => c.id === id));
   const contact = useDB((s) => s.contacts.find((c) => c.id === call?.contact_id));
   const agent = useDB((s) => s.agents.find((a) => a.id === call?.agent_id));
@@ -87,6 +88,7 @@ function CallDetail() {
     };
   }, [call?.recording_url, id]);
 
+  if (!hydrated) return <PageSkeleton variant="detail" />;
   if (!call) throw notFound();
 
   const score = leadScore(call);
