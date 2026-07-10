@@ -72,6 +72,9 @@ function LiveCalls() {
     refreshingRef.current = true;
     if (showSpinner) setRefreshing(true);
     try {
+      // Fire-and-forget: server-side safety net to mark any call that has
+      // been ringing/in_progress with no terminal webhook as no_answer.
+      fetch("/api/public/hooks/sweep-stuck-calls", { method: "POST" }).catch(() => {});
       const cutoff = new Date(Date.now() - LIVE_WINDOW_MS).toISOString();
       const { data, error } = await supabase
         .from("calls")
