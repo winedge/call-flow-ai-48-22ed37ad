@@ -160,6 +160,10 @@ export type AIAgent = {
   voice_speaker_boost?: boolean | null;
   /** If false, the agent waits for the caller to speak first instead of greeting. */
   speak_first?: boolean;
+  /** Auto-updated playbook of learnings from past calls. Injected into every future call's system prompt. */
+  playbook?: string | null;
+  playbook_calls_analyzed?: number;
+  playbook_updated_at?: string | null;
   created_at: string;
 };
 
