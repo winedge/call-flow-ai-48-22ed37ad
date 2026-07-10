@@ -18,6 +18,10 @@ export const Route = createFileRoute("/_app/live-calls")({
 const TERMINAL_STATUSES = new Set(["completed", "failed", "busy", "no_answer", "canceled"]);
 const LIVE_WINDOW_MS = 15 * 60 * 1000;
 const QUEUED_STUCK_MS = 90 * 1000;
+// If nothing has been said on the call after this long, assume the callee's
+// phone is off / unreachable and Twilio's terminal webhook hasn't arrived
+// yet. Hide it from the live view so it doesn't tick forever.
+const SILENT_STUCK_MS = 2 * 60 * 1000;
 
 function LiveCalls() {
   const orgId = useDB((s) => s.currentOrgId);
@@ -37,6 +41,10 @@ function LiveCalls() {
         const age = now - new Date(c.started_at).getTime();
         if (age >= LIVE_WINDOW_MS) return false;
         if (c.status === "queued" && age >= QUEUED_STUCK_MS) return false;
+        // Ringing or in_progress with no transcript activity = phone off /
+        // unreachable / call never actually connected.
+        const hasActivity = (c.transcript?.length ?? 0) > 0;
+        if (!hasActivity && age >= SILENT_STUCK_MS) return false;
         return true;
       });
     }),
