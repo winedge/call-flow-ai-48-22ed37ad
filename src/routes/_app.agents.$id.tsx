@@ -492,6 +492,13 @@ function AgentEditor() {
           <DataFieldsEditor value={form.data_fields} onChange={(v) => patch("data_fields", v)} />
         </Card>
 
+        <PlaybookCard
+          value={form.playbook ?? ""}
+          calls={form.playbook_calls_analyzed ?? 0}
+          updatedAt={form.playbook_updated_at ?? null}
+          onChange={(v) => patch("playbook", v)}
+        />
+
         <TestCallCard agentId={id} isNew={isNew} />
 
 
