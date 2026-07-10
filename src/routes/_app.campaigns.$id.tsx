@@ -25,14 +25,19 @@ const END_REASON_FILL: Record<string, string> = {
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign - BulkCall AI" }] }),
-  component: CampaignDetail,
+  component: CampaignDetailGate,
 });
 
 const OUTCOME_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#64748b"];
 
+function CampaignDetailGate() {
+  const hydrated = useDB((s) => s.hydrated);
+  if (!hydrated) return <PageSkeleton variant="detail" />;
+  return <CampaignDetail />;
+}
+
 function CampaignDetail() {
   const { id } = Route.useParams();
-  const hydrated = useDB((s) => s.hydrated);
   const campaign = useDB((s) => s.campaigns.find((c) => c.id === id));
   const agent = useDB((s) => s.agents.find((a) => a.id === campaign?.agent_id));
   const list = useDB((s) => s.lists.find((l) => l.id === campaign?.list_id));
@@ -42,11 +47,9 @@ function CampaignDetail() {
   const setStatus = useDB((s) => s.setCampaignStatus);
   const duplicate = useDB((s) => s.duplicateCampaign);
 
-  if (!hydrated) {
-    // Hooks below must still run; render skeleton by short-circuiting later.
-  }
-  if (hydrated && !campaign) throw notFound();
+  if (!campaign) throw notFound();
   const cmp = campaign;
+
 
 
   const metrics = useMemo(
