@@ -32,6 +32,7 @@ const OUTCOME_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "
 
 function CampaignDetail() {
   const { id } = Route.useParams();
+  const hydrated = useDB((s) => s.hydrated);
   const campaign = useDB((s) => s.campaigns.find((c) => c.id === id));
   const agent = useDB((s) => s.agents.find((a) => a.id === campaign?.agent_id));
   const list = useDB((s) => s.lists.find((l) => l.id === campaign?.list_id));
@@ -41,6 +42,7 @@ function CampaignDetail() {
   const setStatus = useDB((s) => s.setCampaignStatus);
   const duplicate = useDB((s) => s.duplicateCampaign);
 
+  if (!hydrated) return <PageSkeleton variant="detail" />;
   if (!campaign) throw notFound();
   const cmp = campaign;
 

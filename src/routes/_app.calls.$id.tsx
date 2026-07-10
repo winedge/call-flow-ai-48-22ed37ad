@@ -4,6 +4,7 @@ import { ArrowLeft, Download, FileText, Play, Star, User, Building2, Phone as Ph
 import { toast } from "sonner";
 
 import { PageHeader, StatTile } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
