@@ -359,8 +359,11 @@ function detectCollectedFields(agent: AgentSummary, history: Turn[]): CollectedF
 }
 
 function callerSaidGoodbye(history: Turn[]): boolean {
-  const user = latestUserTurn(history).toLowerCase();
-  return /\b(?:bye|goodbye|good bye|see you|talk (?:to you )?later|have a (?:good|great) (?:day|one)|that'?s all|that will be all|nothing else|we'?re done|i'?m done|thanks(?: a lot)?[.! ]*$|thank you[.! ]*$)\b/.test(user);
+  const user = latestUserTurn(history).toLowerCase().trim();
+  if (!user) return false;
+  // Explicit farewell words - "thanks" / "thank you" alone are NOT a goodbye
+  // (callers often say them mid-conversation). Require an actual bye phrase.
+  return /\b(?:bye|goodbye|good bye|see you|talk (?:to you )?later|have a (?:good|great|nice) (?:day|one|evening|night)|that'?s all(?: for now)?|that (?:will|would) be all|nothing else|we'?re (?:all )?done(?: here)?|i'?m (?:all )?done|i (?:gotta|have to|need to) (?:go|run)|hang up|end (?:the )?call)\b/.test(user);
 }
 
 function assistantAlreadyConfirmed(history: Turn[]): boolean {
@@ -429,8 +432,8 @@ function stateGuidance(state: ConvState, agent: AgentSummary, collected: Collect
     INTRO: "PHASE = INTRO. The caller has just answered your greeting. Briefly acknowledge (one short clause) and immediately ask the FIRST qualification/discovery question from the system prompt or the Qualification questions list. Do NOT ask for name, phone, email, or any personal contact detail yet - the caller must be qualified first. Ask exactly one question.",
     DISCOVERY: "PHASE = DISCOVERY. Continue working through the qualification/discovery questions from the system prompt in order, one at a time. Only after the caller is clearly qualified/interested (or explicitly agrees to next steps) may you begin collecting the personal fields listed under STILL PENDING. Do NOT collect contact details before qualifying.",
     COLLECTING: "PHASE = COLLECTING. The caller is qualified. Now collect the STILL PENDING fields one at a time, in the order listed. Confirm each answer briefly before moving to the next. NEVER re-ask a field listed under ALREADY COLLECTED. Do NOT end the call while any required field is pending.",
-    CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. In ONE short reply: briefly confirm the key details back (name + phone/email if collected), tell the caller the next step (e.g. 'someone from our team will reach out shortly'), thank them, wish them a great day, and prepend [END_CALL] to that reply. Do not ask any more questions.",
-    CLOSING: "PHASE = CLOSING. Give a warm farewell in ONE short sentence (thank them, wish them a good day) and prepend [END_CALL] to the reply. Do NOT ask any more questions. Do NOT re-list details.",
+    CONFIRMING: "PHASE = CONFIRMING. All required fields are collected. In ONE reply (2-3 sentences): (1) briefly confirm the key details back (name + phone/email if collected), (2) tell the caller the concrete next step (e.g. 'someone from our team will reach out shortly at that number'), (3) thank them by name and give a warm, explicit goodbye that INCLUDES the word 'goodbye' or 'bye' (e.g. 'Thanks so much, <name> - have a great rest of your day. Goodbye!'). Prepend [END_CALL] to the reply. Do NOT ask any more questions. Do NOT end with just 'take care' - the reply MUST contain an explicit 'goodbye' or 'bye' word.",
+    CLOSING: "PHASE = CLOSING. Give a warm, complete goodbye in ONE reply (1-2 sentences). Thank the caller (use their name if known), briefly restate the next step if one was set (e.g. 'we'll be in touch shortly'), and finish with an explicit farewell that INCLUDES the word 'goodbye' or 'bye' (e.g. 'Thanks again - have a great day, goodbye!'). Do NOT end with just 'take care' by itself - always include 'goodbye' or 'bye'. Prepend [END_CALL] to the reply. Do NOT ask any more questions. Do NOT re-list all details.",
   }[state];
   return `${phase}\n\n${collectedLines}\n\n${pendingLines}`;
 }
