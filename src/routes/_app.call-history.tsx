@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useShallow } from "zustand/react/shallow";
 import { useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
@@ -10,9 +10,18 @@ import { Input } from "@/components/ui/input";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
 import { useDB } from "@/lib/data-store";
 import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel, endReasonTone, END_REASON_ORDER } from "@/lib/voice/call-end-reasons";
+
+const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
+
 
 const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = {
   green: "text-emerald-400",
@@ -43,6 +52,10 @@ function CallHistory() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [deleting, setDeleting] = useState(false);
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -80,6 +93,28 @@ function CallHistory() {
 
   const orgCampaigns = campaigns.filter((c) => c.org_id === orgId);
   const orgAgents = agents.filter((a) => a.org_id === orgId);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+
+  async function deleteAllHistory() {
+    if (calls.length === 0) return toast.info("No calls to delete");
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from("calls").delete().eq("user_id", orgId);
+      if (error) throw error;
+      useDB.setState((s) => ({ calls: s.calls.filter((c) => c.org_id !== orgId) }));
+      toast.success("Call history cleared");
+      setPage(1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete call history");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
 
   function exportCsv() {
     if (filtered.length === 0) return toast.info("Nothing to export");
@@ -126,9 +161,32 @@ function CallHistory() {
         title="Call History"
         description={`${filtered.length.toLocaleString()} of ${calls.length.toLocaleString()} calls`}
         actions={
-          <Button size="sm" variant="outline" onClick={exportCsv}>
-            <Download className="size-3.5 mr-1" /> Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={exportCsv}>
+              <Download className="size-3.5 mr-1" /> Export CSV
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" disabled={calls.length === 0 || deleting}>
+                  <Trash2 className="size-3.5 mr-1" /> Delete all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete all call history?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes all {calls.length.toLocaleString()} call records, transcripts, and recordings from your account. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteAllHistory} className="bg-red-600 hover:bg-red-700 text-white">
+                    Delete all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         }
       />
 
@@ -222,7 +280,7 @@ function CallHistory() {
               {filtered.length === 0 ? (
                 <tr><td colSpan={12} className="px-4 py-10 text-center text-xs text-neutral-500">No calls match your filters.</td></tr>
               ) : (
-                filtered.slice(0, 200).map((c) => {
+                pageRows.map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
                   const camp = campaigns.find((x) => x.id === c.campaign_id);
                   const contact = contacts.find((x) => x.id === c.contact_id);
@@ -277,9 +335,28 @@ function CallHistory() {
             </tbody>
           </table>
         </div>
-        {filtered.length > 200 && (
-          <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
-            Showing latest 200 of {filtered.length.toLocaleString()} - refine filters or export to CSV to see the rest.
+        {filtered.length > 0 && (
+          <div className="px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-t border-surface-border/40 text-xs text-neutral-600">
+            <div className="flex items-center gap-2">
+              <span>
+                Showing {(pageStart + 1).toLocaleString()}–{Math.min(pageStart + pageSize, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
+              </span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                <SelectTrigger className="h-8 w-[90px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PAGE_SIZE_OPTIONS.map((n) => <SelectItem key={n} value={String(n)}>{n} / page</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1}>
+                <ChevronLeft className="size-3.5" /> Prev
+              </Button>
+              <span className="font-mono">Page {currentPage} / {totalPages}</span>
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>
+                Next <ChevronRight className="size-3.5" />
+              </Button>
+            </div>
           </div>
         )}
       </div>
