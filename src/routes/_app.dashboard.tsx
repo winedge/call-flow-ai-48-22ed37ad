@@ -234,6 +234,11 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Self-improvement loop health */}
+      <div className="mb-6">
+        <ReflectionHealthWidget />
+      </div>
+
       {/* Campaign roster with progress bars */}
       <div className="rounded-xl border border-black/5 bg-white shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-neutral-200/70 flex items-center justify-between">
