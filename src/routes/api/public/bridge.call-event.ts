@@ -26,6 +26,28 @@ const KNOWN_REASONS = new Set([
   "agent_config_error",
 ]);
 
+function normalizeVoicemailText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isVoicemailSystemText(value: string): boolean {
+  const text = normalizeVoicemailText(value);
+  if (!text) return false;
+  return (
+    /\b(?:to|you(?:'re| are)? (?:being )?(?:forwarded|sent|redirected))\s+(?:voice\s*mail|voicemail)\b/.test(text) ||
+    /\b(?:voice\s*mail|voicemail)\s+(?:box|system|message|greeting)\b/.test(text) ||
+    /\b(?:the person|the subscriber|the customer|your party|the party|the number|the wireless customer)\b.{0,80}\b(?:not available|unavailable|cannot be reached|is not accepting calls)\b/.test(text) ||
+    /\b(?:at|after)\s+the\s+tone\b/.test(text) ||
+    /\b(?:please|kindly)?\s*(?:record|leave)\s+(?:your\s+)?(?:message|name and number)\b/.test(text) ||
+    /\b(?:leave|record)\s+(?:a\s+)?message\s+(?:after|at)\s+the\s+(?:tone|beep)\b/.test(text) ||
+    /\bwhen\s+you\s+are\s+finished\b.{0,80}\b(?:hang up|press|disconnect)\b/.test(text)
+  );
+}
+
 export const Route = createFileRoute("/api/public/bridge/call-event")({
   server: {
     handlers: {
@@ -119,6 +141,16 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
             : null;
         if (cleanTranscript && cleanTranscript.length > 0) {
           patch.transcript = cleanTranscript;
+        }
+
+        const voicemailDetected = (cleanTranscript ?? []).some(
+          (t) => t.role === "user" && isVoicemailSystemText(t.content),
+        );
+        if (
+          voicemailDetected &&
+          (!endReason || ["agent_ended", "caller_hangup", "other"].includes(endReason))
+        ) {
+          endReason = "voicemail_hangup";
         }
 
         // Heuristic voicemail reclass: if the bridge says the caller hung up

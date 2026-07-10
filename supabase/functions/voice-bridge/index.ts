@@ -330,6 +330,7 @@ async function reportCallEvent(
  */
 function classifyEndReason(raw: string): string {
   const r = raw.toLowerCase();
+  if (r === "voicemail_hangup" || r.startsWith("voicemail")) return "voicemail_hangup";
   if (r.startsWith("agent ended")) return "agent_ended";
   if (r.startsWith("transfer")) return "transfer";
   if (r.startsWith("max duration")) return "max_duration";
@@ -654,6 +655,28 @@ function latestUserTurn(history: { role: "user" | "assistant"; content: string }
     if (history[i].role === "user") return history[i].content;
   }
   return "";
+}
+
+function normalizeVoicemailText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isVoicemailSystemText(value: string): boolean {
+  const text = normalizeVoicemailText(value);
+  if (!text) return false;
+  return (
+    /\b(?:to|you(?:'re| are)? (?:being )?(?:forwarded|sent|redirected))\s+(?:voice\s*mail|voicemail)\b/.test(text) ||
+    /\b(?:voice\s*mail|voicemail)\s+(?:box|system|message|greeting)\b/.test(text) ||
+    /\b(?:the person|the subscriber|the customer|your party|the party|the number|the wireless customer)\b.{0,80}\b(?:not available|unavailable|cannot be reached|is not accepting calls)\b/.test(text) ||
+    /\b(?:at|after)\s+the\s+tone\b/.test(text) ||
+    /\b(?:please|kindly)?\s*(?:record|leave)\s+(?:your\s+)?(?:message|name and number)\b/.test(text) ||
+    /\b(?:leave|record)\s+(?:a\s+)?message\s+(?:after|at)\s+the\s+(?:tone|beep)\b/.test(text) ||
+    /\bwhen\s+you\s+are\s+finished\b.{0,80}\b(?:hang up|press|disconnect)\b/.test(text)
+  );
 }
 
 function latestAssistantTurn(history: { role: "user" | "assistant"; content: string }[]): string {
@@ -981,8 +1004,12 @@ async function handleUserTurn(s: Session, text: string) {
   s.turnLock = true;
   s.activeTurnInterrupted = false;
   s.history.push({ role: "user", content: cleanText });
+  if (isVoicemailSystemText(cleanText)) {
+    cleanup(s, "voicemail detected");
+    return;
+  }
   try {
-    let { reply, end_call, transfer } = await runTurn(s.agent, s.history, s.callSid);
+    let { reply, end_call, transfer, end_reason } = await runTurn(s.agent, s.history, s.callSid) as { reply: string; end_call: boolean; transfer: boolean; end_reason?: string };
     reply = preventPrematureContactCollection(reply, s.agent, s.history);
     if (s.activeTurnInterrupted || s.queuedUserText) return;
     if (!reply && !end_call && !transfer) return;
@@ -1013,6 +1040,10 @@ async function handleUserTurn(s: Session, text: string) {
       return;
     }
     if (end_call) {
+      if (end_reason === "voicemail_hangup") {
+        cleanup(s, "voicemail detected");
+        return;
+      }
       // Give Twilio/mobile networks time to play the final audio naturally.
       // If the caller didn't explicitly say goodbye, linger a little longer so
       // the ending feels intentional rather than like a sudden drop.
