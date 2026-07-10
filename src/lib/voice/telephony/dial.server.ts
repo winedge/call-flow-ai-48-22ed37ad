@@ -105,14 +105,17 @@ export async function dialOutbound(args: DialArgs): Promise<DialResult> {
     RecordingStatusCallback: recordingUrl,
     RecordingStatusCallbackMethod: "POST",
     RecordingStatusCallbackEvent: "completed",
-    MachineDetection: "DetectMessageEnd",
+    // MachineDetection=Enable fires as soon as Twilio decides human vs
+    // machine (usually <2s), instead of waiting for the voicemail beep
+    // (DetectMessageEnd). We want to hang up the instant it's a machine.
+    MachineDetection: "Enable",
     AsyncAmd: "true",
     AsyncAmdStatusCallback: amdUrl,
     AsyncAmdStatusCallbackMethod: "POST",
-    MachineDetectionTimeout: "30",
-    MachineDetectionSpeechThreshold: "2400",
-    MachineDetectionSpeechEndThreshold: "1200",
-    MachineDetectionSilenceTimeout: "5000",
+    MachineDetectionTimeout: "10",
+    MachineDetectionSpeechThreshold: "1800",
+    MachineDetectionSpeechEndThreshold: "800",
+    MachineDetectionSilenceTimeout: "3000",
   });
 
   const basic = btoa(`${sid}:${token}`);

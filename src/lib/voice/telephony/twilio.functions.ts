@@ -113,14 +113,18 @@ export const initiateCall = createServerFn({ method: "POST" })
       RecordingStatusCallback: recordingUrl,
       RecordingStatusCallbackMethod: "POST",
       RecordingStatusCallbackEvent: "completed",
-      MachineDetection: "DetectMessageEnd",
+      // MachineDetection=Enable fires the AMD callback as soon as Twilio
+      // classifies human vs machine (usually <2s). DetectMessageEnd would
+      // wait for the voicemail beep, which is too slow — we want to hang
+      // up the moment it's a machine.
+      MachineDetection: "Enable",
       AsyncAmd: "true",
       AsyncAmdStatusCallback: amdUrl,
       AsyncAmdStatusCallbackMethod: "POST",
-      MachineDetectionTimeout: "30",
-      MachineDetectionSpeechThreshold: "2400",
-      MachineDetectionSpeechEndThreshold: "1200",
-      MachineDetectionSilenceTimeout: "5000",
+      MachineDetectionTimeout: "10",
+      MachineDetectionSpeechThreshold: "1800",
+      MachineDetectionSpeechEndThreshold: "800",
+      MachineDetectionSilenceTimeout: "3000",
     });
 
     const basic = btoa(`${sid}:${token}`);
