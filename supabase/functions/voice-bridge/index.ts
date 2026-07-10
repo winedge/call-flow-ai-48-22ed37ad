@@ -571,53 +571,36 @@ type Session = {
 };
 
 function gateInboundAudio(s: Session, bytes: Uint8Array): Uint8Array[] {
+  // Track voice activity from RMS purely for local barge-in / metrics.
+  // We ALWAYS forward the raw caller audio to Deepgram - its phone-call
+  // VAD is far better than a hand-rolled gate and substituting silence
+  // frames here was dropping short utterances ("Hello?") entirely.
   const g = s.noiseGate;
   const rms = rmsMuLaw(bytes);
-  const openThreshold = Math.max(650, g.noiseFloor * 3.1);
-  const keepOpenThreshold = Math.max(420, g.noiseFloor * 1.75);
+  const openThreshold = Math.max(320, g.noiseFloor * 2.2);
+  const keepOpenThreshold = Math.max(220, g.noiseFloor * 1.4);
   const loud = g.inSpeech ? rms > keepOpenThreshold : rms > openThreshold;
 
-  if (!g.inSpeech) {
-    g.preRoll.push(bytes);
-    while (g.preRoll.length > 5) g.preRoll.shift();
-
-    if (!loud) {
-      g.speechFrames = 0;
-      g.noiseFloor = g.noiseFloor * 0.95 + rms * 0.05;
-      return [silenceFrame(bytes.length)];
-    }
-
-    g.speechFrames++;
-    // Require either two consecutive loud frames or one very clear speech
-    // frame. This rejects keyboard/room spikes without clipping real speech.
-    if (g.speechFrames < 2 && rms < openThreshold * 1.55) {
-      return [silenceFrame(bytes.length)];
-    }
-
-    g.inSpeech = true;
-    g.silenceFrames = 0;
-    g.lastVoiceAt = Date.now();
-    g.voiceMsSinceCommit += g.speechFrames * 20;
-    const out = g.preRoll;
-    g.preRoll = [];
-    return out;
-  }
-
   if (loud) {
-    g.silenceFrames = 0;
+    if (!g.inSpeech) {
+      g.inSpeech = true;
+      g.speechFrames = 1;
+      g.silenceFrames = 0;
+    } else {
+      g.speechFrames++;
+      g.silenceFrames = 0;
+    }
     g.lastVoiceAt = Date.now();
     g.voiceMsSinceCommit += 20;
-    return [bytes];
-  }
-
-  g.silenceFrames++;
-  if (g.silenceFrames >= 12) {
-    g.inSpeech = false;
-    g.speechFrames = 0;
-    g.preRoll = [];
+  } else {
+    g.silenceFrames++;
+    if (g.inSpeech && g.silenceFrames >= 10) {
+      g.inSpeech = false;
+      g.speechFrames = 0;
+    }
     g.noiseFloor = g.noiseFloor * 0.98 + rms * 0.02;
   }
-  return [silenceFrame(bytes.length)];
+  return [bytes];
 }
 
 function decodeBootstrap(raw?: string): Partial<AgentConfig> | null {
@@ -799,22 +782,22 @@ function primeGreeting(s: Session, a: AgentConfig) {
   })();
 }
 
-function looksLikeSpeech(text: string, voiceMs: number): boolean {
+function looksLikeSpeech(text: string, _voiceMs: number): boolean {
   const normalized = text
     .toLowerCase()
     .replace(/[^a-z0-9' ]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  if (!normalized || normalized.length < 2 || voiceMs < 100) return false;
+  if (!normalized || normalized.length < 2) return false;
   if (/^(uh+|um+|hm+|hmm+|ah+|er+|mm+|noise|background|music|cough|laugh)$/.test(normalized)) return false;
 
   const words = normalized.split(" ").filter(Boolean);
   if (words.length >= 2) return true;
 
   const shortAnswers = new Set([
-    "yes", "yeah", "yep", "no", "nope", "okay", "ok", "sure", "hello", "hi", "thanks", "bye", "correct", "right",
+    "yes", "yeah", "yep", "no", "nope", "okay", "ok", "sure", "hello", "hi", "hey", "thanks", "bye", "correct", "right", "what", "why", "who", "how",
   ]);
-  return normalized.length >= 4 || shortAnswers.has(normalized);
+  return normalized.length >= 3 || shortAnswers.has(normalized);
 }
 
 async function speak(s: Session, text: string) {
@@ -1237,17 +1220,14 @@ Deno.serve((req) => {
             console.log("deepgram open", { callSid: session.callSid });
           },
           onSpeechStart: () => {
-            // Barge-in only when our local audio gate recently saw real
-            // caller voice; this prevents room noise from cutting off TTS.
-            if (session.speaking && Date.now() - session.noiseGate.lastVoiceAt < 350) session.cancelSpeech();
+            // Deepgram detected caller voice - cut off the agent immediately.
+            if (session.speaking) session.cancelSpeech();
           },
           onInterim: (t) => {
             latestInterim = t.trim();
-            const voiceMs = session.noiseGate.voiceMsSinceCommit;
-            // Soft barge-in guard: only cancel once we've heard meaningful
-            // words backed by gated caller audio, not stray background noise.
-            if (session.speaking && looksLikeSpeech(latestInterim, voiceMs)) session.cancelSpeech();
-            scheduleCommit(520, true);
+            // Any interim text while we're speaking = user is talking. Barge in.
+            if (session.speaking && latestInterim.length >= 2) session.cancelSpeech();
+            scheduleCommit(400, true);
           },
           onFinal: (t, speechFinal) => {
             pending = (pending ? pending + " " : "") + t.trim();
