@@ -477,6 +477,9 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     a.objective ? `Objective: ${a.objective}` : "",
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
+    a.playbook?.trim()
+      ? `LEARNED PLAYBOOK (auto-updated from past calls - obey these rules; they override generic tendencies):\n${a.playbook.trim()}`
+      : "",
     fields.length
       ? `Information to collect during this call. Ask one item at a time and confirm each. NEVER re-ask a field that is already listed under ALREADY COLLECTED - treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. address, DOB) unless it is in the list above.`
       : "",
