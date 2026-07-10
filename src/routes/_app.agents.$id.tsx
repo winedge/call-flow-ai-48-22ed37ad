@@ -499,6 +499,8 @@ function AgentEditor() {
           onChange={(v: string) => patch("playbook", v)}
         />
 
+        {!isNew && <ReflectionsPanel agentId={id} />}
+
         <TestCallCard agentId={id} isNew={isNew} />
 
 
