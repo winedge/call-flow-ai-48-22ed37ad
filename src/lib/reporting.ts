@@ -124,16 +124,55 @@ export function downloadFile(content: string, filename: string, mime = "text/csv
   setTimeout(() => URL.revokeObjectURL(url), 500);
 }
 
-/** Simple heuristic lead score (0–100) based on outcome, sentiment, duration, and appointment. */
+/**
+ * Heuristic lead score (0-100). Rewards signals that actually happen on our
+ * calls: how much information the agent extracted, how engaged the caller
+ * was (transcript turns + duration), whether the agent (not the caller) ended
+ * the call cleanly, and — when present — booking / sentiment / outcome tags.
+ */
 export function leadScore(call: Call): number {
-  let s = 20;
-  if (call.appointment_booked) s += 40;
-  if (call.sentiment === "positive") s += 20;
-  if (call.sentiment === "negative") s -= 20;
-  if (call.duration_sec > 60) s += 10;
-  if (call.duration_sec > 180) s += 10;
+  // Non-completed calls can't really score.
+  if (call.status !== "completed") return 0;
+
+  let s = 10; // baseline for any completed call
+
+  // 1. Data completeness — the strongest signal. Count meaningful
+  //    (non-null, non-empty) values in extracted_data.
+  const entries = Object.entries(call.extracted_data ?? {});
+  if (entries.length > 0) {
+    const filled = entries.filter(([, v]) => {
+      if (v === null || v === undefined) return false;
+      if (typeof v === "string") return v.trim().length > 0;
+      return true;
+    }).length;
+    const ratio = filled / entries.length;
+    s += Math.round(ratio * 45); // up to +45
+  }
+
+  // 2. Engagement — transcript turns.
+  const turns = Array.isArray(call.transcript) ? call.transcript.length : 0;
+  if (turns >= 6) s += 5;
+  if (turns >= 14) s += 5;
+  if (turns >= 24) s += 5;
+
+  // 3. Duration.
+  if (call.duration_sec >= 30) s += 3;
+  if (call.duration_sec >= 90) s += 4;
+  if (call.duration_sec >= 180) s += 3;
+
+  // 4. How the call ended.
+  const reason = (call.end_reason || "").toLowerCase();
+  if (reason === "agent_ended" || reason === "completed") s += 8;
+  else if (reason === "caller_hangup" && turns < 6) s -= 15; // early hang-up
+  else if (reason === "no_answer" || reason === "voicemail" || reason === "busy" || reason === "failed") s -= 20;
+
+  // 5. Explicit outcome / sentiment / appointment when the pipeline sets them.
+  if (call.appointment_booked) s += 25;
+  if (call.sentiment === "positive") s += 8;
+  if (call.sentiment === "negative") s -= 10;
   const o = (call.outcome || "").toLowerCase();
-  if (o.includes("qualified") || o.includes("interested")) s += 15;
-  if (o.includes("not interested") || o.includes("dnc")) s -= 30;
+  if (o.includes("qualified") || o.includes("interested") || o.includes("booked")) s += 10;
+  if (o.includes("not interested") || o.includes("dnc") || o.includes("do not")) s -= 25;
+
   return Math.max(0, Math.min(100, s));
 }
