@@ -49,12 +49,13 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         const callSid = body.call_sid?.trim();
         if (!callSid) return errorJson(400, "call_sid required");
 
-        const endReason =
+        let endReason =
           body.end_reason && KNOWN_REASONS.has(body.end_reason)
             ? body.end_reason
             : body.end_reason
               ? "other"
               : null;
+
         const endedAt = body.ended_at ?? new Date().toISOString();
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
