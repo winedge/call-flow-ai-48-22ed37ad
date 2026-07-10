@@ -199,12 +199,20 @@ function CallDetail() {
             </h2>
             {call.recording_url ? (
               <div className="space-y-3">
-                <audio controls src={call.recording_url} className="w-full" />
+                {recordingSrc ? (
+                  <audio controls src={recordingSrc} className="w-full" />
+                ) : recordingError ? (
+                  <p className="text-xs text-red-600">{recordingError}</p>
+                ) : (
+                  <p className="text-xs text-neutral-500 italic">Loading recording…</p>
+                )}
                 <div className="flex items-center justify-between text-[11px] text-neutral-500 font-mono">
                   <span>{new Date(call.started_at).toLocaleString()} · {formatDuration(call.duration_sec)}</span>
-                  <a href={call.recording_url} download={`recording-${call.id.slice(0, 8)}.mp3`} className="text-brand-primary hover:underline flex items-center gap-1">
-                    <Download className="size-3" /> Download
-                  </a>
+                  {recordingSrc && (
+                    <a href={recordingSrc} download={`recording-${call.id.slice(0, 8)}.mp3`} className="text-brand-primary hover:underline flex items-center gap-1">
+                      <Download className="size-3" /> Download
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (
