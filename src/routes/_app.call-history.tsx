@@ -161,9 +161,32 @@ function CallHistory() {
         title="Call History"
         description={`${filtered.length.toLocaleString()} of ${calls.length.toLocaleString()} calls`}
         actions={
-          <Button size="sm" variant="outline" onClick={exportCsv}>
-            <Download className="size-3.5 mr-1" /> Export CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={exportCsv}>
+              <Download className="size-3.5 mr-1" /> Export CSV
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" disabled={calls.length === 0 || deleting}>
+                  <Trash2 className="size-3.5 mr-1" /> Delete all
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete all call history?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes all {calls.length.toLocaleString()} call records, transcripts, and recordings from your account. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={deleteAllHistory} className="bg-red-600 hover:bg-red-700 text-white">
+                    Delete all
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         }
       />
 
