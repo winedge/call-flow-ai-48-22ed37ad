@@ -562,7 +562,7 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
             model: MODEL,
             messages,
             temperature: body.agent.temperature ?? 0.4,
-            max_tokens: 100,
+            max_tokens: 140,
           }),
         });
         if (!res.ok) {
