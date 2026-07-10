@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { PageHeader, EmptyState } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,6 +77,7 @@ function csvRowsToContacts(rows: Record<string, string>[], listId: string | null
 }
 
 function ContactsPage() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
@@ -83,6 +85,7 @@ function ContactsPage() {
   const addContact = useDB((s) => s.addContact);
   const importContacts = useDB((s) => s.importContacts);
   const deleteContacts = useDB((s) => s.deleteContacts);
+
 
   const [filterListId, setFilterListId] = useState<string>("all");
   const [search, setSearch] = useState("");

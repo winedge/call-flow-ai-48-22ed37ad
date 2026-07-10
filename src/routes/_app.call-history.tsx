@@ -160,6 +160,8 @@ function CallHistory() {
     setSearch("");
   }
 
+  if (!hydrated) return <PageSkeleton variant="table" withActions />;
+
   return (
     <>
       <PageHeader
