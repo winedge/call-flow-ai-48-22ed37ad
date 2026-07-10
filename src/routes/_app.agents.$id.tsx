@@ -699,3 +699,94 @@ function DataFieldsEditor({
     </div>
   );
 }
+
+function PlaybookCard({
+  value,
+  calls,
+  updatedAt,
+  onChange,
+}: {
+  value: string;
+  calls: number;
+  updatedAt: string | null;
+  onChange: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  const applyEdit = () => {
+    onChange(draft);
+    setEditing(false);
+    toast.success("Playbook updated - remember to save the agent");
+  };
+  const reset = () => {
+    if (!confirm("Clear the learned playbook? The agent will re-learn from future calls.")) return;
+    setDraft("");
+    onChange("");
+    toast.success("Playbook cleared - save the agent to apply");
+  };
+
+  return (
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-medium text-neutral-900 flex items-center gap-2">
+          <Brain className="size-3.5 text-brand-primary" /> Learned playbook
+        </h2>
+        <div className="flex items-center gap-2 text-[11px] text-neutral-500 font-mono">
+          <span>{calls} call{calls === 1 ? "" : "s"} analyzed</span>
+          {updatedAt && <span>· updated {new Date(updatedAt).toLocaleString()}</span>}
+        </div>
+      </div>
+      <p className="text-[11px] text-neutral-500 mb-3">
+        After every completed call, the agent analyzes the transcript and outcome and folds the lessons into this playbook.
+        It is injected into every future call's system prompt automatically. You can review, edit, or reset it here.
+      </p>
+      {editing ? (
+        <div className="space-y-2">
+          <Textarea
+            rows={12}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="The playbook will appear here after the agent's first completed call."
+            className="font-mono text-xs"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setDraft(value); setEditing(false); }}>
+              Cancel
+            </Button>
+            <Button type="button" size="sm" onClick={applyEdit} className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
+              Apply
+            </Button>
+          </div>
+        </div>
+      ) : value ? (
+        <div className="space-y-3">
+          <pre className="bg-neutral-50 ring-1 ring-black/5 rounded-lg p-3 text-[11px] leading-relaxed font-mono whitespace-pre-wrap max-h-64 overflow-auto">
+            {value}
+          </pre>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={reset}>
+              <RotateCcw className="size-3 mr-1" /> Reset
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-neutral-50 ring-1 ring-black/5 rounded-lg p-4">
+          <p className="text-xs text-neutral-500 italic">
+            No learnings yet. Run a test call - the playbook will populate automatically once the call completes.
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>
+            Start manually
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
