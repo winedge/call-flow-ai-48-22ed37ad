@@ -93,6 +93,10 @@ export async function dialOutbound(args: DialArgs): Promise<DialResult> {
     From: args.from,
     Url: voiceUrl.toString(),
     Method: "POST",
+    // Ring timeout - if the callee's phone is off/unreachable, Twilio will
+    // stop ringing after this many seconds and POST a `no-answer` status.
+    // Default is 60s; 30s gives a snappier terminal state for the UI.
+    Timeout: "30",
     StatusCallback: statusUrl,
     StatusCallbackMethod: "POST",
     StatusCallbackEvent: "initiated ringing answered completed",
