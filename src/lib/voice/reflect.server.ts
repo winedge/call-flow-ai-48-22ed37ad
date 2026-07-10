@@ -63,6 +63,7 @@ type Reflection = {
   objections: string[];
   key_learnings: string[];
   summary: string;
+  sentiment: "positive" | "neutral" | "negative";
 };
 
 type ReflectionRow = {
@@ -319,9 +320,11 @@ export async function reflectOnCall({ callId }: ReflectInput): Promise<void> {
   "what_failed": string[],
   "objections": string[],
   "key_learnings": string[],
-  "summary": string
+  "summary": string,
+  "sentiment": "positive" | "neutral" | "negative"
 }`,
       "Rules: be specific (quote or paraphrase the moment), name techniques not vibes, no praise-only fluff, no generic advice. If nothing failed / no objections, return empty arrays.",
+      "Sentiment reflects the CALLER's overall tone toward the offer/agent: positive = interested/agreed/booked, neutral = polite but non-committal or short call, negative = annoyed/refused/hostile/voicemail-only.",
     ].join("\n\n");
 
     const reflectionUser = [
@@ -340,13 +343,25 @@ export async function reflectOnCall({ callId }: ReflectInput): Promise<void> {
 
     const reflection = await callGeminiJSON<Reflection>(reflectionSystem, reflectionUser);
 
+    const rawSentiment = typeof reflection.sentiment === "string" ? reflection.sentiment.toLowerCase().trim() : "";
+    const sentiment: "positive" | "neutral" | "negative" =
+      rawSentiment === "positive" || rawSentiment === "negative" ? rawSentiment : "neutral";
+
     const cleaned: Reflection = {
       what_worked: toStringArray(reflection.what_worked),
       what_failed: toStringArray(reflection.what_failed),
       objections: toStringArray(reflection.objections),
       key_learnings: toStringArray(reflection.key_learnings, 3),
       summary: typeof reflection.summary === "string" ? reflection.summary.slice(0, 500) : "",
+      sentiment,
     };
+
+    // Persist sentiment on the call row so list/detail views can display it.
+    const { error: sentErr } = await supabaseAdmin
+      .from("calls")
+      .update({ sentiment } as never)
+      .eq("id", call.id);
+    if (sentErr) console.warn("[reflect] sentiment update failed", sentErr.message);
 
     // ---- 2. Playbook update -----------------------------------------------
 

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useDB } from "@/lib/data-store";
 import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel } from "@/lib/voice/call-end-reasons";
+import { sentimentLabel } from "@/components/app/sentiment-badge";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/calls/$id")({
@@ -183,7 +184,7 @@ function CallDetail() {
         <StatTile label="Status" value={call.status} />
         <StatTile label="End reason" value={endReasonLabel(call.end_reason)} />
         <StatTile label="Duration" value={formatDuration(call.duration_sec)} />
-        <StatTile label="Sentiment" value={call.sentiment ?? "-"} />
+        <StatTile label="Sentiment" value={sentimentLabel(call.sentiment)} />
         <StatTile label="Lead score" value={score} accent={score >= 70} />
         <StatTile label="AI minutes" value={call.ai_minutes.toFixed(2)} />
         <StatTile label="Cost" value={`$${(call.cost_cents / 100).toFixed(2)}`} />

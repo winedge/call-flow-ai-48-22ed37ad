@@ -20,6 +20,7 @@ import { useDB } from "@/lib/data-store";
 import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel, endReasonTone, END_REASON_ORDER } from "@/lib/voice/call-end-reasons";
 import { RecordingPlayer } from "@/components/app/recording-player";
+import { SentimentBadge } from "@/components/app/sentiment-badge";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
@@ -312,7 +313,7 @@ function CallHistory() {
                           {endReasonLabel(c.end_reason)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "-"}</td>
+                      <td className="px-4 py-3"><SentimentBadge value={c.sentiment} /></td>
                       <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         {c.recording_url ? (
