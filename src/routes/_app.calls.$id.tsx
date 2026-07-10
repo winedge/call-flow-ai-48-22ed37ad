@@ -184,7 +184,7 @@ function CallDetail() {
         <StatTile label="Status" value={call.status} />
         <StatTile label="End reason" value={endReasonLabel(call.end_reason)} />
         <StatTile label="Duration" value={formatDuration(call.duration_sec)} />
-        <StatTile label="Sentiment" value={call.sentiment ?? "-"} />
+        <StatTile label="Sentiment" value={<SentimentBadge value={call.sentiment} />} />
         <StatTile label="Lead score" value={score} accent={score >= 70} />
         <StatTile label="AI minutes" value={call.ai_minutes.toFixed(2)} />
         <StatTile label="Cost" value={`$${(call.cost_cents / 100).toFixed(2)}`} />
