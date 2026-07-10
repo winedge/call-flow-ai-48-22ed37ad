@@ -40,11 +40,15 @@ const ICONS: Record<Automation["action"], React.ComponentType<{ className?: stri
 };
 
 function Automations() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const list = useDB(useShallow((s) => s.automations.filter((a) => a.org_id === orgId)));
   const add = useDB((s) => s.addAutomation);
   const toggle = useDB((s) => s.toggleAutomation);
   const del = useDB((s) => s.deleteAutomation);
+
+  if (!hydrated) return <PageSkeleton variant="cards" withActions />;
+
 
   return (
     <>
