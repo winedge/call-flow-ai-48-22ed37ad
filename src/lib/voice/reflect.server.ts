@@ -63,6 +63,7 @@ type Reflection = {
   objections: string[];
   key_learnings: string[];
   summary: string;
+  sentiment: "positive" | "neutral" | "negative";
 };
 
 type ReflectionRow = {
