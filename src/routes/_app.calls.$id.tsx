@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useDB } from "@/lib/data-store";
 import { downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel } from "@/lib/voice/call-end-reasons";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/calls/$id")({
   head: () => ({ meta: [{ title: "Call - BulkCall AI" }] }),
@@ -40,10 +41,49 @@ function CallDetail() {
 
   const [local, setLocal] = useState<LocalNotes>({ notes: "", tags: [], next_action: "" });
   const [tagInput, setTagInput] = useState("");
+  const [recordingSrc, setRecordingSrc] = useState<string | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) setLocal(loadLocal(id));
   }, [id]);
+
+  useEffect(() => {
+    if (!call?.recording_url || !id) {
+      setRecordingSrc(null);
+      return;
+    }
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const token = session.session?.access_token;
+        if (!token) {
+          setRecordingError("Please sign in to play recordings.");
+          return;
+        }
+        const res = await fetch(`/api/calls/${id}/recording`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          setRecordingError(`Recording unavailable (${res.status})`);
+          return;
+        }
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setRecordingSrc(objectUrl);
+        setRecordingError(null);
+      } catch (e) {
+        setRecordingError(e instanceof Error ? e.message : "Failed to load recording");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [call?.recording_url, id]);
 
   if (!call) throw notFound();
 
@@ -159,12 +199,20 @@ function CallDetail() {
             </h2>
             {call.recording_url ? (
               <div className="space-y-3">
-                <audio controls src={call.recording_url} className="w-full" />
+                {recordingSrc ? (
+                  <audio controls src={recordingSrc} className="w-full" />
+                ) : recordingError ? (
+                  <p className="text-xs text-red-600">{recordingError}</p>
+                ) : (
+                  <p className="text-xs text-neutral-500 italic">Loading recording…</p>
+                )}
                 <div className="flex items-center justify-between text-[11px] text-neutral-500 font-mono">
                   <span>{new Date(call.started_at).toLocaleString()} · {formatDuration(call.duration_sec)}</span>
-                  <a href={call.recording_url} download={`recording-${call.id.slice(0, 8)}.mp3`} className="text-brand-primary hover:underline flex items-center gap-1">
-                    <Download className="size-3" /> Download
-                  </a>
+                  {recordingSrc && (
+                    <a href={recordingSrc} download={`recording-${call.id.slice(0, 8)}.mp3`} className="text-brand-primary hover:underline flex items-center gap-1">
+                      <Download className="size-3" /> Download
+                    </a>
+                  )}
                 </div>
               </div>
             ) : (

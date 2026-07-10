@@ -53,6 +53,7 @@ import { Route as ApiPublicBridgeCallEventRouteImport } from './routes/api/publi
 import { Route as ApiPublicBridgeAgentRouteImport } from './routes/api/public/bridge.agent'
 import { Route as ApiCampaignsIdStartRouteImport } from './routes/api/campaigns.$id.start'
 import { Route as ApiCampaignsIdPauseRouteImport } from './routes/api/campaigns.$id.pause'
+import { Route as ApiCallsIdRecordingRouteImport } from './routes/api/calls.$id.recording'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -277,6 +278,11 @@ const ApiCampaignsIdPauseRoute = ApiCampaignsIdPauseRouteImport.update({
   path: '/pause',
   getParentRoute: () => ApiCampaignsIdRoute,
 } as any)
+const ApiCallsIdRecordingRoute = ApiCallsIdRecordingRouteImport.update({
+  id: '/recording',
+  path: '/recording',
+  getParentRoute: () => ApiCallsIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -303,11 +309,12 @@ export interface FileRoutesByFullPath {
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
   '/api/automations/$id': typeof ApiAutomationsIdRoute
-  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
   '/agents/': typeof AppAgentsIndexRoute
   '/campaigns/': typeof AppCampaignsIndexRoute
+  '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
@@ -348,11 +355,12 @@ export interface FileRoutesByTo {
   '/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
   '/api/automations/$id': typeof ApiAutomationsIdRoute
-  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
   '/agents': typeof AppAgentsIndexRoute
   '/campaigns': typeof AppCampaignsIndexRoute
+  '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
@@ -395,11 +403,12 @@ export interface FileRoutesById {
   '/_app/campaigns/new': typeof AppCampaignsNewRoute
   '/api/agents/$id': typeof ApiAgentsIdRoute
   '/api/automations/$id': typeof ApiAutomationsIdRoute
-  '/api/calls/$id': typeof ApiCallsIdRoute
+  '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
   '/_app/agents/': typeof AppAgentsIndexRoute
   '/_app/campaigns/': typeof AppCampaignsIndexRoute
+  '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
   '/api/campaigns/$id/pause': typeof ApiCampaignsIdPauseRoute
   '/api/campaigns/$id/start': typeof ApiCampaignsIdStartRoute
   '/api/public/bridge/agent': typeof ApiPublicBridgeAgentRoute
@@ -447,6 +456,7 @@ export interface FileRouteTypes {
     | '/api/contacts/$id'
     | '/agents/'
     | '/campaigns/'
+    | '/api/calls/$id/recording'
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
@@ -492,6 +502,7 @@ export interface FileRouteTypes {
     | '/api/contacts/$id'
     | '/agents'
     | '/campaigns'
+    | '/api/calls/$id/recording'
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/api/contacts/$id'
     | '/_app/agents/'
     | '/_app/campaigns/'
+    | '/api/calls/$id/recording'
     | '/api/campaigns/$id/pause'
     | '/api/campaigns/$id/start'
     | '/api/public/bridge/agent'
@@ -889,6 +901,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCampaignsIdPauseRouteImport
       parentRoute: typeof ApiCampaignsIdRoute
     }
+    '/api/calls/$id/recording': {
+      id: '/api/calls/$id/recording'
+      path: '/recording'
+      fullPath: '/api/calls/$id/recording'
+      preLoaderRoute: typeof ApiCallsIdRecordingRouteImport
+      parentRoute: typeof ApiCallsIdRoute
+    }
   }
 }
 
@@ -962,12 +981,24 @@ const ApiAutomationsRouteWithChildren = ApiAutomationsRoute._addFileChildren(
   ApiAutomationsRouteChildren,
 )
 
+interface ApiCallsIdRouteChildren {
+  ApiCallsIdRecordingRoute: typeof ApiCallsIdRecordingRoute
+}
+
+const ApiCallsIdRouteChildren: ApiCallsIdRouteChildren = {
+  ApiCallsIdRecordingRoute: ApiCallsIdRecordingRoute,
+}
+
+const ApiCallsIdRouteWithChildren = ApiCallsIdRoute._addFileChildren(
+  ApiCallsIdRouteChildren,
+)
+
 interface ApiCallsRouteChildren {
-  ApiCallsIdRoute: typeof ApiCallsIdRoute
+  ApiCallsIdRoute: typeof ApiCallsIdRouteWithChildren
 }
 
 const ApiCallsRouteChildren: ApiCallsRouteChildren = {
-  ApiCallsIdRoute: ApiCallsIdRoute,
+  ApiCallsIdRoute: ApiCallsIdRouteWithChildren,
 }
 
 const ApiCallsRouteWithChildren = ApiCallsRoute._addFileChildren(
