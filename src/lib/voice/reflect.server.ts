@@ -320,9 +320,11 @@ export async function reflectOnCall({ callId }: ReflectInput): Promise<void> {
   "what_failed": string[],
   "objections": string[],
   "key_learnings": string[],
-  "summary": string
+  "summary": string,
+  "sentiment": "positive" | "neutral" | "negative"
 }`,
       "Rules: be specific (quote or paraphrase the moment), name techniques not vibes, no praise-only fluff, no generic advice. If nothing failed / no objections, return empty arrays.",
+      "Sentiment reflects the CALLER's overall tone toward the offer/agent: positive = interested/agreed/booked, neutral = polite but non-committal or short call, negative = annoyed/refused/hostile/voicemail-only.",
     ].join("\n\n");
 
     const reflectionUser = [
