@@ -32,6 +32,7 @@ type AgentSummary = {
   end_call_conditions?: string[];
   transfer_number?: string;
   data_fields?: DataField[];
+  playbook?: string;
 };
 
 type Turn = { role: "user" | "assistant"; content: string };
