@@ -205,42 +205,57 @@ export type Database = {
       call_reflections: {
         Row: {
           agent_id: string
+          attempts: number
           call_id: string
           created_at: string
           id: string
           key_learnings: Json
+          last_error: string | null
+          next_attempt_at: string | null
           objections: Json
-          success_label: string
-          success_score: number
+          status: string
+          success_label: string | null
+          success_score: number | null
           summary: string | null
+          updated_at: string
           user_id: string
           what_failed: Json
           what_worked: Json
         }
         Insert: {
           agent_id: string
+          attempts?: number
           call_id: string
           created_at?: string
           id?: string
           key_learnings?: Json
+          last_error?: string | null
+          next_attempt_at?: string | null
           objections?: Json
-          success_label?: string
-          success_score?: number
+          status?: string
+          success_label?: string | null
+          success_score?: number | null
           summary?: string | null
+          updated_at?: string
           user_id: string
           what_failed?: Json
           what_worked?: Json
         }
         Update: {
           agent_id?: string
+          attempts?: number
           call_id?: string
           created_at?: string
           id?: string
           key_learnings?: Json
+          last_error?: string | null
+          next_attempt_at?: string | null
           objections?: Json
-          success_label?: string
-          success_score?: number
+          status?: string
+          success_label?: string | null
+          success_score?: number | null
           summary?: string | null
+          updated_at?: string
           user_id?: string
           what_failed?: Json
           what_worked?: Json
