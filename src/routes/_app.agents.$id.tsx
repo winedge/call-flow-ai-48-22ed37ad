@@ -2,7 +2,7 @@ import { createFileRoute, useRouter, notFound } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Save, ArrowLeft, Play, Loader2, PhoneCall } from "lucide-react";
+import { Save, ArrowLeft, Play, Loader2, PhoneCall, Brain, RotateCcw } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
