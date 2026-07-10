@@ -1220,18 +1220,22 @@ Deno.serve((req) => {
             console.log("deepgram open", { callSid: session.callSid });
           },
           onSpeechStart: () => {
-            // Deepgram detected caller voice - cut off the agent immediately.
-            if (session.speaking) session.cancelSpeech();
+            // Deepgram VAD alone is not reliable enough to barge on - the
+            // caller's phone often echoes our own TTS back to the mic and
+            // that would cancel the agent mid-reply. Wait for a real final
+            // transcript before interrupting.
           },
           onInterim: (t) => {
             latestInterim = t.trim();
-            // Any interim text while we're speaking = user is talking. Barge in.
-            if (session.speaking && latestInterim.length >= 2) session.cancelSpeech();
             scheduleCommit(400, true);
           },
           onFinal: (t, speechFinal) => {
-            pending = (pending ? pending + " " : "") + t.trim();
+            const clean = t.trim();
+            pending = (pending ? pending + " " : "") + clean;
             latestInterim = "";
+            // Real transcribed words while we're speaking = caller is
+            // actually talking (not echo). Cut the agent off now.
+            if (session.speaking && clean.length >= 2) session.cancelSpeech();
             if (speechFinal) commit();
             else scheduleCommit(260);
           },
