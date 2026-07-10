@@ -49,12 +49,13 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         const callSid = body.call_sid?.trim();
         if (!callSid) return errorJson(400, "call_sid required");
 
-        const endReason =
+        let endReason =
           body.end_reason && KNOWN_REASONS.has(body.end_reason)
             ? body.end_reason
             : body.end_reason
               ? "other"
               : null;
+
         const endedAt = body.ended_at ?? new Date().toISOString();
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -90,7 +91,8 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
           ended_at: endedAt,
           updated_at: endedAt,
         };
-        if (endReason) patch.end_reason = endReason;
+        // end_reason is applied below, after the voicemail reclass heuristic.
+
         // Bridge is authoritative for terminal state - Twilio's status
         // callback may not always land (signature mismatch behind proxy,
         // network drop). Always flip non-terminal statuses to completed
@@ -118,6 +120,21 @@ export const Route = createFileRoute("/api/public/bridge/call-event")({
         if (cleanTranscript && cleanTranscript.length > 0) {
           patch.transcript = cleanTranscript;
         }
+
+        // Heuristic voicemail reclass: if the bridge says the caller hung up
+        // but there is not a single user turn in the transcript, the callee
+        // almost certainly never picked up in person — the stream was a
+        // voicemail greeting the AI talked over. Twilio AMD sometimes
+        // classifies these as "unknown"/"human" so the /twilio/amd path
+        // never fires and we'd otherwise mislabel it as caller_hangup.
+        if (endReason === "caller_hangup") {
+          const userTurns = (cleanTranscript ?? []).filter((t) => t.role === "user").length;
+          if (userTurns === 0) {
+            endReason = "voicemail_hangup";
+          }
+        }
+        if (endReason) patch.end_reason = endReason;
+
 
         // Run structured field extraction if the agent has data_fields defined
         // and we have a transcript to work from.
