@@ -280,7 +280,7 @@ function CallHistory() {
               {filtered.length === 0 ? (
                 <tr><td colSpan={12} className="px-4 py-10 text-center text-xs text-neutral-500">No calls match your filters.</td></tr>
               ) : (
-                filtered.slice(0, 200).map((c) => {
+                pageRows.map((c) => {
                   const agent = agents.find((a) => a.id === c.agent_id);
                   const camp = campaigns.find((x) => x.id === c.campaign_id);
                   const contact = contacts.find((x) => x.id === c.contact_id);
