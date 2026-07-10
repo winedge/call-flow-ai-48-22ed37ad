@@ -36,6 +36,7 @@ type BridgeAgent = {
   tts_engine?: string;
   data_fields?: DataField[];
   speak_first?: boolean;
+  playbook?: string;
   voice_settings?: {
     stability?: number;
     similarity_boost?: number;
