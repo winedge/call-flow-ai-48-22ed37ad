@@ -116,6 +116,8 @@ function NewCampaign() {
     router.navigate({ to: "/campaigns/$id", params: { id: camp.id } });
   }
 
+  if (!hydrated) return <PageSkeleton variant="form" />;
+
   return (
     <>
       <PageHeader

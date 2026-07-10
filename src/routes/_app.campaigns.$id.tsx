@@ -8,6 +8,7 @@ import {
 } from "recharts";
 
 import { PageHeader, StatTile, StatusPill } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
