@@ -9,9 +9,11 @@ import { useSupabaseSync } from "@/lib/sync";
 export const Route = createFileRoute("/_app")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    // Use getSession (reads from localStorage, no network) instead of getUser
+    // (which hits Supabase Auth on every navigation and makes route switches slow).
+    const { data } = await supabase.auth.getSession();
+    if (!data.session?.user) throw redirect({ to: "/auth" });
+    return { user: data.session.user };
   },
   component: AppLayout,
 });
