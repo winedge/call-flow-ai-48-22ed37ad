@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDB } from "@/lib/data-store";
 import { callsToCsv, downloadFile, formatDuration, leadScore } from "@/lib/reporting";
 import { endReasonLabel, endReasonTone, END_REASON_ORDER } from "@/lib/voice/call-end-reasons";
+import { RecordingPlayer } from "@/components/app/recording-player";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 200];
 
@@ -313,15 +314,9 @@ function CallHistory() {
                       </td>
                       <td className="px-4 py-3 text-neutral-600 text-xs">{c.sentiment ?? "-"}</td>
                       <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         {c.recording_url ? (
-                          <audio
-                            controls
-                            preload="none"
-                            src={c.recording_url}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-8 w-56 max-w-full"
-                          />
+                          <RecordingPlayer callId={c.id} />
                         ) : (
                           <span className="text-[11px] text-neutral-400">-</span>
                         )}
