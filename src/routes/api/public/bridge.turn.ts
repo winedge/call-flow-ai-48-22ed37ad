@@ -37,6 +37,32 @@ type AgentSummary = {
 
 type Turn = { role: "user" | "assistant"; content: string };
 
+function normalizeVoicemailText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isVoicemailSystemText(value: string): boolean {
+  const text = normalizeVoicemailText(value);
+  if (!text) return false;
+  return (
+    /\b(?:to|you(?:'re| are)? (?:being )?(?:forwarded|sent|redirected))\s+(?:voice\s*mail|voicemail)\b/.test(text) ||
+    /\b(?:voice\s*mail|voicemail)\s+(?:box|system|message|greeting)\b/.test(text) ||
+    /\b(?:the person|the subscriber|the customer|your party|the party|the number|the wireless customer)\b.{0,80}\b(?:not available|unavailable|cannot be reached|is not accepting calls)\b/.test(text) ||
+    /\b(?:at|after)\s+the\s+tone\b/.test(text) ||
+    /\b(?:please|kindly)?\s*(?:record|leave)\s+(?:your\s+)?(?:message|name and number)\b/.test(text) ||
+    /\b(?:leave|record)\s+(?:a\s+)?message\s+(?:after|at)\s+the\s+(?:tone|beep)\b/.test(text) ||
+    /\bwhen\s+you\s+are\s+finished\b.{0,80}\b(?:hang up|press|disconnect)\b/.test(text)
+  );
+}
+
+function historyHasVoicemailSystem(history: Turn[]): boolean {
+  return history.some((turn) => turn.role === "user" && isVoicemailSystemText(turn.content));
+}
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -529,6 +555,14 @@ export const Route = createFileRoute("/api/public/bridge/turn")({
         if (!body.agent) return errorJson(400, "agent required");
 
         const history = body.history ?? [];
+        if (historyHasVoicemailSystem(history)) {
+          return json({
+            reply: "",
+            end_call: true,
+            transfer: false,
+            end_reason: "voicemail_hangup",
+          });
+        }
         const collected = detectCollectedFields(body.agent, history);
         const state = computeConvState(body.agent, history);
 
