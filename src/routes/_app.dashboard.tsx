@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { PhoneCall, Voicemail, CalendarCheck, Radio, Users } from "lucide-react";
 
 import { PageHeader, StatusPill } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { ReflectionHealthWidget } from "@/components/app/reflection-status";
 import { useDB } from "@/lib/data-store";
 import { cn } from "@/lib/utils";
@@ -19,10 +20,14 @@ export const Route = createFileRoute("/_app/dashboard")({
 });
 
 function Dashboard() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
   const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
+
+  if (!hydrated) return <PageSkeleton variant="dashboard" />;
+
 
   const now = Date.now();
   const startToday = new Date().setHours(0, 0, 0, 0);

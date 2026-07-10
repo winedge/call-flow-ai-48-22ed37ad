@@ -5,6 +5,7 @@ import { Download, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-reac
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,11 +40,13 @@ export const Route = createFileRoute("/_app/call-history")({
 });
 
 function CallHistory() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const calls = useDB(useShallow((s) => s.calls.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
   const campaigns = useDB((s) => s.campaigns);
   const contacts = useDB((s) => s.contacts);
+
 
   const [statusFilter, setStatusFilter] = useState("all");
   const [endReasonFilter, setEndReasonFilter] = useState("all");
@@ -156,6 +159,8 @@ function CallHistory() {
     setDateTo("");
     setSearch("");
   }
+
+  if (!hydrated) return <PageSkeleton variant="table" withActions />;
 
   return (
     <>

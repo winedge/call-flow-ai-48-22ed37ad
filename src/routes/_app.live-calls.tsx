@@ -5,6 +5,7 @@ import { PhoneOff, ArrowRightLeft, RefreshCw, Radio } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, EmptyState } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { useDB, type AIAgent, type Call } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ const QUEUED_STUCK_MS = 90 * 1000;
 const SILENT_STUCK_MS = 2 * 60 * 1000;
 
 function LiveCalls() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   // Slow ticker (5s) just to prune stuck queued rows and expire the live
   // window - NOT tied to per-second UI updates. Card elapsed-time counters
@@ -163,6 +165,8 @@ function LiveCalls() {
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
+
+  if (!hydrated) return <PageSkeleton variant="cards" withActions />;
 
   return (
     <>

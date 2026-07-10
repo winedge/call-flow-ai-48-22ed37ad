@@ -4,6 +4,7 @@ import { Plus, Bot, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, EmptyState } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { useDB } from "@/lib/data-store";
 
@@ -13,9 +14,13 @@ export const Route = createFileRoute("/_app/agents/")({
 });
 
 function AgentsList() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
   const del = useDB((s) => s.deleteAgent);
+
+  if (!hydrated) return <PageSkeleton variant="cards" withActions />;
+
 
   return (
     <>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function NewCampaign() {
   const router = useRouter();
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const agents = useDB(useShallow((s) => s.agents.filter((a) => a.org_id === orgId)));
   const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
@@ -113,6 +115,8 @@ function NewCampaign() {
     }
     router.navigate({ to: "/campaigns/$id", params: { id: camp.id } });
   }
+
+  if (!hydrated) return <PageSkeleton variant="form" />;
 
   return (
     <>

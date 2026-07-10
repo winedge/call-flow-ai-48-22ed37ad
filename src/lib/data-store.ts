@@ -292,6 +292,7 @@ function buildSeed() {
     settings: [] as OrgSettings[],
     currentUserId: "" as UUID,
     currentOrgId: "" as UUID,
+    hydrated: false,
   };
 }
 
@@ -764,7 +765,13 @@ export const useDB = create<DBState>()(
       },
 
     }),
-    { name: "bulkcall-db-v2" },
+    {
+      name: "bulkcall-db-v2",
+      partialize: (s) => {
+        const { hydrated: _h, ...rest } = s;
+        return rest;
+      },
+    },
   ),
 );
 

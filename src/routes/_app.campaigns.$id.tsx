@@ -8,6 +8,7 @@ import {
 } from "recharts";
 
 import { PageHeader, StatTile, StatusPill } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
@@ -24,10 +25,16 @@ const END_REASON_FILL: Record<string, string> = {
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign - BulkCall AI" }] }),
-  component: CampaignDetail,
+  component: CampaignDetailGate,
 });
 
 const OUTCOME_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#64748b"];
+
+function CampaignDetailGate() {
+  const hydrated = useDB((s) => s.hydrated);
+  if (!hydrated) return <PageSkeleton variant="detail" />;
+  return <CampaignDetail />;
+}
 
 function CampaignDetail() {
   const { id } = Route.useParams();
@@ -42,6 +49,7 @@ function CampaignDetail() {
 
   if (!campaign) throw notFound();
   const cmp = campaign;
+
 
 
   const metrics = useMemo(

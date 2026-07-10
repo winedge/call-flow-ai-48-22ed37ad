@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Save, ArrowLeft, Play, Loader2, PhoneCall, Brain, RotateCcw } from "lucide-react";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { ReflectionsPanel } from "@/components/app/reflection-status";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,8 +31,14 @@ import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
   head: () => ({ meta: [{ title: "Edit agent - BulkCall AI" }] }),
-  component: AgentEditor,
+  component: AgentEditorGate,
 });
+
+function AgentEditorGate() {
+  const hydrated = useDB((s) => s.hydrated);
+  if (!hydrated) return <PageSkeleton variant="form" />;
+  return <AgentEditor />;
+}
 
 // Kokoro speaker presets - Apache-2.0, commercially licensed.
 const VOICES = KOKORO_VOICES.map((v) => ({ id: v.id, name: v.label, language: v.language }));

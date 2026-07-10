@@ -4,6 +4,7 @@ import { Plus, Megaphone, Play, Pause, Square, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader, EmptyState, StatusPill } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,12 +20,16 @@ export const Route = createFileRoute("/_app/campaigns/")({
 });
 
 function CampaignsList() {
+  const hydrated = useDB((s) => s.hydrated);
   const orgId = useDB((s) => s.currentOrgId);
   const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
   const calls = useDB((s) => s.calls);
   const setStatus = useDB((s) => s.setCampaignStatus);
   const duplicate = useDB((s) => s.duplicateCampaign);
+
+  if (!hydrated) return <PageSkeleton variant="table" withActions />;
+
 
   return (
     <>

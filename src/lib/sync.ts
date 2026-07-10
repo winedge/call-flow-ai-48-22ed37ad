@@ -235,6 +235,7 @@ async function loadAll(userId: UUID) {
     appointments: (appts.data ?? []).map(toAppointment),
     automations: (autos.data ?? []).map(toAutomation),
     settings: [settings],
+    hydrated: true,
   });
 }
 
@@ -332,6 +333,7 @@ export function useSupabaseSync() {
           appointments: [],
           automations: [],
           settings: [],
+          hydrated: false,
         });
         return;
       }
