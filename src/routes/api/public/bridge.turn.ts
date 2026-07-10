@@ -446,10 +446,13 @@ function stripFieldReAsks(reply: string, collected: CollectedField[]): string {
 function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedField[]): string {
   const canTransfer = !!a.transfer_number?.trim();
   const fields = a.data_fields ?? [];
+  const hasRequired = fields.some((f) => f.required !== false);
   const parts = [
     "You are operating under a strict conversation state machine. Obey the current PHASE below.",
     stateGuidance(state, a, collected),
-    "Conversation flow priority: follow the configured system prompt's conversation order first. Do not treat required data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
+    hasRequired
+      ? "Conversation flow priority: your primary objective is to collect the required fields listed below. After a brief acknowledgement of the greeting, start asking for the STILL PENDING required fields one at a time. Weave the required questions in naturally alongside any discovery from the system prompt - do not save them for the end. Once ALL required fields are collected, immediately move to PHASE = CONFIRMING (confirm + next step + farewell + [END_CALL])."
+      : "Conversation flow priority: follow the configured system prompt's conversation order first. Do not treat required data fields as an opening script. In the opening and early discovery phase, acknowledge the caller and ask the next relevant discovery question from the system prompt. Never jump straight to collecting name, phone, email, or contact details unless the caller explicitly asks to book/schedule, agrees to a demo/appointment/follow-up, or volunteers contact details first.",
     a.system_prompt?.trim(),
     a.name ? `Your name is ${a.name}. This is YOUR name (the assistant's), NOT the caller's. NEVER address the caller as "${a.name}" or use "${a.name}" as if it were their name. The caller has NOT told you their name. Do NOT guess, assume, or invent a name for the caller. Address them neutrally ("you", "there") until they explicitly say their name in this conversation. If unsure, do not use any name at all.` : "You do not know the caller's name. Never invent or assume one. Address them neutrally until they say their name.",
     a.personality ? `Personality: ${a.personality}` : "",
@@ -457,14 +460,15 @@ function buildSystem(a: AgentSummary, state: ConvState, collected: CollectedFiel
     a.prompt ? `Task: ${a.prompt}` : "",
     a.business_knowledge ? `Reference:\n${a.business_knowledge}` : "",
     fields.length
-      ? `Information to collect ONLY during PHASE = COLLECTING. These fields are NOT the opening script. Ask one item at a time and confirm it. NEVER re-ask a field that is already listed under ALREADY COLLECTED - treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. email, address) unless it is in the list above.`
+      ? `Information to collect during this call. Ask one item at a time and confirm each. NEVER re-ask a field that is already listed under ALREADY COLLECTED - treat those as final:\n- ${fields.map(describeField).join("\n- ")}\n\nDo NOT ask for any other personal detail (e.g. address, DOB) unless it is in the list above.`
       : "",
     a.qualification_questions?.length
       ? `Qualification questions:\n- ${a.qualification_questions.join("\n- ")}`
       : "",
     a.end_call_conditions?.length
-      ? `End the call ONLY when: ${a.end_call_conditions.join("; ")}. When ending, first give a warm closing line (thank them, confirm next step, say goodbye) and prepend [END_CALL] to that closing reply. Never [END_CALL] on the same turn where you just received information - always confirm the info back, share the next step, and wait for the caller's goodbye first.`
-      : `Only end the call after the caller clearly says goodbye or asks to end. Never hang up mid-flow. When ending, prepend [END_CALL] to a warm closing reply.`,
+      ? `End the call ONLY when: ${a.end_call_conditions.join("; ")}. When ending, first give a warm closing line (thank them, confirm next step, say goodbye) and prepend [END_CALL] to that closing reply.`
+      : `End the call when all required information has been collected and confirmed, OR when the caller clearly says goodbye/asks to end. When ending, prepend [END_CALL] to a warm closing reply that thanks them and states the next step.`,
+
     canTransfer
       ? `If the caller asks for a human, a manager, sales, billing, or a topic clearly outside your scope, prepend [TRANSFER] to your reply (e.g. "[TRANSFER] Sure, connecting you now."). Do not use [TRANSFER] otherwise.`
       : `You cannot transfer this call. If a human is requested, apologize and offer to take a message.`,
