@@ -5,6 +5,7 @@ import { Eye, EyeOff, Save, Plus, Trash2, CheckCircle2, AlertCircle, Copy, User 
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/app/primitives";
+import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ const TZS = ["America/Los_Angeles", "America/Denver", "America/Chicago", "Americ
 type Me = { id: string; email: string; full_name: string };
 
 function SettingsPage() {
+  const hydrated = useDB((s) => s.hydrated);
   const settings = useDB(selectCurrentSettings);
   const saveSettings = useDB((s) => s.saveSettings);
   const orgId = useDB((s) => s.currentOrgId);
@@ -87,6 +89,8 @@ function SettingsPage() {
   };
 
   const projectUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+  if (!hydrated) return <PageSkeleton variant="form" />;
 
   return (
     <>
