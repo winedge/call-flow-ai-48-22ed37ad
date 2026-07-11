@@ -26,9 +26,6 @@ function Dashboard() {
   const campaigns = useDB(useShallow((s) => s.campaigns.filter((c) => c.org_id === orgId)));
   const agents = useDB((s) => s.agents);
 
-  if (!hydrated) return <PageSkeleton variant="dashboard" />;
-
-
   const now = Date.now();
   const startToday = new Date().setHours(0, 0, 0, 0);
   const callsToday = calls.filter((c) => new Date(c.started_at).getTime() >= startToday);
@@ -64,6 +61,9 @@ function Dashboard() {
 
   const activeCampaigns = campaigns.filter((c) => c.status === "running");
   const pace = activeCampaigns.reduce((s, c) => s + (c.calls_per_minute ?? 0), 0);
+
+  if (!hydrated) return <PageSkeleton variant="dashboard" />;
+
 
   return (
     <>
