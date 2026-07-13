@@ -29,9 +29,17 @@ export function computeCampaignMetrics(campaign: Campaign, calls: Call[], contac
   let firstAt: number | null = null;
   let lastAt: number | null = null;
 
+  let voicemailCount = 0;
   for (const c of cCalls) {
     if (c.status in byStatus) (byStatus as Record<string, number>)[c.status]++;
-    if (c.status === "completed" || c.status === "voicemail") answered++;
+    // Voicemail can be encoded via status OR via end_reason (AMD sets end_reason
+    // to voicemail_left / voicemail_hangup while status remains completed).
+    const isVoicemail =
+      c.status === "voicemail" ||
+      c.end_reason === "voicemail_left" ||
+      c.end_reason === "voicemail_hangup";
+    if (isVoicemail) voicemailCount++;
+    if (c.status === "completed" || isVoicemail) answered++;
     sumDur += c.duration_sec;
     sumCost += c.cost_cents;
     sumMinutes += c.ai_minutes;
