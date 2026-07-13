@@ -1,0 +1,23 @@
+{
+  "name": "BulkCall AI",
+  "short_name": "BulkCall",
+  "description": "AI-powered outbound calling at scale.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/__l5e/assets-v1/f3aaff00-aa13-48b8-8637-49f9773cc580/medinjuryclaims-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/__l5e/assets-v1/f3aaff00-aa13-48b8-8637-49f9773cc580/medinjuryclaims-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
