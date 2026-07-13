@@ -313,6 +313,7 @@ type DBState = ReturnType<typeof buildSeed> & {
   deleteContacts: (ids: UUID[]) => void;
   addCampaign: (c: Omit<Campaign, "id" | "org_id" | "created_by" | "created_at" | "status">) => Campaign;
   setCampaignStatus: (id: UUID, status: CampaignStatus) => void;
+  updateCampaign: (id: UUID, patch: Partial<Campaign>) => void;
   duplicateCampaign: (id: UUID) => void;
   addPhone: (number: string, type: PhoneNumber["type"]) => PhoneNumber;
   deletePhone: (id: UUID) => void;
@@ -643,6 +644,17 @@ export const useDB = create<DBState>()(
           campaigns: s.campaigns.map((c) => (c.id === id ? { ...c, status } : c)),
         }));
         dbWrite(supabase.from("campaigns").update({ status }).eq("id", id));
+      },
+      updateCampaign: (id, patch) => {
+        set((s) => ({
+          campaigns: s.campaigns.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+        }));
+        const dbPatch: Record<string, unknown> = { ...patch };
+        delete dbPatch.id;
+        delete dbPatch.org_id;
+        delete dbPatch.created_by;
+        delete dbPatch.created_at;
+        dbWrite(supabase.from("campaigns").update(dbPatch as never).eq("id", id));
       },
       duplicateCampaign: (id) => {
         const orig = get().campaigns.find((c) => c.id === id);

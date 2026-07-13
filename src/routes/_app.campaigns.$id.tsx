@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Play, Pause, Square, Copy, ArrowLeft, Download, Radio } from "lucide-react";
@@ -10,8 +10,10 @@ import {
 import { PageHeader, StatTile, StatusPill } from "@/components/app/primitives";
 import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
+import { RecordingPlayer } from "@/components/app/recording-player";
 import { computeCampaignMetrics, formatEta, formatDuration, callsToCsv, downloadFile, leadScore } from "@/lib/reporting";
 import { endReasonLabel, END_REASON_ORDER, END_REASON_TONE } from "@/lib/voice/call-end-reasons";
 
@@ -45,6 +47,7 @@ function CampaignDetail() {
   const calls = useDB(useShallow((s) => s.calls.filter((c) => c.campaign_id === id)));
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.list_id === campaign?.list_id)));
   const setStatus = useDB((s) => s.setCampaignStatus);
+  const updateCampaign = useDB((s) => s.updateCampaign);
   const duplicate = useDB((s) => s.duplicateCampaign);
 
   if (!campaign) throw notFound();
@@ -213,6 +216,8 @@ function CampaignDetail() {
           />
         </div>
       </div>
+
+      {cmp.status === "running" && <NextBurstBanner cpm={cmp.calls_per_minute} />}
 
       <Tabs defaultValue="live" className="w-full">
         <TabsList className="mb-6">
@@ -407,7 +412,7 @@ function CampaignDetail() {
           </div>
           <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse min-w-[860px]">
+              <table className="w-full text-sm border-collapse min-w-[1040px]">
                 <thead>
                   <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                     <th className="px-4 py-3 text-left font-medium">When</th>
@@ -418,11 +423,12 @@ function CampaignDetail() {
                     <th className="px-4 py-3 text-left font-medium">Sentiment</th>
                     <th className="px-4 py-3 text-right font-medium">Duration</th>
                     <th className="px-4 py-3 text-right font-medium">Score</th>
+                    <th className="px-4 py-3 text-left font-medium">Recording</th>
                   </tr>
                 </thead>
                 <tbody>
                   {calls.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-xs text-neutral-500">No calls yet</td></tr>
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-xs text-neutral-500">No calls yet</td></tr>
                   ) : (
                     calls.slice(0, 200).map((c) => (
                       <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
@@ -438,6 +444,13 @@ function CampaignDetail() {
                         <td className="px-4 py-3 text-neutral-600">{c.sentiment ?? "-"}</td>
                         <td className="px-4 py-3 text-right font-mono text-neutral-600">{formatDuration(c.duration_sec)}</td>
                         <td className="px-4 py-3 text-right font-mono text-neutral-800">{leadScore(c)}</td>
+                        <td className="px-4 py-3">
+                          {c.recording_url ? (
+                            <RecordingPlayer callId={c.id} />
+                          ) : (
+                            <span className="text-[11px] text-neutral-400 font-mono">-</span>
+                          )}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -454,7 +467,13 @@ function CampaignDetail() {
             <InfoCard title="Contact list" body={list?.name ?? "-"} sub={list?.description} />
             <InfoCard title="From number" body={phone?.number ?? "-"} sub={phone?.type ?? ""} />
             <InfoCard title="Timezone" body={cmp.timezone} sub={`${cmp.calling_hours.start}–${cmp.calling_hours.end}`} />
-            <InfoCard title="Pace" body={`${cmp.calls_per_minute} calls/min`} />
+            <PaceEditor
+              value={cmp.calls_per_minute}
+              onChange={(v) => {
+                updateCampaign(cmp.id, { calls_per_minute: v });
+                toast.success(`Pace updated to ${v} calls/min`);
+              }}
+            />
             <InfoCard title="Retries" body={`${cmp.retry_rules.max_attempts}× · ${cmp.retry_rules.gap_minutes}m gap`} />
           </div>
         </TabsContent>
@@ -484,6 +503,80 @@ function InfoCard({ title, body, sub }: { title: string; body: string; sub?: str
       <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-2 font-mono">{title}</p>
       <p className="text-sm font-medium text-neutral-900">{body}</p>
       {sub && <p className="text-[11px] text-neutral-500 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+/**
+ * Countdown to the next campaign-tick burst.
+ * pg_cron fires /api/public/hooks/campaign-tick once every minute at :00.
+ */
+function NextBurstBanner({ cpm }: { cpm: number }) {
+  const [secondsLeft, setSecondsLeft] = useState(() => 60 - new Date().getSeconds());
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const remaining = 60 - new Date().getSeconds();
+      setSecondsLeft(remaining === 60 ? 0 : remaining);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const pct = ((60 - secondsLeft) / 60) * 100;
+  return (
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-4 mb-6 flex items-center gap-4">
+      <div className="flex-1">
+        <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-mono">Next burst in</p>
+        <p className="text-lg font-mono text-brand-primary">
+          {secondsLeft}s
+          <span className="text-neutral-500 text-xs ml-2">
+            up to {cpm} call{cpm === 1 ? "" : "s"}
+          </span>
+        </p>
+      </div>
+      <div className="w-40 h-2 bg-neutral-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-brand-primary transition-all duration-1000 ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Inline-editable pace card. Saves immediately on blur / Enter, with a
+ * short debounce so rapid typing doesn't fire a write per keystroke.
+ */
+function PaceEditor({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [local, setLocal] = useState(String(value));
+  useEffect(() => {
+    setLocal(String(value));
+  }, [value]);
+
+  const commit = () => {
+    const n = Math.max(1, Math.min(60, Math.round(Number(local) || 0)));
+    if (n !== value) onChange(n);
+    setLocal(String(n));
+  };
+
+  return (
+    <div className="bg-white ring-1 ring-black/5 rounded-xl p-5">
+      <p className="text-[11px] uppercase tracking-wider text-neutral-500 mb-2 font-mono">Pace</p>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          min={1}
+          max={60}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
+          className="w-20 h-9 font-mono"
+        />
+        <span className="text-sm text-neutral-600">calls / min</span>
+      </div>
+      <p className="text-[11px] text-neutral-500 mt-2">Applied on the next burst (top of the minute).</p>
     </div>
   );
 }
