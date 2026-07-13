@@ -127,10 +127,7 @@ export function Topbar() {
               <UserIcon className="size-3.5 mr-2" /> Settings
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => {
-                toast.info("Auth wiring pending Lovable Cloud enablement");
-                router.navigate({ to: "/auth" });
-              }}
+              onClick={handleSignOut}
             >
               <LogOut className="size-3.5 mr-2" /> Sign out
             </DropdownMenuItem>
