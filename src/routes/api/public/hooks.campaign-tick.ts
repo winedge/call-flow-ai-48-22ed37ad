@@ -58,13 +58,25 @@ async function runCampaign(
   const slots = Math.max(0, Math.min(campaign.calls_per_minute, slotsByConcurrency));
   if (slots <= 0) return { dialed: 0, skipped: 0, completed: false };
 
-  // Load all contacts in the list.
-  const { data: contactsRaw } = await admin
-    .from("contacts")
-    .select("id,phone")
-    .eq("list_id", campaign.list_id)
-    .eq("user_id", campaign.user_id);
-  const contacts = (contactsRaw ?? []) as ContactRow[];
+  // Load all contacts in the list (paginated - PostgREST caps 1000/request).
+  const contacts: ContactRow[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    for (let i = 0; i < 1000; i++) {
+      const { data, error } = await admin
+        .from("contacts")
+        .select("id,phone")
+        .eq("list_id", campaign.list_id)
+        .eq("user_id", campaign.user_id)
+        .range(from, from + pageSize - 1);
+      if (error) break;
+      const rows = (data ?? []) as ContactRow[];
+      contacts.push(...rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+  }
   if (contacts.length === 0) {
     if (active === 0) {
       await admin
@@ -76,12 +88,24 @@ async function runCampaign(
     return { dialed: 0, skipped: 0, completed: false };
   }
 
-  // Prior calls for this campaign (per contact history).
-  const { data: priorCallsRaw } = await admin
-    .from("calls")
-    .select("contact_id,ended_at,started_at")
-    .eq("campaign_id", campaign.id);
-  const priorCalls = (priorCallsRaw ?? []) as CallCountRow[];
+  // Prior calls for this campaign (paginated).
+  const priorCalls: CallCountRow[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    for (let i = 0; i < 1000; i++) {
+      const { data, error } = await admin
+        .from("calls")
+        .select("contact_id,ended_at,started_at")
+        .eq("campaign_id", campaign.id)
+        .range(from, from + pageSize - 1);
+      if (error) break;
+      const rows = (data ?? []) as CallCountRow[];
+      priorCalls.push(...rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+  }
   const byContact = new Map<
     string,
     { attempts: number; lastStartMs: number; anyActive: boolean }
