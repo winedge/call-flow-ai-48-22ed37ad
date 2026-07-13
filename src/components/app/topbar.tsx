@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronDown, Plus, LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
+import { supabase } from "@/integrations/supabase/client";
 
 export function Topbar() {
   const router = useRouter();
