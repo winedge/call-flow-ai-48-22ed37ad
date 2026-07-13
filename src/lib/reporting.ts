@@ -76,7 +76,7 @@ export function computeCampaignMetrics(campaign: Campaign, calls: Call[], contac
     completed: byStatus.completed,
     answered,
     noAnswer: byStatus.no_answer,
-    voicemail: byStatus.voicemail,
+    voicemail: voicemailCount,
     failed: byStatus.failed,
     busy: byStatus.busy,
     callbacks,
