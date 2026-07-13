@@ -412,7 +412,7 @@ function CampaignDetail() {
           </div>
           <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse min-w-[860px]">
+              <table className="w-full text-sm border-collapse min-w-[1040px]">
                 <thead>
                   <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
                     <th className="px-4 py-3 text-left font-medium">When</th>
