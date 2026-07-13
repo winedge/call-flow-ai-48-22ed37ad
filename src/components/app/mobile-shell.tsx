@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
@@ -103,6 +105,7 @@ export function MobileTopBar() {
 
 function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const org = useDB(selectCurrentOrg);
   const user = useDB(selectCurrentUser);
   const orgs = useDB((s) => s.organizations);
@@ -214,10 +217,17 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
           </div>
           <button
             aria-label="Sign out"
-            onClick={() => {
-              toast.info("Auth wiring pending Lovable Cloud enablement");
+            onClick={async () => {
+              try {
+                await queryClient.cancelQueries();
+                queryClient.clear();
+                await supabase.auth.signOut();
+                toast.success("Signed out");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Sign out failed");
+              }
               onNavigate();
-              router.navigate({ to: "/auth" });
+              router.navigate({ to: "/auth", replace: true });
             }}
             className="size-9 grid place-items-center rounded-full text-neutral-600 active:bg-neutral-200 transition"
           >

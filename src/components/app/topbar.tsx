@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronDown, Plus, LogOut, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   DropdownMenu,
@@ -12,14 +13,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
+import { supabase } from "@/integrations/supabase/client";
 
 export function Topbar() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const org = useDB(selectCurrentOrg);
   const user = useDB(selectCurrentUser);
   const orgs = useDB((s) => s.organizations);
   const switchOrg = useDB((s) => s.switchOrg);
   const createOrg = useDB((s) => s.createOrg);
+
+  async function handleSignOut() {
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await supabase.auth.signOut();
+      toast.success("Signed out");
+      router.navigate({ to: "/auth", replace: true });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sign out failed");
+    }
+  }
 
   return (
     <header className="h-16 border-b border-surface-border/60 flex items-center justify-between px-8 bg-surface-base/80 backdrop-blur-md sticky top-0 z-20">
@@ -112,10 +127,7 @@ export function Topbar() {
               <UserIcon className="size-3.5 mr-2" /> Settings
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => {
-                toast.info("Auth wiring pending Lovable Cloud enablement");
-                router.navigate({ to: "/auth" });
-              }}
+              onClick={handleSignOut}
             >
               <LogOut className="size-3.5 mr-2" /> Sign out
             </DropdownMenuItem>
