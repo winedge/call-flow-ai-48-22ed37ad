@@ -67,9 +67,7 @@ function CampaignDetail() {
           c.campaign_id === cmp.id &&
           (c.status === "in_progress" ||
             c.status === "dialing" ||
-            c.status === "queued" ||
-            c.status === "ringing" ||
-            c.status === "initiated"),
+            c.status === "queued"),
       ),
     [calls, cmp.id],
   );
