@@ -779,10 +779,17 @@ export const useDB = create<DBState>()(
     }),
     {
       name: "bulkcall-db-v2",
-      partialize: (s) => {
-        const { hydrated: _h, ...rest } = s;
-        return rest;
-      },
+      // Only persist lightweight session/preference state. Server-hydrated
+      // collections (contacts, calls, campaigns, ...) can be tens of MB and
+      // will blow past the ~5MB localStorage quota, throwing on every write
+      // and blocking the main thread on JSON.stringify.
+      partialize: (s) => ({
+        currentUserId: s.currentUserId,
+        currentOrgId: s.currentOrgId,
+        users: s.users,
+        organizations: s.organizations,
+        members: s.members,
+      }),
     },
   ),
 );
