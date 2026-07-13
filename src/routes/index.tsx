@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { AuthPage } from "@/components/auth/auth-page";
 import { supabase } from "@/integrations/supabase/client";
-import { AuthPage } from "./auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
