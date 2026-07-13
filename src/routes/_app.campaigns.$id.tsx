@@ -459,7 +459,13 @@ function CampaignDetail() {
             <InfoCard title="Contact list" body={list?.name ?? "-"} sub={list?.description} />
             <InfoCard title="From number" body={phone?.number ?? "-"} sub={phone?.type ?? ""} />
             <InfoCard title="Timezone" body={cmp.timezone} sub={`${cmp.calling_hours.start}–${cmp.calling_hours.end}`} />
-            <InfoCard title="Pace" body={`${cmp.calls_per_minute} calls/min`} />
+            <PaceEditor
+              value={cmp.calls_per_minute}
+              onChange={(v) => {
+                updateCampaign(cmp.id, { calls_per_minute: v });
+                toast.success(`Pace updated to ${v} calls/min`);
+              }}
+            />
             <InfoCard title="Retries" body={`${cmp.retry_rules.max_attempts}× · ${cmp.retry_rules.gap_minutes}m gap`} />
           </div>
         </TabsContent>
