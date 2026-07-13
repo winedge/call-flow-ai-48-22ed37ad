@@ -106,6 +106,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      {
+        rel: "icon",
+        type: "image/png",
+        href: "/__l5e/assets-v1/f3aaff00-aa13-48b8-8637-49f9773cc580/medinjuryclaims-logo.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/__l5e/assets-v1/f3aaff00-aa13-48b8-8637-49f9773cc580/medinjuryclaims-logo.png",
+      },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
