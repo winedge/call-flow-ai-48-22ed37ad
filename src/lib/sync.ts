@@ -248,7 +248,7 @@ async function loadAll(userId: UUID) {
     currentOrgId: userId,
     agents: (agents.data ?? []).map(toAgent),
     lists: (lists.data ?? []).map(toList),
-    contacts: (contacts.data ?? []).map(toContact),
+    contacts: contactsRows.map(toContact),
     phones: (phones.data ?? []).map(toPhone),
     campaigns: (campaigns.data ?? []).map(toCampaign),
     calls: (calls.data ?? []).map(toCall),
