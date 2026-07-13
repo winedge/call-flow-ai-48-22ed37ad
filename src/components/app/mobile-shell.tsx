@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 import { cn } from "@/lib/utils";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
