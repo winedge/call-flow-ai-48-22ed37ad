@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Play, Pause, Square, Copy, ArrowLeft, Download, Radio } from "lucide-react";
@@ -10,8 +10,10 @@ import {
 import { PageHeader, StatTile, StatusPill } from "@/components/app/primitives";
 import { PageSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDB } from "@/lib/data-store";
+import { RecordingPlayer } from "@/components/app/recording-player";
 import { computeCampaignMetrics, formatEta, formatDuration, callsToCsv, downloadFile, leadScore } from "@/lib/reporting";
 import { endReasonLabel, END_REASON_ORDER, END_REASON_TONE } from "@/lib/voice/call-end-reasons";
 
