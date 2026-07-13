@@ -88,12 +88,24 @@ async function runCampaign(
     return { dialed: 0, skipped: 0, completed: false };
   }
 
-  // Prior calls for this campaign (per contact history).
-  const { data: priorCallsRaw } = await admin
-    .from("calls")
-    .select("contact_id,ended_at,started_at")
-    .eq("campaign_id", campaign.id);
-  const priorCalls = (priorCallsRaw ?? []) as CallCountRow[];
+  // Prior calls for this campaign (paginated).
+  const priorCalls: CallCountRow[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    for (let i = 0; i < 1000; i++) {
+      const { data, error } = await admin
+        .from("calls")
+        .select("contact_id,ended_at,started_at")
+        .eq("campaign_id", campaign.id)
+        .range(from, from + pageSize - 1);
+      if (error) break;
+      const rows = (data ?? []) as CallCountRow[];
+      priorCalls.push(...rows);
+      if (rows.length < pageSize) break;
+      from += pageSize;
+    }
+  }
   const byContact = new Map<
     string,
     { attempts: number; lastStartMs: number; anyActive: boolean }
