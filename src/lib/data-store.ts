@@ -788,7 +788,7 @@ export const useDB = create<DBState>()(
         currentOrgId: s.currentOrgId,
         users: s.users,
         organizations: s.organizations,
-        orgMembers: s.orgMembers,
+        members: s.members,
       }),
     },
   ),
