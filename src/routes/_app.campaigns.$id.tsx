@@ -61,8 +61,15 @@ function CampaignDetail() {
   );
 
   const liveCalls = useMemo(
-    () => calls.filter((c) => c.status === "in_progress" || c.status === "dialing"),
-    [calls],
+    () =>
+      calls.filter(
+        (c) =>
+          c.campaign_id === cmp.id &&
+          (c.status === "in_progress" ||
+            c.status === "dialing" ||
+            c.status === "queued"),
+      ),
+    [calls, cmp.id],
   );
 
   const outcomeData = useMemo(() => {
