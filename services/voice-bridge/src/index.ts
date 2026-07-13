@@ -264,10 +264,28 @@ const server = Bun.serve<Ctx>({
           agent_id: session.agentId,
           stream_sid: session.streamSid,
         });
-        void speak(
-          session,
-          session.agent.greeting || "Hello, this is your AI assistant.",
-        );
+
+        // Wait for the callee to speak first ("Hello?") before the agent
+        // greets. Twilio's `start` fires the instant the media stream opens,
+        // which on outbound calls is essentially at pickup — greeting there
+        // means the agent talks over the human's hello (and over the first
+        // second of a voicemail intro). Delay 1500ms so the human leads;
+        // any interim STT during the wait cancels the greeting so the agent
+        // can respond to what they said instead of barrelling in.
+        const speakFirst = session.agent.speak_first ?? true;
+        if (!speakFirst) return; // agent stays silent until user speaks
+        const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
+        let aborted = false;
+        const prevCancel = session.cancelSpeech;
+        session.cancelSpeech = () => { aborted = true; prevCancel(); };
+        await new Promise((r) => setTimeout(r, 1500));
+        session.cancelSpeech = prevCancel;
+        if (aborted || session.closed || session.pendingUser.trim().length > 0) {
+          // Human already started talking — let the STT final drive the first turn.
+          return;
+        }
+        void speak(session, greeting);
+
       } else if (msg.event === "media" && session.dg && msg.media) {
         const bytes = Uint8Array.from(atob(msg.media.payload), (c) =>
           c.charCodeAt(0),
