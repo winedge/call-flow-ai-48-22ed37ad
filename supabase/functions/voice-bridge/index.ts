@@ -1333,9 +1333,22 @@ Deno.serve((req) => {
       }
       if (session.agent.speak_first !== false) {
         const greeting = session.agent.greeting || "Hello, this is your AI assistant.";
-        session.history.push({ role: "assistant", content: greeting });
-        session.greeted = true;
-        void speak(session, greeting);
+        // Wait 1500ms so the human's "Hello?" (or voicemail intro) leads
+        // instead of being talked over. If the caller speaks during the
+        // wait, cancelSpeech fires and we skip the greeting so the STT
+        // final can drive the first turn.
+        let aborted = false;
+        const prevCancel = session.cancelSpeech;
+        session.cancelSpeech = () => { aborted = true; prevCancel(); };
+        await new Promise((r) => setTimeout(r, 1500));
+        session.cancelSpeech = prevCancel;
+        if (aborted || session.closed) {
+          // Listening already started above; user's transcript drives turn 1.
+        } else {
+          session.history.push({ role: "assistant", content: greeting });
+          session.greeted = true;
+          void speak(session, greeting);
+        }
       } else {
         // Listening already started above.
       }
