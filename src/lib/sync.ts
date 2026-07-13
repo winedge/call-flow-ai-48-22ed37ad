@@ -198,11 +198,31 @@ function toAutomation(r: Row): Automation {
   };
 }
 
+async function fetchAllContacts(): Promise<Row[]> {
+  const pageSize = 1000;
+  const all: Row[] = [];
+  let from = 0;
+  // PostgREST caps a single request at 1000 rows; page until exhausted.
+  for (let i = 0; i < 1000; i++) {
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) break;
+    const rows = (data ?? []) as Row[];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 async function loadAll(userId: UUID) {
-  const [agents, lists, contacts, phones, campaigns, calls, appts, autos, settingsRow] = await Promise.all([
+  const [agents, lists, contactsRows, phones, campaigns, calls, appts, autos, settingsRow] = await Promise.all([
     supabase.from("agents").select("*").order("created_at", { ascending: false }),
     supabase.from("contact_lists").select("*").order("created_at", { ascending: false }),
-    supabase.from("contacts").select("*").order("created_at", { ascending: false }),
+    fetchAllContacts(),
     supabase.from("phone_numbers").select("*").order("created_at", { ascending: false }),
     supabase.from("campaigns").select("*").order("created_at", { ascending: false }),
     supabase.from("calls").select("*").order("started_at", { ascending: false }).limit(500),
