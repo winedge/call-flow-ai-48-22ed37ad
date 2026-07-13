@@ -242,6 +242,7 @@ function CampaignDetail() {
             <StatTile label="Answered" value={metrics.answered} />
             <StatTile label="No answer" value={metrics.noAnswer} />
             <StatTile label="Voicemail" value={metrics.voicemail} />
+            <StatTile label="Customer hangups" value={metrics.customerHangups} />
             <StatTile label="Busy" value={metrics.busy} />
             <StatTile label="Failed" value={metrics.failed} />
             <StatTile label="Callbacks" value={metrics.callbacks} />
