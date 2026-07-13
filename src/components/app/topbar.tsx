@@ -17,11 +17,24 @@ import { supabase } from "@/integrations/supabase/client";
 
 export function Topbar() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const org = useDB(selectCurrentOrg);
   const user = useDB(selectCurrentUser);
   const orgs = useDB((s) => s.organizations);
   const switchOrg = useDB((s) => s.switchOrg);
   const createOrg = useDB((s) => s.createOrg);
+
+  async function handleSignOut() {
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await supabase.auth.signOut();
+      toast.success("Signed out");
+      router.navigate({ to: "/auth", replace: true });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sign out failed");
+    }
+  }
 
   return (
     <header className="h-16 border-b border-surface-border/60 flex items-center justify-between px-8 bg-surface-base/80 backdrop-blur-md sticky top-0 z-20">
