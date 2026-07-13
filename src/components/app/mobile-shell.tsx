@@ -84,7 +84,7 @@ export function MobileTopBar() {
       </Sheet>
 
       <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
-        <img src={logoAsset.url} alt="BulkCall AI" className="h-5 w-auto object-contain shrink-0" />
+        <img src={logoAsset.url} alt="Medical Calling AI" className="h-5 w-auto object-contain shrink-0" />
         <div className="min-w-0 leading-tight">
           <p className="truncate text-[9px] font-mono uppercase tracking-wider text-neutral-500">
             {org?.name ?? "-"}
@@ -126,7 +126,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
       <SheetHeader className="p-5 pb-3 border-b border-surface-border/60">
         <SheetTitle asChild>
           <div className="flex items-center gap-3">
-            <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain shrink-0" />
+            <img src={logoAsset.url} alt="Medical Calling AI" className="h-6 w-auto object-contain shrink-0" />
             <div className="min-w-0 text-left">
               <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
                 {org?.name ?? "-"}

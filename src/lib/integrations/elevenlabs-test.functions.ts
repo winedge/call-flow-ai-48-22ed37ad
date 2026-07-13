@@ -53,7 +53,7 @@ export const testElevenLabs = createServerFn({ method: "POST" })
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: "ElevenLabs is connected. Your BulkCall AI voice is ready.",
+          text: "ElevenLabs is connected. Your Medical Calling AI voice is ready.",
           model_id: "eleven_multilingual_v2",
         }),
       },

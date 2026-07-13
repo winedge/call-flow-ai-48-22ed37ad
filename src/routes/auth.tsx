@@ -13,8 +13,8 @@ import { lovable } from "@/integrations/lovable";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in - BulkCall AI" },
-      { name: "description", content: "Sign in to BulkCall AI to manage your AI calling campaigns." },
+      { title: "Sign in - Medical Calling AI" },
+      { name: "description", content: "Sign in to Medical Calling AI to manage your AI calling campaigns." },
     ],
   }),
   component: AuthPage,
@@ -76,7 +76,7 @@ function AuthPage() {
     <div className="min-h-screen bg-surface-base flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Link to="/" className="flex items-center justify-center gap-3 mb-8">
-          <img src={logoAsset.url} alt="BulkCall AI" className="h-8 w-auto object-contain" />
+          <img src={logoAsset.url} alt="Medical Calling AI" className="h-8 w-auto object-contain" />
         </Link>
 
         <div className="bg-white ring-1 ring-black/5 rounded-xl p-6 backdrop-blur-sm">

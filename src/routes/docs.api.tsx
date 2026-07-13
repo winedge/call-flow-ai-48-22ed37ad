@@ -4,11 +4,11 @@ import { useEffect } from "react";
 export const Route = createFileRoute("/docs/api")({
   head: () => ({
     meta: [
-      { title: "BulkCall AI - REST API Reference" },
+      { title: "Medical Calling AI - REST API Reference" },
       {
         name: "description",
         content:
-          "Interactive OpenAPI reference for BulkCall AI: agents, contacts, campaigns, calls, automations, and Twilio webhooks.",
+          "Interactive OpenAPI reference for Medical Calling AI: agents, contacts, campaigns, calls, automations, and Twilio webhooks.",
       },
     ],
     links: [
@@ -48,7 +48,7 @@ function ApiDocs() {
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div>
             <div className="font-mono text-xs uppercase tracking-widest text-emerald-400">
-              BulkCall AI
+              Medical Calling AI
             </div>
             <h1 className="text-lg font-semibold">REST API Reference</h1>
           </div>

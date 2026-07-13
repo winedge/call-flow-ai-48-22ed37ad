@@ -51,7 +51,7 @@ export function Sidebar() {
     <aside className="w-64 flex-shrink-0 border-r border-surface-border/60 bg-surface-base flex flex-col h-screen sticky top-0">
       <div className="p-6">
         <Link to="/dashboard" className="flex items-center gap-3">
-          <img src={logoAsset.url} alt="BulkCall AI" className="h-6 w-auto object-contain" />
+          <img src={logoAsset.url} alt="Medical Calling AI" className="h-6 w-auto object-contain" />
           <div className="min-w-0">
             <p className="truncate text-[10px] font-mono uppercase tracking-wider text-neutral-500">
               {org?.name ?? "-"}

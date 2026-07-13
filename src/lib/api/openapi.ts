@@ -420,10 +420,10 @@ export function buildOpenApiSpec(origin: string) {
   return {
     openapi: "3.0.3",
     info: {
-      title: "BulkCall AI REST API",
+      title: "Medical Calling AI REST API",
       version: "1.0.0",
       description:
-        "Programmatic access to BulkCall AI: agents, contacts, campaigns, calls, automations, and webhook receivers for Twilio call events.",
+        "Programmatic access to Medical Calling AI: agents, contacts, campaigns, calls, automations, and webhook receivers for Twilio call events.",
     },
     servers: [{ url: origin }],
     components: {
@@ -550,7 +550,7 @@ export function buildOpenApiSpec(origin: string) {
           tags: ["webhooks"],
           summary: "Outbound post-call webhook (delivered to your URL)",
           description:
-            "This is NOT an endpoint on BulkCall AI - it documents the payload BulkCall AI POSTs to the `url` configured on any `webhook`-action automation whose trigger fires after a call ends.\n\nEmitted from two places with the same shape:\n- The voice bridge, when it reports the final transcript (fires `call_completed`).\n- The Twilio status callback, on terminal transitions (fires `call_completed`, `call_failed`, or `call_no_answer`).\n\nContent-Type is `application/json`. There is no signature header on outbound deliveries yet - validate by IP allow-list or a shared secret in the URL until HMAC signing ships.",
+            "This is NOT an endpoint on Medical Calling AI - it documents the payload Medical Calling AI POSTs to the `url` configured on any `webhook`-action automation whose trigger fires after a call ends.\n\nEmitted from two places with the same shape:\n- The voice bridge, when it reports the final transcript (fires `call_completed`).\n- The Twilio status callback, on terminal transitions (fires `call_completed`, `call_failed`, or `call_no_answer`).\n\nContent-Type is `application/json`. There is no signature header on outbound deliveries yet - validate by IP allow-list or a shared secret in the URL until HMAC signing ships.",
           security: [],
           requestBody: {
             required: true,

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dispatch Board - BulkCall AI" },
+      { title: "Dispatch Board - Medical Calling AI" },
       { name: "description", content: "Live call-ops console for your outbound AI dispatchers." },
     ],
   }),

@@ -20,7 +20,7 @@ import { useDB } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/campaigns/new")({
-  head: () => ({ meta: [{ title: "New campaign - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "New campaign - Medical Calling AI" }] }),
   component: NewCampaign,
 });
 

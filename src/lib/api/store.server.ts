@@ -88,7 +88,7 @@ type DB = {
   automations: Automation[];
 };
 
-const g = globalThis as unknown as { __bulkcall_db?: DB };
+const g = globalThis as unknown as { __medical-calling-ai_db?: DB };
 
 function seed(): DB {
   return {
@@ -102,8 +102,8 @@ function seed(): DB {
 
 
 export function db(): DB {
-  if (!g.__bulkcall_db) g.__bulkcall_db = seed();
-  return g.__bulkcall_db;
+  if (!g.__medical-calling-ai_db) g.__medical-calling-ai_db = seed();
+  return g.__medical-calling-ai_db;
 }
 
 export function newId() {

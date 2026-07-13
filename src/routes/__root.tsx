@@ -83,21 +83,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BulkCall AI - AI-Powered Outbound Calling at Scale" },
+      { title: "Medical Calling AI - AI-Powered Outbound Calling at Scale" },
       {
         name: "description",
         content:
           "Launch AI-powered outbound calling campaigns at scale. Twilio telephony, ElevenLabs voices, GPT-powered conversations.",
       },
-      { name: "author", content: "BulkCall AI" },
-      { property: "og:title", content: "BulkCall AI - AI-Powered Outbound Calling at Scale" },
+      { name: "author", content: "Medical Calling AI" },
+      { property: "og:title", content: "Medical Calling AI - AI-Powered Outbound Calling at Scale" },
       {
         property: "og:description",
         content: "AI-powered outbound calling campaigns at scale.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "BulkCall AI - AI-Powered Outbound Calling at Scale" },
+      { name: "twitter:title", content: "Medical Calling AI - AI-Powered Outbound Calling at Scale" },
       { name: "description", content: "Launch AI-powered outbound calling campaigns at scale. Twilio telephony, ElevenLabs voices, GPT-powered conversations." },
       { property: "og:description", content: "Launch AI-powered outbound calling campaigns at scale. Twilio telephony, ElevenLabs voices, GPT-powered conversations." },
       { name: "twitter:description", content: "Launch AI-powered outbound calling campaigns at scale. Twilio telephony, ElevenLabs voices, GPT-powered conversations." },

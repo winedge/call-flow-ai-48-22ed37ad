@@ -35,7 +35,7 @@ const TONE_CLASS: Record<"green" | "amber" | "blue" | "red" | "gray", string> = 
 };
 
 export const Route = createFileRoute("/_app/call-history")({
-  head: () => ({ meta: [{ title: "Call history - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Call history - Medical Calling AI" }] }),
   component: CallHistory,
 });
 

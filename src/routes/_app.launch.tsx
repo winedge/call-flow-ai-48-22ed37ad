@@ -60,7 +60,7 @@ import {
 export const Route = createFileRoute("/_app/launch")({
   head: () => ({
     meta: [
-      { title: "Launch a campaign - BulkCall AI" },
+      { title: "Launch a campaign - Medical Calling AI" },
       {
         name: "description",
         content:
@@ -121,7 +121,7 @@ const PRESETS: { id: string; label: string; icon: React.ElementType; brief: stri
 ];
 
 const SAMPLE_CSV = "phone,name,email,company\n+14155551234,Ada Lovelace,ada@example.com,Analytical Engines\n+442071234567,Alan Turing,alan@example.co.uk,Bletchley Park\n";
-const DRAFT_KEY = "bulkcall-launch-draft-v1";
+const DRAFT_KEY = "medical-calling-ai-launch-draft-v1";
 
 type Step = 1 | 2 | 3 | 4;
 type ContactRow = Omit<Contact, "id" | "org_id" | "created_at">;
@@ -397,7 +397,7 @@ function LaunchWizard() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "bulkcall-contacts-sample.csv";
+    a.download = "medical-calling-ai-contacts-sample.csv";
     a.click();
     URL.revokeObjectURL(url);
   }

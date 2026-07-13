@@ -778,7 +778,7 @@ export const useDB = create<DBState>()(
 
     }),
     {
-      name: "bulkcall-db-v2",
+      name: "medical-calling-ai-db-v2",
       // Only persist lightweight session/preference state. Server-hydrated
       // collections (contacts, calls, campaigns, ...) can be tens of MB and
       // will blow past the ~5MB localStorage quota, throwing on every write

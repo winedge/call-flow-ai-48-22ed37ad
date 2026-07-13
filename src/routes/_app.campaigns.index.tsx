@@ -15,7 +15,7 @@ import {
 import { useDB } from "@/lib/data-store";
 
 export const Route = createFileRoute("/_app/campaigns/")({
-  head: () => ({ meta: [{ title: "Campaigns - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaigns - Medical Calling AI" }] }),
   component: CampaignsList,
 });
 

@@ -26,7 +26,7 @@ const END_REASON_FILL: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/_app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Campaign - Medical Calling AI" }] }),
   component: CampaignDetailGate,
 });
 
