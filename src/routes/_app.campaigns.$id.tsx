@@ -217,6 +217,8 @@ function CampaignDetail() {
         </div>
       </div>
 
+      {cmp.status === "running" && <NextBurstBanner cpm={cmp.calls_per_minute} />}
+
       <Tabs defaultValue="live" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="live">
