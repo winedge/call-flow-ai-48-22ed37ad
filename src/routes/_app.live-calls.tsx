@@ -11,7 +11,7 @@ import { useDB, type AIAgent, type Call } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/live-calls")({
-  head: () => ({ meta: [{ title: "Live calls - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Live calls - Medical Calling AI" }] }),
   component: LiveCalls,
 });
 

@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth/reset-password")({
   head: () => ({
-    meta: [{ title: "Set new password - BulkCall AI" }],
+    meta: [{ title: "Set new password - Medical Calling AI" }],
   }),
   component: ResetPasswordPage,
 });
@@ -53,7 +53,7 @@ function ResetPasswordPage() {
             <Phone className="size-4 text-primary-foreground" strokeWidth={2.5} />
           </div>
           <span className="font-medium tracking-tight text-neutral-900 text-lg">
-            BulkCall AI
+            Medical Calling AI
           </span>
         </div>
 

@@ -30,7 +30,7 @@ import { listElevenLabsVoices, previewElevenLabsVoice, type ElevenLabsVoice } fr
 import { initiateCall } from "@/lib/voice/telephony/twilio.functions";
 
 export const Route = createFileRoute("/_app/agents/$id")({
-  head: () => ({ meta: [{ title: "Edit agent - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Edit agent - Medical Calling AI" }] }),
   component: AgentEditorGate,
 });
 

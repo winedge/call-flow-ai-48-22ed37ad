@@ -26,7 +26,7 @@ import { Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/_app/settings")({
-  head: () => ({ meta: [{ title: "Settings - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Settings - Medical Calling AI" }] }),
   component: SettingsPage,
 });
 
@@ -196,7 +196,7 @@ function SettingsPage() {
                 </Select>
               </FieldRow>
               <FieldRow label="Webhook URL">
-                <Input defaultValue={settings?.webhook_url ?? ""} placeholder="https://yourapp.com/webhooks/bulkcall" onBlur={(e) => saveWebhook(e.target.value)} />
+                <Input defaultValue={settings?.webhook_url ?? ""} placeholder="https://yourapp.com/webhooks/medical-calling-ai" onBlur={(e) => saveWebhook(e.target.value)} />
               </FieldRow>
             </div>
           </Card>

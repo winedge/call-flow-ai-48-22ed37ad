@@ -1,6 +1,6 @@
 {
-  "name": "BulkCall AI",
-  "short_name": "BulkCall",
+  "name": "Medical Calling AI",
+  "short_name": "Medical Calling AI",
   "description": "AI-powered outbound calling at scale.",
   "start_url": "/",
   "display": "standalone",

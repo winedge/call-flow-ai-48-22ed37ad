@@ -15,7 +15,7 @@ import { sentimentLabel } from "@/components/app/sentiment-badge";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_app/calls/$id")({
-  head: () => ({ meta: [{ title: "Call - BulkCall AI" }] }),
+  head: () => ({ meta: [{ title: "Call - Medical Calling AI" }] }),
   component: CallDetail,
 });
 
