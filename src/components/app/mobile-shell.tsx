@@ -105,6 +105,7 @@ export function MobileTopBar() {
 
 function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const org = useDB(selectCurrentOrg);
   const user = useDB(selectCurrentUser);
   const orgs = useDB((s) => s.organizations);
