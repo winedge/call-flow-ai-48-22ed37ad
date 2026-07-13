@@ -66,7 +66,9 @@ export type AgentConfig = {
   greeting: string;
   system_prompt: string;
   temperature: number;
+  speak_first?: boolean;
 };
+
 
 export function fetchAgent(id: string): Promise<AgentConfig> {
   return get<AgentConfig>(`/api/public/bridge/agent?id=${encodeURIComponent(id)}`);
