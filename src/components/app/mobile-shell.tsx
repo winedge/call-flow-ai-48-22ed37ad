@@ -217,10 +217,17 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
           </div>
           <button
             aria-label="Sign out"
-            onClick={() => {
-              toast.info("Auth wiring pending Lovable Cloud enablement");
+            onClick={async () => {
+              try {
+                await queryClient.cancelQueries();
+                queryClient.clear();
+                await supabase.auth.signOut();
+                toast.success("Signed out");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Sign out failed");
+              }
               onNavigate();
-              router.navigate({ to: "/auth" });
+              router.navigate({ to: "/auth", replace: true });
             }}
             className="size-9 grid place-items-center rounded-full text-neutral-600 active:bg-neutral-200 transition"
           >
