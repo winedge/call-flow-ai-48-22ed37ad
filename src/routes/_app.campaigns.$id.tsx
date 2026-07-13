@@ -47,6 +47,7 @@ function CampaignDetail() {
   const calls = useDB(useShallow((s) => s.calls.filter((c) => c.campaign_id === id)));
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.list_id === campaign?.list_id)));
   const setStatus = useDB((s) => s.setCampaignStatus);
+  const updateCampaign = useDB((s) => s.updateCampaign);
   const duplicate = useDB((s) => s.duplicateCampaign);
 
   if (!campaign) throw notFound();
