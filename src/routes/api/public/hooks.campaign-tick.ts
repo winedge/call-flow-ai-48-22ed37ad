@@ -17,6 +17,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { dialOutbound } from "@/lib/voice/telephony/dial.server";
 
 const MAX_CONCURRENT_PER_CAMPAIGN = 10;
+const QUEUED_SLOT_WINDOW_MS = 2 * 60 * 1000;
 
 interface CampaignRow {
   id: string;
@@ -39,6 +40,11 @@ interface CallCountRow {
   started_at: string;
 }
 
+interface ActiveCallRow {
+  status: string;
+  started_at: string;
+}
+
 async function runCampaign(
   campaign: CampaignRow,
   admin: Awaited<ReturnType<typeof getAdmin>>,
@@ -47,13 +53,21 @@ async function runCampaign(
   if (!campaign.agent_id || !campaign.list_id) {
     return { dialed: 0, skipped: 0, completed: false };
   }
-  // Active calls for this campaign (ended_at IS NULL = still in progress).
-  const { count: activeCount } = await admin
+  // Active calls for this campaign. Queue/ring rows can miss a Twilio
+  // terminal callback; don't let old pre-connect rows pin every slot forever.
+  const { data: activeRaw } = await admin
     .from("calls")
-    .select("id", { count: "exact", head: true })
+    .select("status,started_at")
     .eq("campaign_id", campaign.id)
-    .is("ended_at", null);
-  const active = activeCount ?? 0;
+    .is("ended_at", null)
+    .in("status", ["queued", "dialing", "ringing", "in_progress"]);
+  const activeRows = (activeRaw ?? []) as ActiveCallRow[];
+  const nowMs = Date.now();
+  const active = activeRows.filter((row) => {
+    if (row.status === "in_progress" || row.status === "dialing") return true;
+    const ageMs = nowMs - new Date(row.started_at).getTime();
+    return ageMs < QUEUED_SLOT_WINDOW_MS;
+  }).length;
   const slotsByConcurrency = Math.max(0, MAX_CONCURRENT_PER_CAMPAIGN - active);
   const slots = Math.max(0, Math.min(campaign.calls_per_minute, slotsByConcurrency));
   if (slots <= 0) return { dialed: 0, skipped: 0, completed: false };
