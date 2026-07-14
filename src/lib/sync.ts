@@ -219,6 +219,28 @@ async function fetchAllContacts(userId: UUID): Promise<Row[]> {
   return all;
 }
 
+async function fetchAllCalls(userId: UUID): Promise<Row[]> {
+  const pageSize = 1000;
+  const all: Row[] = [];
+  let from = 0;
+  // Campaign reporting must include every call; a fixed 500-row cap makes
+  // larger campaigns appear stuck even while calls continue in the database.
+  for (let i = 0; i < 1000; i++) {
+    const { data, error } = await supabase
+      .from("calls")
+      .select("*")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as Row[];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 async function loadAll(userId: UUID) {
   const previous = useDB.getState();
   const keepContacts = previous.currentUserId === userId;
@@ -228,7 +250,7 @@ async function loadAll(userId: UUID) {
     supabase.from("contact_lists").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("phone_numbers").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("campaigns").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-    supabase.from("calls").select("*").eq("user_id", userId).order("started_at", { ascending: false }).limit(500),
+    fetchAllCalls(userId),
     supabase.from("appointments").select("*").eq("user_id", userId).order("scheduled_at", { ascending: true }),
     supabase.from("automations").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("org_settings").select("*").eq("user_id", userId).maybeSingle(),
@@ -256,7 +278,7 @@ async function loadAll(userId: UUID) {
     contactsLoading: false,
     phones: (phones.data ?? []).map(toPhone),
     campaigns: (campaigns.data ?? []).map(toCampaign),
-    calls: (calls.data ?? []).map(toCall),
+    calls: calls.map(toCall),
     appointments: (appts.data ?? []).map(toAppointment),
     automations: (autos.data ?? []).map(toAutomation),
     settings: [settings],
