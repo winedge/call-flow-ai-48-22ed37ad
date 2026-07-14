@@ -270,14 +270,6 @@ function ContactsPage() {
           </div>
         )}
 
-        <ImportCsvDialog
-          lists={lists}
-          currentFilterListId="all"
-          createList={createList}
-          importContacts={importContacts}
-          onImported={(listId) => setActiveListId(listId)}
-          hideTrigger
-        />
       </>
     );
   }
