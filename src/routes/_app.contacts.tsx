@@ -11,6 +11,8 @@ import {
   Tag,
   Download,
   Loader2,
+  ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
