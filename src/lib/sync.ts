@@ -198,7 +198,7 @@ function toAutomation(r: Row): Automation {
   };
 }
 
-async function fetchAllContacts(): Promise<Row[]> {
+async function fetchAllContacts(userId: UUID): Promise<Row[]> {
   const pageSize = 1000;
   const all: Row[] = [];
   let from = 0;
@@ -206,10 +206,11 @@ async function fetchAllContacts(): Promise<Row[]> {
   for (let i = 0; i < 1000; i++) {
     const { data, error } = await supabase
       .from("contacts")
-      .select("*")
+      .select("id,user_id,list_id,name,company,phone,email,custom_vars,tags,notes,status,created_at")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
-    if (error) break;
+    if (error) throw error;
     const rows = (data ?? []) as Row[];
     all.push(...rows);
     if (rows.length < pageSize) break;
@@ -219,15 +220,17 @@ async function fetchAllContacts(): Promise<Row[]> {
 }
 
 async function loadAll(userId: UUID) {
-  const [agents, lists, contactsRows, phones, campaigns, calls, appts, autos, settingsRow] = await Promise.all([
-    supabase.from("agents").select("*").order("created_at", { ascending: false }),
-    supabase.from("contact_lists").select("*").order("created_at", { ascending: false }),
-    fetchAllContacts(),
-    supabase.from("phone_numbers").select("*").order("created_at", { ascending: false }),
-    supabase.from("campaigns").select("*").order("created_at", { ascending: false }),
-    supabase.from("calls").select("*").order("started_at", { ascending: false }).limit(500),
-    supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
-    supabase.from("automations").select("*").order("created_at", { ascending: false }),
+  const previous = useDB.getState();
+  const keepContacts = previous.currentUserId === userId;
+
+  const [agents, lists, phones, campaigns, calls, appts, autos, settingsRow] = await Promise.all([
+    supabase.from("agents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("contact_lists").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("phone_numbers").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("campaigns").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    supabase.from("calls").select("*").eq("user_id", userId).order("started_at", { ascending: false }).limit(500),
+    supabase.from("appointments").select("*").eq("user_id", userId).order("scheduled_at", { ascending: true }),
+    supabase.from("automations").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     supabase.from("org_settings").select("*").eq("user_id", userId).maybeSingle(),
   ]);
 
@@ -248,7 +251,9 @@ async function loadAll(userId: UUID) {
     currentOrgId: userId,
     agents: (agents.data ?? []).map(toAgent),
     lists: (lists.data ?? []).map(toList),
-    contacts: contactsRows.map(toContact),
+    contacts: keepContacts ? previous.contacts : [],
+    contactsHydrated: keepContacts ? previous.contactsHydrated : false,
+    contactsLoading: false,
     phones: (phones.data ?? []).map(toPhone),
     campaigns: (campaigns.data ?? []).map(toCampaign),
     calls: (calls.data ?? []).map(toCall),
@@ -257,6 +262,37 @@ async function loadAll(userId: UUID) {
     settings: [settings],
     hydrated: true,
   });
+}
+
+export async function loadContactsForCurrentUser({ force = false }: { force?: boolean } = {}) {
+  const state = useDB.getState();
+  let userId = state.currentUserId;
+
+  if (!userId) {
+    const { data } = await supabase.auth.getSession();
+    userId = (data.session?.user?.id as UUID | undefined) ?? "";
+  }
+
+  if (!userId) return;
+
+  const latest = useDB.getState();
+  if (!force && latest.contactsHydrated) return;
+  if (latest.contactsLoading) return;
+
+  useDB.setState({ contactsLoading: true });
+  try {
+    const contacts = (await fetchAllContacts(userId)).map(toContact);
+    useDB.setState({
+      currentUserId: userId,
+      currentOrgId: userId,
+      contacts,
+      contactsHydrated: true,
+      contactsLoading: false,
+    });
+  } catch (error) {
+    useDB.setState({ contactsLoading: false });
+    throw error;
+  }
 }
 
 export function useSupabaseSync() {
@@ -328,12 +364,13 @@ export function useSupabaseSync() {
     }
 
     async function hydrate() {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (!data.user) return;
-      await loadAll(data.user.id as UUID);
+      const user = data.session?.user;
+      if (!user) return;
+      await loadAll(user.id as UUID);
       if (cancelled) return;
-      realtimeCleanup = subscribeRealtime(data.user.id as UUID);
+      realtimeCleanup = subscribeRealtime(user.id as UUID);
     }
     void hydrate();
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -353,6 +390,8 @@ export function useSupabaseSync() {
           appointments: [],
           automations: [],
           settings: [],
+          contactsHydrated: false,
+          contactsLoading: false,
           hydrated: false,
         });
         return;

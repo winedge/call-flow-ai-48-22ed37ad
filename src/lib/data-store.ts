@@ -290,6 +290,8 @@ function buildSeed() {
     appointments: [] as Appointment[],
     automations: [] as Automation[],
     settings: [] as OrgSettings[],
+    contactsHydrated: false,
+    contactsLoading: false,
     currentUserId: "" as UUID,
     currentOrgId: "" as UUID,
     hydrated: false,

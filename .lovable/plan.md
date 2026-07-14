@@ -1,61 +1,30 @@
-## What’s broken
+## Plan to fix the slow dashboard after login
 
-Both **Create list** and **Import CSV** are failing for the same backend reason:
+The hosted backend is healthy, so the delay is coming from the app’s client-side auth/data loading flow.
 
-- `contact_lists` and `contacts` have row-level rules that correctly restrict data to the signed-in user.
-- But they are missing the required backend table grants for the app role.
-- Result: the UI writes to the local cache, but the database rejects the save, so after refresh or when creating a campaign there are no real lists/contacts to select.
+### What I’ll change
 
-## Plan
+1. **Stop blocking the dashboard on the heaviest dataset**
+   - The app currently loads all contacts during initial dashboard hydration.
+   - Contacts are the slowest/repeated backend query and are not needed to render the dashboard.
+   - I’ll make dashboard startup load only the data it needs first: agents, campaigns, recent calls, phone numbers, appointments, automations, and settings.
 
-### 1. Fix backend access for lists and contacts
+2. **Load contacts only when needed**
+   - Move full contacts loading to the Contacts page.
+   - Keep contacts paginated/batched so large contact lists don’t delay login or dashboard rendering.
 
-Add a database migration that grants the app permission to use the existing private tables:
+3. **Make auth readiness faster and safer**
+   - Replace the initial `getUser()` network call in the sync hook with `getSession()` so the app uses the restored local session immediately after login.
+   - Keep auth state-change handling, but avoid doing blocking auth/network work inside auth callbacks.
 
-- `contact_lists`
-  - Signed-in users can create, view, edit, and delete only their own lists.
-  - Backend service role keeps full access for trusted server tasks.
-- `contacts`
-  - Signed-in users can create, view, edit, and delete only their own contacts.
-  - Backend service role keeps full access for trusted campaign/telephony tasks.
+4. **Improve dashboard rendering performance**
+   - Remove repeated full-array filtering in dashboard calculations where possible.
+   - Reuse precomputed maps/counts for campaign and agent stats so rendering stays fast as call history grows.
 
-No public/anonymous access will be added because contacts contain phone numbers and emails.
+5. **Validate after implementation**
+   - Verify the dashboard renders quickly from an authenticated session.
+   - Check that Contacts still loads/imports/deletes correctly after contact loading becomes page-specific.
 
-### 2. Make list creation show real success/failure
+### Expected result
 
-Update `src/lib/data-store.ts` and `src/routes/_app.contacts.tsx` so **New list** waits for the database save before showing success.
-
-- If the save works, add the list to the UI.
-- If the save fails, show the real error instead of pretending it worked.
-
-### 3. Make CSV import list-based
-
-Update the Contacts page import flow so every CSV goes into one contact list:
-
-- User chooses an existing list, or creates a new list during import.
-- If no list exists yet, the import defaults to creating a new list from the CSV filename.
-- Imported contacts are saved with that `list_id`.
-- Campaign creation can then select that same list.
-
-### 4. Make CSV import reliable for larger files
-
-Replace the current fire-and-forget import with an awaited batch import:
-
-- Parse and validate phone numbers before insert.
-- De-dupe against existing contacts in the database, not only local cache.
-- Insert contacts in batches so large CSV files do not fail as one giant request.
-- Show accurate results: imported, duplicate, invalid, and failed rows.
-
-### 5. Add a campaign list count check
-
-On the **Create campaign** page, show how many contacts are in the selected list so you can confirm the campaign has numbers before starting it.
-
-## Technical details
-
-- Migration needed:
-  - `GRANT SELECT, INSERT, UPDATE, DELETE ON public.contact_lists TO authenticated;`
-  - `GRANT ALL ON public.contact_lists TO service_role;`
-  - `GRANT SELECT, INSERT, UPDATE, DELETE ON public.contacts TO authenticated;`
-  - `GRANT ALL ON public.contacts TO service_role;`
-- Existing RLS policies already scope rows with `auth.uid() = user_id`, so the data remains private.
-- No anonymous grants will be added.
+After login, the dashboard should show much faster because it will no longer wait for the entire contacts table before becoming usable.

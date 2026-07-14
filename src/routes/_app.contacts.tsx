@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDB, type Contact } from "@/lib/data-store";
+import { loadContactsForCurrentUser } from "@/lib/sync";
 
 export const Route = createFileRoute("/_app/contacts")({
   head: () => ({ meta: [{ title: "Contacts - Medical Calling AI" }] }),
@@ -78,6 +79,8 @@ function csvRowsToContacts(rows: Record<string, string>[], listId: string | null
 
 function ContactsPage() {
   const hydrated = useDB((s) => s.hydrated);
+  const contactsHydrated = useDB((s) => s.contactsHydrated);
+  const contactsLoading = useDB((s) => s.contactsLoading);
   const orgId = useDB((s) => s.currentOrgId);
   const lists = useDB(useShallow((s) => s.lists.filter((l) => l.org_id === orgId)));
   const contacts = useDB(useShallow((s) => s.contacts.filter((c) => c.org_id === orgId)));
@@ -91,6 +94,19 @@ function ContactsPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!hydrated || contactsHydrated || contactsLoading) return;
+    let mounted = true;
+    void loadContactsForCurrentUser().catch((error) => {
+      if (!mounted) return;
+      const message = error instanceof Error ? error.message : "Contacts could not be loaded.";
+      toast.error(message);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [hydrated, contactsHydrated, contactsLoading]);
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
@@ -141,7 +157,7 @@ function ContactsPage() {
     URL.revokeObjectURL(url);
   }
 
-  if (!hydrated) return <PageSkeleton variant="table" withActions />;
+  if (!hydrated || !contactsHydrated || contactsLoading) return <PageSkeleton variant="table" withActions />;
 
   return (
     <>
