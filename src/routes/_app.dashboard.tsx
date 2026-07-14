@@ -112,7 +112,7 @@ function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] divide-y md:divide-y-0 md:divide-x divide-neutral-200/70">
           <div className="p-5">
             <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-              <span className={cn("size-2 rounded-full", liveCalls.length ? "bg-emerald-500 animate-pulse" : "bg-neutral-300")} />
+              <span className={cn("size-2 rounded-full", dashboardStats.liveCalls.length ? "bg-emerald-500 animate-pulse" : "bg-neutral-300")} />
               {dashboardStats.liveCalls.length ? "On the wire" : "Room quiet"}
             </div>
             <div className="mt-2 flex items-end gap-3">
