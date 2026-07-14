@@ -11,6 +11,8 @@ import {
   Tag,
   Download,
   Loader2,
+  ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -89,8 +91,7 @@ function ContactsPage() {
   const importContacts = useDB((s) => s.importContacts);
   const deleteContacts = useDB((s) => s.deleteContacts);
 
-
-  const [filterListId, setFilterListId] = useState<string>("all");
+  const [activeListId, setActiveListId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
@@ -108,9 +109,29 @@ function ContactsPage() {
     };
   }, [hydrated, contactsHydrated, contactsLoading]);
 
+  const countsByList = useMemo(() => {
+    const map = new Map<string, number>();
+    let unassigned = 0;
+    for (const c of contacts) {
+      if (c.list_id) map.set(c.list_id, (map.get(c.list_id) ?? 0) + 1);
+      else unassigned++;
+    }
+    return { map, unassigned };
+  }, [contacts]);
+
+  const activeList = useMemo(
+    () => (activeListId ? lists.find((l) => l.id === activeListId) ?? null : null),
+    [activeListId, lists],
+  );
+
   const filtered = useMemo(() => {
+    if (!activeListId) return [];
     return contacts.filter((c) => {
-      if (filterListId !== "all" && c.list_id !== filterListId) return false;
+      if (activeListId === "__unassigned__") {
+        if (c.list_id) return false;
+      } else if (c.list_id !== activeListId) {
+        return false;
+      }
       if (search) {
         const q = search.toLowerCase();
         return (
@@ -122,7 +143,7 @@ function ContactsPage() {
       }
       return true;
     });
-  }, [contacts, filterListId, search]);
+  }, [contacts, activeListId, search]);
 
   function toggle(id: string) {
     setSelected((s) => {
@@ -152,18 +173,120 @@ function ContactsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "contacts.csv";
+    a.download = `${activeList?.name ?? "contacts"}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   if (!hydrated || !contactsHydrated || contactsLoading) return <PageSkeleton variant="table" withActions />;
 
+  // ---- Lists overview ----
+  if (!activeListId) {
+    return (
+      <>
+        <PageHeader
+          title="Contacts"
+          description={`${contacts.length.toLocaleString()} contacts across ${lists.length} ${lists.length === 1 ? "list" : "lists"}.`}
+          actions={
+            <div className="flex gap-2">
+              <input
+                ref={fileRef}
+                type="file"
+                hidden
+                accept=".csv,text/csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    window.dispatchEvent(new CustomEvent("contacts:import-file", { detail: f }));
+                  }
+                  e.currentTarget.value = "";
+                }}
+              />
+              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                <Upload className="size-3.5 mr-1" /> Import CSV
+              </Button>
+              <ImportCsvDialog
+                lists={lists}
+                currentFilterListId="all"
+                createList={createList}
+                importContacts={importContacts}
+                onImported={(listId) => setActiveListId(listId)}
+              />
+              <NewListDialog onCreate={createList} />
+            </div>
+          }
+        />
+
+        {lists.length === 0 && countsByList.unassigned === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No contact lists yet"
+            description="Create a list or import a CSV to get started."
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {lists.map((l) => {
+              const count = countsByList.map.get(l.id) ?? 0;
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => { setSelected(new Set()); setSearch(""); setActiveListId(l.id); }}
+                  className="text-left bg-white ring-1 ring-black/5 rounded-xl p-4 hover:ring-black/20 transition group"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Users className="size-4 text-neutral-500 shrink-0" />
+                        <div className="font-medium text-neutral-900 truncate">{l.name}</div>
+                      </div>
+                      <div className="mt-1 text-xs text-neutral-500">
+                        {count.toLocaleString()} {count === 1 ? "contact" : "contacts"}
+                      </div>
+                    </div>
+                    <ChevronRight className="size-4 text-neutral-400 group-hover:text-neutral-700 shrink-0" />
+                  </div>
+                </button>
+              );
+            })}
+            {countsByList.unassigned > 0 && (
+              <button
+                onClick={() => { setSelected(new Set()); setSearch(""); setActiveListId("__unassigned__"); }}
+                className="text-left bg-white ring-1 ring-black/5 rounded-xl p-4 hover:ring-black/20 transition group"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Users className="size-4 text-neutral-500 shrink-0" />
+                      <div className="font-medium text-neutral-900 truncate">Unassigned</div>
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500">
+                      {countsByList.unassigned.toLocaleString()} contacts
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 text-neutral-400 group-hover:text-neutral-700 shrink-0" />
+                </div>
+              </button>
+            )}
+          </div>
+        )}
+
+      </>
+    );
+  }
+
+  // ---- Single-list detail ----
+  const listTitle = activeList?.name ?? (activeListId === "__unassigned__" ? "Unassigned" : "Contacts");
+
   return (
     <>
+      <div className="mb-3">
+        <Button variant="ghost" size="sm" onClick={() => { setActiveListId(null); setSelected(new Set()); setSearch(""); }}>
+          <ArrowLeft className="size-3.5 mr-1" /> Back to lists
+        </Button>
+      </div>
       <PageHeader
-        title="Contacts"
-        description={`${contacts.length.toLocaleString()} contacts across ${lists.length} lists.`}
+        title={listTitle}
+        description={`${filtered.length.toLocaleString()} contacts`}
         actions={
           <div className="flex gap-2">
             <input
@@ -185,14 +308,6 @@ function ContactsPage() {
             <Button variant="outline" size="sm" onClick={exportCSV}>
               <Download className="size-3.5 mr-1" /> Export
             </Button>
-            <ImportCsvDialog
-              lists={lists}
-              currentFilterListId={filterListId}
-              createList={createList}
-              importContacts={importContacts}
-              onImported={(listId) => setFilterListId(listId)}
-            />
-            <NewListDialog onCreate={createList} />
             <NewContactDialog
               lists={lists}
               onAdd={(c) => addContact(c)}
@@ -201,102 +316,91 @@ function ContactsPage() {
         }
       />
 
-      {contacts.length === 0 ? (
+      <div className="flex flex-wrap gap-3 items-center mb-4">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, phone, email..."
+            className="pl-9"
+          />
+        </div>
+        {selected.size > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-400"
+            onClick={() => {
+              deleteContacts([...selected]);
+              toast.success(`Deleted ${selected.size} contacts`);
+              setSelected(new Set());
+            }}
+          >
+            <Trash2 className="size-3.5 mr-1" /> Delete {selected.size}
+          </Button>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="No contacts yet"
-          description="Import a CSV or add contacts manually to get started."
+          title="No contacts in this list"
+          description="Import a CSV or add contacts manually."
         />
       ) : (
-        <>
-          <div className="flex flex-wrap gap-3 items-center mb-4">
-            <Select value={filterListId} onValueChange={setFilterListId}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All lists</SelectItem>
-                {lists.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="relative flex-1 min-w-[220px]">
-              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, phone, email..."
-                className="pl-9"
-              />
-            </div>
-            {selected.size > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-400"
-                onClick={() => {
-                  deleteContacts([...selected]);
-                  toast.success(`Deleted ${selected.size} contacts`);
-                  setSelected(new Set());
-                }}
-              >
-                <Trash2 className="size-3.5 mr-1" /> Delete {selected.size}
-              </Button>
-            )}
-          </div>
-
-          <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse min-w-[760px]">
-                <thead>
-                  <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
-                    <th className="px-4 py-3 w-10">
+        <div className="bg-white ring-1 ring-black/5 rounded-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse min-w-[760px]">
+              <thead>
+                <tr className="text-[11px] text-neutral-500 uppercase tracking-wider border-b border-surface-border/60">
+                  <th className="px-4 py-3 w-10">
+                    <Checkbox
+                      checked={selected.size > 0 && selected.size === filtered.length}
+                      onCheckedChange={toggleAll}
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">Name</th>
+                  <th className="px-4 py-3 text-left font-medium">Company</th>
+                  <th className="px-4 py-3 text-left font-medium">Phone</th>
+                  <th className="px-4 py-3 text-left font-medium">Email</th>
+                  <th className="px-4 py-3 text-left font-medium">Tags</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 200).map((c) => (
+                  <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
+                    <td className="px-4 py-3">
                       <Checkbox
-                        checked={selected.size > 0 && selected.size === filtered.length}
-                        onCheckedChange={toggleAll}
+                        checked={selected.has(c.id)}
+                        onCheckedChange={() => toggle(c.id)}
                       />
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium">Name</th>
-                    <th className="px-4 py-3 text-left font-medium">Company</th>
-                    <th className="px-4 py-3 text-left font-medium">Phone</th>
-                    <th className="px-4 py-3 text-left font-medium">Email</th>
-                    <th className="px-4 py-3 text-left font-medium">Tags</th>
+                    </td>
+                    <td className="px-4 py-3 text-neutral-900">{c.name}</td>
+                    <td className="px-4 py-3 text-neutral-600">{c.company}</td>
+                    <td className="px-4 py-3 font-mono text-neutral-800">{c.phone}</td>
+                    <td className="px-4 py-3 text-neutral-600">{c.email}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {c.tags.map((t) => (
+                          <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-neutral-200 text-neutral-600">
+                            <Tag className="size-2.5 mr-1 inline" />
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filtered.slice(0, 200).map((c) => (
-                    <tr key={c.id} className="border-b border-surface-border/30 hover:bg-neutral-100">
-                      <td className="px-4 py-3">
-                        <Checkbox
-                          checked={selected.has(c.id)}
-                          onCheckedChange={() => toggle(c.id)}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-neutral-900">{c.name}</td>
-                      <td className="px-4 py-3 text-neutral-600">{c.company}</td>
-                      <td className="px-4 py-3 font-mono text-neutral-800">{c.phone}</td>
-                      <td className="px-4 py-3 text-neutral-600">{c.email}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {c.tags.map((t) => (
-                            <span key={t} className="text-[10px] px-2 py-0.5 rounded bg-neutral-200 text-neutral-600">
-                              <Tag className="size-2.5 mr-1 inline" />
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {filtered.length > 200 && (
-              <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
-                Showing first 200 of {filtered.length}
-              </div>
-            )}
+                ))}
+              </tbody>
+            </table>
           </div>
-        </>
+          {filtered.length > 200 && (
+            <div className="px-4 py-3 text-xs text-neutral-500 border-t border-surface-border/40">
+              Showing first 200 of {filtered.length}
+            </div>
+          )}
+        </div>
       )}
     </>
   );
