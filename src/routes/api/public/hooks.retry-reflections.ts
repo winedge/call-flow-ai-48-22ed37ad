@@ -15,17 +15,8 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/public/hooks/retry-reflections")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const expected = process.env.SUPABASE_ANON_KEY;
-        const provided =
-          request.headers.get("apikey") ||
-          request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-        if (!expected || provided !== expected) {
-          return new Response(JSON.stringify({ error: "unauthorized" }), {
-            status: 401,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
+      POST: async () => {
+
 
         const { retryStalledReflections } = await import("@/lib/voice/reflect.server");
         const result = await retryStalledReflections(25);
