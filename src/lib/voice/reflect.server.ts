@@ -79,8 +79,17 @@ function normalizeTranscript(v: unknown): Transcript {
   return v.flatMap((t): Transcript => {
     if (!t || typeof t !== "object") return [];
     const o = t as Record<string, unknown>;
-    const speaker = o.speaker === "ai" || o.speaker === "human" ? o.speaker : null;
-    const text = typeof o.text === "string" ? o.text : "";
+    // Support both {speaker, text} and {role, content} shapes.
+    let speaker: "ai" | "human" | null = null;
+    if (o.speaker === "ai" || o.speaker === "human") {
+      speaker = o.speaker;
+    } else if (o.role === "assistant" || o.role === "ai") {
+      speaker = "ai";
+    } else if (o.role === "user" || o.role === "human" || o.role === "caller") {
+      speaker = "human";
+    }
+    const text =
+      typeof o.text === "string" ? o.text : typeof o.content === "string" ? o.content : "";
     if (!speaker || !text) return [];
     return [{ speaker, text }];
   });
