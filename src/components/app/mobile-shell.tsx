@@ -93,7 +93,7 @@ export function MobileTopBar() {
       </Link>
 
       <Link
-        to={"/campaigns/new" as "/dashboard"}
+        to="/campaigns/new"
         aria-label="New campaign"
         className="size-9 grid place-items-center rounded-full bg-brand-primary text-primary-foreground shadow-sm active:brightness-90 transition"
       >
@@ -138,7 +138,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
 
       <div className="p-4 border-b border-surface-border/60">
         <Link
-          to={"/launch" as "/dashboard"}
+          to="/launch"
           onClick={onNavigate}
           className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-brand-primary/15 ring-1 ring-brand-primary/40 text-brand-primary active:bg-brand-primary/25 transition"
         >
@@ -154,7 +154,7 @@ function MobileDrawer({ onNavigate }: { onNavigate: () => void }) {
         {[...TABS, ...MORE_NAV].map((item) => (
           <Link
             key={item.to + item.label}
-            to={item.to as "/dashboard"}
+            to={item.to}
             onClick={onNavigate}
             className="flex items-center gap-3 px-3 py-3 rounded-lg text-neutral-800 hover:text-neutral-900 active:bg-neutral-200 transition-colors"
           >
@@ -264,7 +264,7 @@ export function MobileBottomNav() {
             return (
               <Link
                 key={tab.to}
-                to={tab.to as "/dashboard"}
+                to={tab.to}
                 className="relative flex flex-col items-center justify-center gap-1 active:bg-neutral-200/40 transition-colors"
               >
                 <div
@@ -330,7 +330,7 @@ export function MobileBottomNav() {
             {MORE_NAV.map((item) => (
               <Link
                 key={item.to + item.label}
-                to={item.to as "/dashboard"}
+                to={item.to}
                 onClick={() => setMoreOpen(false)}
                 className="flex items-center gap-3 px-3 py-3.5 rounded-lg text-neutral-900 active:bg-neutral-200 transition-colors"
               >
