@@ -100,7 +100,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="hidden lg:flex items-center gap-4 border-r border-surface-border/60 pr-6">
+        <div className="hidden sm:flex items-center gap-4 border-r border-surface-border/60 pr-6">
           <div className="text-right">
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
               Twilio Connection
