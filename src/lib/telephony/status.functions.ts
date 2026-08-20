@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const checkTwilioConnection = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .handler(async () => {
     // Access env vars inside handler to ensure server-side execution
     const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -11,3 +13,4 @@ export const checkTwilioConnection = createServerFn({ method: "GET" })
       timestamp: Date.now(),
     };
   });
+
