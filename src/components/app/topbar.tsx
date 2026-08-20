@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
-import { syncTwilioNumbers } from "@/lib/telephony/sync-numbers.functions";
+import { checkTwilioConnection } from "@/lib/telephony/status.functions";
 
 export function Topbar() {
   const router = useRouter();
@@ -26,14 +26,8 @@ export function Topbar() {
   const createOrg = useDB((s) => s.createOrg);
 
   const { data: twilioStatus } = useQuery({
-    queryKey: ["twilio-status-smoke"],
-    queryFn: async () => {
-      // Use the known-good syncNumbers function as a smoke test
-      // but wrap it so we don't actually trigger a sync on every header render.
-      // Since it's a POST and has a different signature, we just return a placeholder for now
-      // to verify the route is functional.
-      return { live: true, timestamp: Date.now() };
-    },
+    queryKey: ["twilio-status"],
+    queryFn: () => checkTwilioConnection(),
     refetchInterval: 30000, 
   });
 
