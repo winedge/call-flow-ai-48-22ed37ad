@@ -2,6 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronDown, Plus, LogOut, User as UserIcon, PhoneCall, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { checkTwilioConnection } from "@/lib/telephony/status.functions";
 
 import {
   DropdownMenu,
@@ -27,10 +28,12 @@ export function Topbar() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: async () => {
-      // Check for presence of credentials via standard Supabase client as a proxy.
-      // We don't have a reliable server function right now, so we check VITE_ env if available,
-      // but usually these are backend-only.
-      return { live: false, timestamp: Date.now() };
+      try {
+        return await checkTwilioConnection();
+      } catch (error) {
+        console.error("Twilio status check failed:", error);
+        return { live: false, timestamp: Date.now() };
+      }
     },
     refetchInterval: 30000, 
   });
