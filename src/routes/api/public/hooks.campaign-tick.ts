@@ -158,11 +158,13 @@ async function runCampaign(
     }
   }
 
+  console.log(`[campaign-tick] Campaign ${campaign.id}: slots=${slots}, eligible=${eligible.length}, exhausted=${exhausted}, total_contacts=${contacts.length}`);
   const toDial = eligible.slice(0, slots);
   let dialed = 0;
   let skipped = 0;
   for (const c of toDial) {
     try {
+      console.log(`[campaign-tick] Attempting dial campaign=${campaign.id} contact=${c.id} to=${c.phone} from=${fromNumber}`);
       await dialOutbound({
         userId: campaign.user_id,
         agentId: campaign.agent_id,
