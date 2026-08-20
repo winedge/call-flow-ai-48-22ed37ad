@@ -228,7 +228,7 @@ function AgentEditor() {
         description="Define how this agent speaks, listens, and qualifies."
         crumb={[
           { label: "Agents", to: "/agents" },
-          { label: isNew ? "New" : form.name || "Edit", to: "/agents/" + id },
+          { label: isNew ? "New" : form.name || "Edit", to: "/agents/$id", params: { id } },
         ]}
         actions={
           <div className="flex gap-2">

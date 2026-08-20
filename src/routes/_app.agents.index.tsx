@@ -29,7 +29,7 @@ function AgentsList() {
         description="Voices, prompts, and behavior for every campaign."
         actions={
           <Button asChild className="bg-brand-primary text-primary-foreground hover:bg-brand-primary hover:brightness-110">
-            <Link to="/agents/new">
+            <Link to="/agents/$id" params={{ id: 'new' }}>
               <Plus className="size-4 mr-1" /> New Agent
             </Link>
           </Button>
