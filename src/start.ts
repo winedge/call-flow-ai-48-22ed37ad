@@ -10,9 +10,7 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
-    // Only return the custom error page for non-JSON requests (likely direct navigation or SSR crashes)
-    // Server functions expect specific JSON formats or handled errors.
-    console.error("[errorMiddleware] caught:", error);
+    console.error(error);
     return new Response(renderErrorPage(), {
       status: 500,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -22,6 +20,5 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  // Temporarily disabling requestMiddleware to see if it fixes the server function 500
-  // requestMiddleware: [errorMiddleware],
+  requestMiddleware: [errorMiddleware],
 }));

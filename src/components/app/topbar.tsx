@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
-import { checkTwilioConnection } from "@/lib/telephony/status.functions";
+// import { checkTwilioConnection } from "@/lib/telephony/status.functions";
 
 export function Topbar() {
   const router = useRouter();
@@ -27,7 +27,10 @@ export function Topbar() {
 
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
-    queryFn: () => checkTwilioConnection(),
+    queryFn: async () => {
+      // Inline check for testing
+      return { live: false, timestamp: Date.now() };
+    },
     refetchInterval: 30000, // Check every 30s
   });
 
