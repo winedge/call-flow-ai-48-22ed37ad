@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronDown, Plus, LogOut, User as UserIcon } from "lucide-react";
+import { ChevronDown, Plus, LogOut, User as UserIcon, PhoneCall, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useDB, selectCurrentOrg, selectCurrentUser } from "@/lib/data-store";
 import { supabase } from "@/integrations/supabase/client";
+import { checkTwilioConnection } from "@/lib/telephony/status.functions";
 
 export function Topbar() {
   const router = useRouter();
@@ -23,6 +24,12 @@ export function Topbar() {
   const orgs = useDB((s) => s.organizations);
   const switchOrg = useDB((s) => s.switchOrg);
   const createOrg = useDB((s) => s.createOrg);
+
+  const { data: twilioStatus } = useQuery({
+    queryKey: ["twilio-status"],
+    queryFn: () => checkTwilioConnection(),
+    refetchInterval: 30000, // Check every 30s
+  });
 
   async function handleSignOut() {
     try {
@@ -84,16 +91,31 @@ export function Topbar() {
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="hidden sm:block text-right">
-          <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
-            Status
-          </p>
-          <div className="flex items-center gap-1.5 justify-end">
-            <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-neutral-800">
-              Node-04 Active
-            </span>
+      <div className="flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-4 border-r border-surface-border/60 pr-6">
+          <div className="text-right">
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
+              Twilio Connection
+            </p>
+            <div className="flex items-center gap-1.5 justify-end mt-0.5">
+              <span className={`size-1.5 rounded-full ${twilioStatus?.live ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+              <span className="text-xs font-medium text-neutral-800 flex items-center gap-1">
+                {twilioStatus?.live ? "Live" : "Disconnected"}
+                {!twilioStatus?.live && <AlertCircle className="size-3 text-amber-500" />}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
+              System
+            </p>
+            <div className="flex items-center gap-1.5 justify-end mt-0.5">
+              <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-medium text-neutral-800">
+                Node-04 Active
+              </span>
+            </div>
           </div>
         </div>
 
