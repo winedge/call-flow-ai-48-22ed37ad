@@ -2,7 +2,6 @@ import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronDown, Plus, LogOut, User as UserIcon, PhoneCall, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
-import { checkTwilioConnection } from "@/lib/telephony/status.functions";
 
 import {
   DropdownMenu,
@@ -28,12 +27,8 @@ export function Topbar() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: async () => {
-      try {
-        return await checkTwilioConnection();
-      } catch (error) {
-        console.error("Twilio status check failed:", error);
-        return { live: false, timestamp: Date.now() };
-      }
+      // We've temporarily removed the server function check due to 500 errors.
+      return { live: false, timestamp: Date.now() };
     },
     refetchInterval: 30000, 
   });
