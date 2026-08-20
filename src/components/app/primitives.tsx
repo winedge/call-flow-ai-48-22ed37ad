@@ -51,7 +51,7 @@ export function PageHeader({
           {crumb.map((c, i) => (
             <span key={c.to} className="flex items-center gap-1">
               {i > 0 && <span className="opacity-40">/</span>}
-              <Link to={c.to as "/dashboard"} className="hover:text-brand-primary">
+              <Link to={c.to} className="hover:text-brand-primary">
                 {c.label}
               </Link>
             </span>

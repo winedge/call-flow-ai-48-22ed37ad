@@ -61,7 +61,7 @@ export function Sidebar() {
       </div>
       <div className="px-4 pb-3">
         <Link
-          to={"/launch" as "/dashboard"}
+          to="/launch"
           className="group flex items-center gap-2 px-3 py-2 rounded-md bg-brand-primary/15 hover:bg-brand-primary/25 ring-1 ring-brand-primary/40 text-brand-primary transition-colors"
         >
           <Sparkles className="size-4" strokeWidth={2} />
@@ -82,7 +82,7 @@ export function Sidebar() {
           return (
             <Link
               key={item.to}
-              to={item.to as "/dashboard"}
+              to={item.to}
               className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 active
