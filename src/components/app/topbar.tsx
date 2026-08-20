@@ -27,10 +27,14 @@ export function Topbar() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: async () => {
-      // Check for presence of credentials via standard Supabase client as a proxy.
-      // We don't have a reliable server function right now, so we check VITE_ env if available,
-      // but usually these are backend-only.
-      return { live: false, timestamp: Date.now() };
+      try {
+        const res = await fetch("/api/public/twilio-status");
+        if (!res.ok) throw new Error("API failed");
+        return await res.json();
+      } catch (error) {
+        console.error("Twilio status check failed:", error);
+        return { live: false, timestamp: Date.now() };
+      }
     },
     refetchInterval: 30000, 
   });
@@ -96,7 +100,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="hidden lg:flex items-center gap-4 border-r border-surface-border/60 pr-6">
+        <div className="hidden sm:flex items-center gap-4 border-r border-surface-border/60 pr-6">
           <div className="text-right">
             <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-mono">
               Twilio Connection
