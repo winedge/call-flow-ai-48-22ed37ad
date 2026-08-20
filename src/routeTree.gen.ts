@@ -30,6 +30,7 @@ import { Route as AppCallHistoryRouteImport } from './routes/_app.call-history'
 import { Route as AppAutomationsRouteImport } from './routes/_app.automations'
 import { Route as AppCampaignsIndexRouteImport } from './routes/_app.campaigns.index'
 import { Route as AppAgentsIndexRouteImport } from './routes/_app.agents.index'
+import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api/public/twilio-status'
 import { Route as ApiContactsIdRouteImport } from './routes/api/contacts.$id'
 import { Route as ApiCampaignsIdRouteImport } from './routes/api/campaigns.$id'
 import { Route as ApiCallsIdRouteImport } from './routes/api/calls.$id'
@@ -160,6 +161,11 @@ const AppAgentsIndexRoute = AppAgentsIndexRouteImport.update({
   id: '/agents/',
   path: '/agents/',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
+  id: '/api/public/twilio-status',
+  path: '/api/public/twilio-status',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiContactsIdRoute = ApiContactsIdRouteImport.update({
   id: '/$id',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/agents/': typeof AppAgentsIndexRoute
   '/campaigns/': typeof AppCampaignsIndexRoute
   '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/agents': typeof AppAgentsIndexRoute
   '/campaigns': typeof AppCampaignsIndexRoute
   '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/api/calls/$id': typeof ApiCallsIdRouteWithChildren
   '/api/campaigns/$id': typeof ApiCampaignsIdRouteWithChildren
   '/api/contacts/$id': typeof ApiContactsIdRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_app/agents/': typeof AppAgentsIndexRoute
   '/_app/campaigns/': typeof AppCampaignsIndexRoute
   '/api/calls/$id/recording': typeof ApiCallsIdRecordingRoute
@@ -474,6 +483,7 @@ export interface FileRouteTypes {
     | '/api/calls/$id'
     | '/api/campaigns/$id'
     | '/api/contacts/$id'
+    | '/api/public/twilio-status'
     | '/agents/'
     | '/campaigns/'
     | '/api/calls/$id/recording'
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/api/calls/$id'
     | '/api/campaigns/$id'
     | '/api/contacts/$id'
+    | '/api/public/twilio-status'
     | '/agents'
     | '/campaigns'
     | '/api/calls/$id/recording'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/api/calls/$id'
     | '/api/campaigns/$id'
     | '/api/contacts/$id'
+    | '/api/public/twilio-status'
     | '/_app/agents/'
     | '/_app/campaigns/'
     | '/api/calls/$id/recording'
@@ -603,6 +615,7 @@ export interface RootRouteChildren {
   ApiContactsRoute: typeof ApiContactsRouteWithChildren
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   DocsApiRoute: typeof DocsApiRoute
+  ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicBridgeAgentRoute: typeof ApiPublicBridgeAgentRoute
   ApiPublicBridgeCallEventRoute: typeof ApiPublicBridgeCallEventRoute
   ApiPublicBridgeTransferRoute: typeof ApiPublicBridgeTransferRoute
@@ -767,6 +780,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/agents/'
       preLoaderRoute: typeof AppAgentsIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/public/twilio-status': {
+      id: '/api/public/twilio-status'
+      path: '/api/public/twilio-status'
+      fullPath: '/api/public/twilio-status'
+      preLoaderRoute: typeof ApiPublicTwilioStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/contacts/$id': {
       id: '/api/contacts/$id'
@@ -1096,6 +1116,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiContactsRoute: ApiContactsRouteWithChildren,
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   DocsApiRoute: DocsApiRoute,
+  ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicBridgeAgentRoute: ApiPublicBridgeAgentRoute,
   ApiPublicBridgeCallEventRoute: ApiPublicBridgeCallEventRoute,
   ApiPublicBridgeTransferRoute: ApiPublicBridgeTransferRoute,
