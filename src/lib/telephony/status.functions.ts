@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getTwilioEnv } from "./status.server";
 
 export const checkTwilioConnection = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
-      const sid = process.env.TWILIO_ACCOUNT_SID;
-      const token = process.env.TWILIO_AUTH_TOKEN;
+      const { sid, token } = await getTwilioEnv();
 
       if (!sid || !token) {
         return { live: false, reason: "Credentials missing" };
