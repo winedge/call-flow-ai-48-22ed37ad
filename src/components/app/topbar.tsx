@@ -27,8 +27,14 @@ export function Topbar() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: async () => {
-      // We've temporarily removed the server function check due to 500 errors.
-      return { live: false, timestamp: Date.now() };
+      try {
+        const res = await fetch("/api/public/twilio-status");
+        if (!res.ok) throw new Error("API failed");
+        return await res.json();
+      } catch (error) {
+        console.error("Twilio status check failed:", error);
+        return { live: false, timestamp: Date.now() };
+      }
     },
     refetchInterval: 30000, 
   });
